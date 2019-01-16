@@ -219,3 +219,6 @@ dmypy.json
 pyvenv.cfg
 .venv
 pip-selfcheck.json
+
+# VS Code
+.vscode/*

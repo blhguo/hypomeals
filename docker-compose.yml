@@ -11,16 +11,16 @@ services:
     #     ports:
     #         - 5432:5432
     web-init:
-        build: ./src
+        build: ./hypomeals
         command: /code/initserver.sh
         volumes:
-            - ./events:/code
+            - ./hypomeals:/code
     web:
-        build: ./src
+        build: ./hypomeals
         user: nobody
         command: /code/runserver.sh
         volumes:
-            - ./src:/code
+            - ./hypomeals:/code
         expose:
             - "8000"
         depends_on:
