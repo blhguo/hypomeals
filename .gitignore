@@ -49,6 +49,7 @@ flycheck_*.el
 
 # Certificates / keys
 nginx/certs
+certs.tar.gz
 
 # User-specific stuff:
 .idea/**/workspace.xml
