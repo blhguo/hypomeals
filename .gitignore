@@ -47,6 +47,9 @@ flycheck_*.el
 # network security
 /network-security.data
 
+# Certificates / keys
+nginx/certs
+
 # User-specific stuff:
 .idea/**/workspace.xml
 .idea/**/tasks.xml
