@@ -32,6 +32,8 @@ ALLOWED_HOSTS = [
 ]
 
 AUTH_USER_MODEL = "meals.User"
+LOGIN_URL = "/accounts/login/"
+LOGIN_REDIRECT_URL = "/"
 
 
 # Application definition
