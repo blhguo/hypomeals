@@ -63,7 +63,7 @@ class Sku(models.Model):
     )
     unit_size = models.CharField(max_length=100, blank=False)
     count = models.IntegerField(blank=False)
-    product_line = models.ForeignKey(ProductLine, on_delete=models.CASCADE)
+    product_line = models.ForeignKey(ProductLine, blank=False, on_delete=models.CASCADE)
     ingredients = models.ManyToManyField(Ingredient, through="SkuIngredient")
     comment = models.CharField(max_length=200, blank=True)
 
@@ -75,8 +75,10 @@ class Sku(models.Model):
 
 class SkuIngredient(models.Model):
 
-    sku_number = models.ForeignKey(Sku, on_delete=models.CASCADE)
-    ingredient_number = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
+    sku_number = models.ForeignKey(Sku, blank=False, on_delete=models.CASCADE)
+    ingredient_number = models.ForeignKey(
+        Ingredient, blank=False, on_delete=models.CASCADE
+    )
     quantity = models.FloatField(blank=False)
 
     def __str__(self):
