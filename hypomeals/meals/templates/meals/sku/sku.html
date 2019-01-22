@@ -1,0 +1,181 @@
+{% extends "meals/base.html" %}
+
+{% block sku_active %}active{% endblock %}
+
+{% block body %}
+<div class="container-fluid m-auto">
+<form method="post">
+{% csrf_token %}
+<div class="row">
+<div class="col-sm-8">
+<nav>
+    <ul class="pagination my-4">
+    {% if skus.has_previous %}
+        <li class="page-item">
+        <a class="page-link" href="?page={{ skus.previous_page_number }}">
+            <span>&laquo;</span>
+        </a>
+        </li>
+    {% else %}
+        <li class="page-item disabled">
+        <a class="page-link" href="#">
+            <span>&laquo;</span>
+        </a>
+        </li>
+    {% endif %}
+
+    {% for page in pages %}
+        {% if page == forloop.counter %}
+        <li class="page-item active">
+        {% else %}
+        <li class="page-item">
+        {% endif %}
+        <a class="page-link" href="?page={{ forloop.counter }}">
+        {{ forloop.counter }}
+        </a>
+        </li>
+    {% endfor %}
+
+    {% if skus.has_next %}
+        <li class="page-item">
+        <a class="page-link" href="?page={{ skus.next_page_number }}">
+            <span>&raquo;</span>
+        </a>
+        </li>
+    {% else %}
+        <li class="page-item disabled">
+        <a class="page-link" href="#">
+            <span>&raquo;</span>
+        </a>
+        </li>
+    {% endif %}
+    </ul>
+</nav>
+</div>
+<div class="col-sm-4">
+<div class="btn-group my-4" style="float: right;">
+    <button type="button"
+            class="btn btn-success">
+        <span class="fa fa-plus"></span> Add a new SKU
+    </button>
+    <button type="button"
+            class="btn btn-danger"
+            disabled
+            data-toggle="tooltip"
+            data-placement="top"
+            title="Select SKUs below to remove them."
+            id="removeButton">
+        <span class="fa fa-minus"></span> Remove selected
+    </button>
+</div>
+</div>
+</div>
+<div class="row">
+<div class="col-sm-2">
+<div class="form-group">
+    <label for="{{ form.num_per_page.id_for_label }}">Number per page:</label>
+    {{ form.num_per_page }}
+</div>
+<div class="form-group">
+    <label for="{{ form.keyword.id_for_label }}">Search:</label>
+    {{ form.keyword }}
+</div>
+<div class="form-group">
+    <label for="{{ form.sort_by.id_for_label }}">Sort by:</label>
+    {{ form.sort_by }}
+</div>
+<div class="form-group">
+    <label for="{{ form.ingredients.id_for_label }}">Contains ingredients:</label>
+    <input type="text" class="form-control" id="ingredientInput" placeholder="Start typing...">
+    {{ form.ingredients }}
+</div>
+<div class="form-group">
+    <label for="{{ form.product_lines.id_for_label }}">Belongs to product line:</label>
+    <input type="text" class="form-control" id="productLineInput" placeholder="Start typing...">
+    {{ form.product_lines }}
+</div>
+<input type="submit" class="btn btn-success" value="Filter">
+</div>
+<div class="col-sm-10">
+<table class="table">
+<thead class="thead-light">
+<tr>
+    <th><input type="checkbox" id="selectAll"> </th>
+    <th>SKU#</th>
+    <th>Name</th>
+    <th>Case UPC#</th>
+    <th>Unit UPC#</th>
+    <th>Unit Size</th>
+    <th>Count Per Case</th>
+    <th>Product Line</th>
+</tr>
+</thead>
+<tbody class="table-striped">
+{% for sku in skus %}
+<tr>
+    <td><input type="checkbox" class="sku-checkbox" id="checkbox-{{ sku.number }}"> </td>
+    <td>{{ sku.number }}</td>
+    <td>{{ sku.name }}</td>
+    <td>{{ sku.case_upc.upc_number }}</td>
+    <td>{{ sku.unit_upc.upc_number }}</td>
+    <td>{{ sku.unit_size }}</td>
+    <td>{{ sku.count }}</td>
+    <td>{{ sku.product_line.name }}</td>
+</tr>
+{% empty %}
+    <div class="alert alert-danger">
+    No results were found. Please modify your search parameters and try again.
+    </div>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</div>
+</form>
+</div>
+{% endblock %}
+
+{% block scriptend %}
+<script>
+$(function() {
+    var removeButton = $("#removeButton");
+    var skuCheckboxes = $(".sku-checkbox").toArray();
+    skuCheckboxes.forEach(function (cb) {
+        cb.onchange = function(ev) {
+            removeButton.prop("disabled", !skuCheckboxes.some(function(elem) {
+                return elem.checked;
+            }));
+        }
+    });
+
+    $("#selectAll").on("change", function(ev) {
+        let value = $(this).prop("checked");
+        skuCheckboxes.forEach(function(cb) {
+            cb.checked = value;
+        });
+    });
+
+    removeButton.on("click", function(ev) {
+        var toRemove = [];
+        skuCheckboxes.forEach(function(cb) {
+            if (cb.checked) {
+                toRemove.push(cb.id);
+            }
+        });
+        if (confirm(`Are you sure you want to remove ${toRemove.length} SKU(s)? `+
+            `This cannot be undone.`)) {
+            $.post("{% url 'remove_skus' %}",
+                {"toRemove": toRemove},
+                function(data, status) {
+                    console.log(status);
+                    if (status !== "200") {
+                        alert(`[Status=${status}] Error removing ${toRemove.length} SKU(s): ` +
+                        ("error" in data) ? data.error : "" + "\n" +
+                            `Please refresh the page and try again later.`);
+                    }
+                });
+        }
+    });
+});
+</script>
+{% endblock %}
