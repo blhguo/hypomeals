@@ -2,6 +2,7 @@ import jsonpickle
 from django import forms
 from django.core.exceptions import FieldDoesNotExist
 from django.core.paginator import Paginator
+from django.db.models import Q
 
 from meals.exceptions import QueryException
 from meals.models import Sku, Ingredient, ProductLine
@@ -25,12 +26,12 @@ class SkuFilterForm(forms.Form):
     ingredients = forms.MultipleChoiceField(
         required=False,
         choices=get_ingredient_choices,
-        # widget=forms.SelectMultiple(attrs={"style": "display: none"}),
+        widget=forms.SelectMultiple(attrs={"style": "display: none"}),
     )
     product_lines = forms.MultipleChoiceField(
         required=False,
         choices=get_product_line_choices,
-        # widget=forms.SelectMultiple(attrs={"style": "display: none"}),
+        widget=forms.SelectMultiple(attrs={"style": "display: none"}),
     )
 
     def __init__(self, *args, **kwargs):
@@ -43,14 +44,14 @@ class SkuFilterForm(forms.Form):
         params = self.cleaned_data
         num_per_page = params.get("num_per_page", 50)
         sort_by = params.get("sort_by", "")
-        query_params = {}
+        query_filter = Q()
         if params["keyword"]:
-            query_params["name__icontains"] = params["keyword"]
-        if "ingredients" in params:
-            query_params["ingredients__in"] = params["ingredients"]
-        if "product_lines" in params:
-            query_params["product_line__name__in"] = params["product_lines"]
-        query = Sku.objects.filter(**query_params)
+            query_filter |= Q(name__icontains=params["keyword"])
+        if params["ingredients"]:
+            query_filter |= Q(ingredients__in=params["ingredients"])
+        if params["product_lines"]:
+            query_filter |= Q(product_line__name__in=params["product_lines"])
+        query = Sku.objects.filter(query_filter)
         if sort_by:
             query.order_by(sort_by)
-        return Paginator(query.all(), num_per_page)
+        return Paginator(query.distinct(), num_per_page)

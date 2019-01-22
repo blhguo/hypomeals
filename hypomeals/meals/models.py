@@ -109,34 +109,6 @@ class Sku(models.Model):
             ("product_line", "Product Line"),
         ]
 
-    @classmethod
-    def query_from_request(cls, request):
-        params = request.POST
-        page = int(params.get("page", "1")) - 1
-        if page < 0:
-            page = 0
-        num_per_page = params.get("num_per_page", 50)
-        sort_by = params.get("sort_by", "")
-        filter_by = jsonpickle.loads(params.get("filter_by", "{}"))
-        query_params = {}
-        if "keyword" in filter_by:
-            query_params["name__icontains"] = filter_by["keyword"]
-        if "ingredients" in filter_by:
-            query_params["ingredients__in"] = filter_by["ingredients"]
-        if "product_lines" in filter_by:
-            query_params["product_line__name__in"] = filter_by["product_lines"]
-        query = Sku.objects.filter(**query_params)
-        if sort_by:
-            try:
-                cls._meta.get_field(sort_by)
-            except FieldDoesNotExist as e:
-                raise QueryException(
-                    msg=f"Cannot sort by {sort_by}: field does not exist.", ex=e
-                )
-            else:
-                query.order_by(sort_by)
-        return query.all()[num_per_page * page: num_per_page * (page + 1)]
-
 
 class SkuIngredient(models.Model):
 

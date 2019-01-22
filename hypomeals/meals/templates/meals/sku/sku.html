@@ -85,16 +85,19 @@
     {{ form.sort_by }}
 </div>
 <div class="form-group">
-    <label for="{{ form.ingredients.id_for_label }}">Contains ingredients:</label>
+    <label for="{{ form.ingredients.id_for_label }}">Contains ingredient(s):</label>
     <input type="text" class="form-control" id="ingredientInput" placeholder="Start typing...">
     {{ form.ingredients }}
 </div>
 <div class="form-group">
-    <label for="{{ form.product_lines.id_for_label }}">Belongs to product line:</label>
+    <label for="{{ form.product_lines.id_for_label }}">Belongs to product line(s):</label>
     <input type="text" class="form-control" id="productLineInput" placeholder="Start typing...">
     {{ form.product_lines }}
 </div>
-<input type="submit" class="btn btn-success" value="Filter">
+<div class="btn-group w-100" role="group">
+<input type="submit" class="btn btn-success w-100" value="Filter">
+<a href="#" id="resetAllButton" class="btn btn-danger w-100">Reset</a>
+</div>
 </div>
 <div class="col-sm-10">
 <table class="table">
@@ -176,6 +179,127 @@ $(function() {
                 });
         }
     });
+
+    /************** Autocomplete for Ingredients and Product Lines **************/
+    // Adapted from https://jqueryui.com/autocomplete/#multiple-remote
+
+    function split(val) {
+        return val.split(/,\s*/);
+    }
+
+    function lastTerm(val) {
+        return split(val).pop();
+    }
+
+    function selectCheckbox(selected, options) {
+        options.forEach(function(option) {
+            option.selected = selected.indexOf(option.text) !== -1;
+        })
+    }
+
+    function selectIngredients(selected) {
+        return selectCheckbox(
+            selected,
+            $("select[id={{ form.ingredients.id_for_label }}] option").toArray());
+    }
+
+    function selectProductLines(selected) {
+        return selectCheckbox(
+            selected,
+            $("select[id={{ form.product_lines.id_for_label }}] option").toArray());
+    }
+
+    function injectCallback(callback) {
+        return function(event, ui) {
+            let currentTerms = split(this.value);
+            currentTerms.pop();  // Get rid of the half-typed term
+            currentTerms.push(ui.item.value);
+            currentTerms.push("");
+            this.value = currentTerms.join(", ");
+            callback(currentTerms);
+            return false;
+        }
+    }
+
+    // Generate an initial list of ingredients and put in the box
+    let initialIngredients = [];
+    $("select[id={{ form.ingredients.id_for_label }}] option:selected")
+        .each(function (i, option) {
+            initialIngredients.push(option.text);
+        });
+    initialIngredients.push("");
+
+    // Do the same for product lines
+    let initialProductLines = [];
+    $("select[id={{ form.product_lines.id_for_label }}] option:selected")
+        .each(function(i, option) {
+            initialProductLines.push(option.text);
+        });
+    initialProductLines.push("");
+
+    $("#ingredientInput")
+        .on("keydown", function(ev) {
+            if (ev.keyCode === $.ui.keyCode.TAB
+                && $(this).autocomplete("instance").menu.active) {
+                ev.preventDefault();
+            }
+        })
+        .on("keyup", function(ev) {
+            let currentTerms = split(this.value);
+            selectIngredients(currentTerms);
+        })
+        .autocomplete({
+            source: function(request, response) {
+                $.getJSON("{% url 'autocomplete_ingredients' %}", {
+                    term: lastTerm(request.term)
+                }, response)
+            },
+            search: function() {
+                let term = lastTerm(this.value);
+                // Only perform a search when user has typed more than 2 chars
+                if (term.length < 2) {
+                    return false;
+                }
+            },
+            focus: function() {
+                return false;
+            },
+            select: injectCallback(selectIngredients),
+        }).val(initialIngredients.join(", "));
+
+    $("#productLineInput")
+        .on("keydown", function(ev) {
+            if (ev.keyCode === $.ui.keyCode.TAB
+                && $(this).autocomplete("instance").menu.active) {
+                ev.preventDefault();
+            }
+        })
+        .on("keyup", function(ev) {
+            let currentTerms = split(this.value);
+            selectProductLines(currentTerms);
+        })
+        .autocomplete({
+            source: function(request, response) {
+                $.getJSON("{% url 'autocomplete_product_lines' %}", {
+                    term: lastTerm(request.term)
+                }, response)
+            },
+            search: function() {
+                let term = lastTerm(this.value);
+                // Only perform a search when user has typed more than 2 chars
+                if (term.length < 2) {
+                    return false;
+                }
+            },
+            focus: function() {
+                return false;
+            },
+            select: injectCallback(selectProductLines),
+        }).val(initialProductLines.join(", "));
+
+    $("#resetAllButton").click(function(ev) {
+        window.location.href = "{% url 'sku' %}"
+    })
 });
 </script>
 {% endblock %}
