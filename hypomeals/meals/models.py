@@ -17,6 +17,9 @@ class Upc(models.Model):
 
     __repr__ = __str__
 
+    class Meta:
+        ordering = ["pk"]
+
 
 class ProductLine(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -26,6 +29,9 @@ class ProductLine(models.Model):
 
     __repr__ = __str__
 
+    class Meta:
+        ordering = ["pk"]
+
 
 class Vendor(models.Model):
     info = models.CharField(max_length=200)
@@ -34,6 +40,9 @@ class Vendor(models.Model):
         return f"Vendor #{self.pk}"
 
     __repr__ = __str__
+
+    class Meta:
+        ordering = ["pk"]
 
 
 class Ingredient(models.Model):
@@ -48,6 +57,9 @@ class Ingredient(models.Model):
         return self.name
 
     __repr__ = __str__
+
+    class Meta:
+        ordering = ["number"]
 
 
 class Sku(models.Model):
@@ -71,6 +83,9 @@ class Sku(models.Model):
         return f"{self.name}: {self.unit_size} * {self.count}"
 
     __repr__ = __str__
+
+    class Meta:
+        ordering = ["number"]
 
 
 class SkuIngredient(models.Model):
