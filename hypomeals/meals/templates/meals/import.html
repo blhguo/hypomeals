@@ -5,7 +5,7 @@
     }
 </style>
 <script>
-    function ShowHelp(id) {
+    function showHelp(id) {
         var x = document.getElementById(id);
         if (x.style.display === "none") {
             x.style.display = "block";
@@ -28,16 +28,16 @@
         <div class="jumbotron">
             <h3>Import your files below</h3>
             <hr>
-            <div class="btn-group d-flex" role="group">
-                <button onclick="ShowHelp('SKU')">Example SKU Layout</button>
-                <button onclick="ShowHelp('Ingredients')">Example Ingredients Layout</button>
-                <button onclick="ShowHelp('Product Lines')">Example Product Lines Layout</button>
-                <button onclick="ShowHelp('Sku/Ingred')">Example Quantities Layout</button>
+            <div class="mw-100 btn-group" role="group">
+                <button class="w-100" onclick="showHelp('SKU')">Example SKU Layout</button>
+                <button class="w-100" onclick="showHelp('Ingredients')">Example Ingredients Layout</button>
+                <button class="w-100" onclick="showHelp('Product Lines')">Example Product Lines Layout</button>
+                <button class="w-100"onclick="showHelp('Formula')">Example Formula Layout</button>
 
             </div>
             <div id="SKU" style="display:none">
                 <h5>SKU File Formatting</h5>
-                <table style="width:100%">
+                <table class="w-100">
                     <tr>
                         <th>Number</th>
                         <th>Name</th>
@@ -83,7 +83,7 @@
             </div>
             <div id="Ingredients" style="display:none">
                 <h5>Ingredients File Formatting</h5>
-                <table>
+                <table class="w-100">
                     <tr>
                         <th>Number</th>
                         <th>Name</th>
@@ -121,7 +121,7 @@
             </div>
             <div id="Product Lines" style="display:none">
                 <h5>Product Lines File Formatting</h5>
-                <table>
+                <table class="w-100">
                     <tr>
                         <th>Names</th>
                     </tr>
@@ -137,9 +137,9 @@
                 </table>
                 <hr>
             </div>
-            <div id="Sku/Ingred" style="display:none">
-                <h5>Quantities File Formatting</h5>
-                <table>
+            <div id="Formula" style="display:none">
+                <h5>Formula File Formatting</h5>
+                <table class="w-100">
                     <tr>
                         <th>SKU Number</th>
                         <th>Ingredient Number</th>
