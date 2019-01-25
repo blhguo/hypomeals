@@ -23,7 +23,7 @@ def import_page(request):
         return render(request, template, {'form':form})
     form = ImportFileForm()
     csv_file = request.FILES
-    process_files(request, csv_file)
+    process_files(csv_file)
     return render(request, 'meals/index.html', {'form':form})
 
     '''

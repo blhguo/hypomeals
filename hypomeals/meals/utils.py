@@ -2,220 +2,330 @@ from django.contrib import messages
 import io
 import csv
 from .models import *
+import re
 
 
 # from django.shortcuts import render
-
-
-def process_files(request, csv_file):
+def process_files(csv_files):
     """
-    :param request: REQUEST object to respond with errors if necessary (error messages currently non-functional)
-    :param csv_file: FILES uploaded by the user (should be a dictionary of form-attributes:file)
+    :param csv_files: FILES uploaded by the user (should be a dictionary of form-attributes:file)
     :return: None
-    This function calls a helper function called "process_upload", who's function is described below.
-    This function then called check_ref_integ() to ensure that all relationships exist in the database or in another file
+    This function calls a helper function called "process_(type)", who's function is described below.
+    This function then called check_(type)_integrity() to ensure that all relationships exist in the database or in another file
     """
-    keys = [
-        "skus",
-        "ingr",
-        "prod",
-        "sku_",
-    ]  # TODO sku=sku, ingr=ingredients, prod=product line, sku_=Formula
-    #TODO I'll change this to be more readable once the import format is set in stone
-    sku_map = {}
-    ing_map = {}
-    prln_map = {}
-    qnt_map = {}
-    in_map = {
-        "skus": sku_map,
-        "ingr": ing_map,
-        "prod": prln_map,
-        "sku_": qnt_map,
-    }
-    for upload in csv_file.values():
-        process_upload(request, upload, in_map)
-    for key in keys:
-        if not check_referential_integrity(key, in_map):
-            # TODO: No actual handling here
-            messages.error(
-                request,
-                "ERROR HAS OCCURRED, REFERENTIAL INTEGRITY LOST",
-            )
+    skus_map = {}
+    ingredients_map = {}
+    product_line_map = {}
+    formula_map = {}
+
+    for upload in csv_files.values():
+        if re.match(r"skus(\S)*\.csv", upload.name):
+            skus_map = process_skus(upload)
+        elif re.match(r"ingredients(\S)*\.csv", upload.name):
+            ingredients_map = process_ingredients(upload)
+        elif re.match(r"product_lines(\S)*\.csv", upload.name):
+            product_line_map = process_product_lines(upload)
+        elif re.match(r"formula(\S)*\.csv", upload.name):
+            formula_map = process_formula(upload)
+        else:
+            print("DOES NOT MATCH")
+    if (
+        check_sku_integrity(skus_map, product_line_map)
+        and check_ingredients_integrity(ingredients_map)
+        and check_product_line_integrity(product_line_map)
+        and check_formula_integrity(
+            formula_map, skus_map, ingredients_map
+        )
+    ):
+        print("Referential Integrity Preserved")
+    else:
+        print("Referential Integrity Broken")
 
 
-def process_upload(request, upload, in_map):
+def process_skus(upload):
     """
-    :param request: REQUEST object to respond with errors if necessary (error messages currently non-functional)
-    :param upload: One specific FILE uploaded by the user
-    :param in_map: Map of Maps. in_map is a String:d_map, and d_map is a map of some identifier (string or number) to DB objects
-    :return: None
-    This function parses a single CSV file and adds it to the DB.
-    It also adds each object (specified by a row in the CSV) to a map for later use to check referential integrity
+    :param upload: The file to be processed, expected to be a csv of SKUs
+    :return: A map representing the SKUs created
     """
-    if not upload.name.endswith(".csv"):
-        messages.error(request, "Incorrect file extension")
-    datatype = upload.name[0:4]
-    data_set = upload.read().decode("UTF-8")
-    io_string = io.StringIO(data_set)
-    next(io_string)
-    if datatype == "skus":
-        for column in csv.reader(
-            io_string, delimiter=",", quotechar="|" #TODO: Quotechar might be different, could be '"'
-        ):
-            case_upc, case_created = Upc.objects.get_or_create(
-                upc_number=column[2]
-            )
-            unit_upc, unit_created = Upc.objects.get_or_create(
-                upc_number=column[3]
-            )
-            product_line, product_line_created = ProductLine.objects.get_or_create(
-                name=column[6]
-            )
-            created, created_bool = Sku.objects.get_or_create(
-                number=column[0],
-                name=column[1],
-                case_upc=case_upc,
-                unit_upc=unit_upc,
-                unit_size=column[4],
-                count=column[5],
-                product_line=product_line,
-                comment=column[6],
-            )
-            if not check_duplicates(created, datatype, in_map):
-                created.save()
-    if datatype == "ingr":
-        for column in csv.reader(
-            io_string, delimiter=",", quotechar="|"
-        ):
-            vendor, vendor_created = Vendor.objects.get_or_create(
-                info=column[2]
-            )
-            created, created_bool = Ingredient.objects.get_or_create(
-                number=column[0],
-                name=column[1],
-                vendor=vendor,
-                size=column[3],
-                cost=column[4],
-                comment=column[5],
-            )
-            if not check_duplicates(created, datatype, in_map):
-                created.save()
-    if datatype == "prod":
-        for column in csv.reader(
-            io_string, delimiter=",", quotechar="|"
-        ):
-            created, created_bool = ProductLine.objects.get_or_create(
-                name=column[0]
-            )
-            if not check_duplicates(created, datatype, in_map):
-                created.save()
-    if datatype == "sku_":
-        for column in csv.reader(
-            io_string, delimiter=",", quotechar="|"
-        ):
-            sku_num = Sku.objects.get(number=column[0])
-            ing_num = Ingredient.objects.get(
-                number=column[1]
-            )
-            created, created_bool = SkuIngredient.objects.get_or_create(
-                sku_number=sku_num,
-                ingredient_number=ing_num,
-                quantity=column[2],
-            )
-            if not check_duplicates(created, datatype, in_map):
-                created.save()
+    temp = upload.read().decode("UTF-8").splitlines()
+    reader = csv.DictReader(temp)
+    skus_map = {}
+    for row in reader:
+        print(row['Case UPC'])
+        case_upc, case_created = Upc.objects.get_or_create(
+            upc_number=row["Case UPC"]
+        )
+        unit_upc, unit_created = Upc.objects.get_or_create(
+            upc_number=row["Unit UPC"]
+        )
+        product_line, product_line_created = ProductLine.objects.get_or_create(
+            name=row["Product Line Name"]
+        )
+        created, created_bool = Sku.objects.get_or_create(
+            number=row["SKU#"],
+            name=row["Name"],
+            case_upc=case_upc,
+            unit_upc=unit_upc,
+            unit_size=row["Unit size"],
+            count=row["Count per case"],
+            product_line=product_line,
+            comment=row["Comment"],
+        )
+        if check_sku_duplicates(created, skus_map):
+            print("saving")
+            created.save()
+        else:
+            print("Error here")
+            # TODO raise DuplicateException(row)
+    return skus_map
 
 
-def check_duplicates(table_entry, datatype, in_map):
+def check_sku_duplicates(table_entry, skus_map):
     """
-    :param table_entry: One DB object, could be a Sku, Ingredient, Product Line, or Formula
-    :param datatype: Specifies if the interpretation should be for Sku, Ingredient, Product Line, or Formula
-    :param in_map: Same in_map as before, this function adds things to the in_map for later use
-    :return Boolean: representing whether a duplicate exists or not. If duplicate exists, then returns True
+    :param table_entry: The datastructure being checked for duplicates in the database
+    :param skus_map: The map to which the datastructure will be saved
+    :return: boolean representing if a duplicate exists
     """
-    d_map = in_map[datatype]
     ret = True
-    if datatype == "skus":
-        if not Sku.objects.filter(
-            number=table_entry.number,
-            name=table_entry.name,
-            case_upc=table_entry.case_upc,
-            unit_upc=table_entry.unit_upc,
-            count=table_entry.count,
-            product_line=table_entry.product_line,
-        ).exists():
-            # TODO: Not sure if these should be .number (helpful for Quantiy checking)
-            #  TODO: or .name (helpful for product-line matching)
-            d_map[table_entry.number] = table_entry
-            ret = False
-    if datatype == "ingr":
-        if not Ingredient.objects.filter(
-            number=table_entry.number,
-            name=table_entry.name,
-            vendor=table_entry.vendor,
-            size=table_entry.size,
-            cost=table_entry.cost,
-        ).exists():
-            d_map[table_entry.number] = table_entry
-            ret = False
-    if datatype == "prod":
-        if not ProductLine.objects.filter(
-            name=table_entry.name
-        ).exists():
-            d_map[table_entry.name] = table_entry
-            ret = False
-    if datatype == "sku_":
-        if not SkuIngredient.objects.filter(
-            sku_number=table_entry.sku_number,
-            ingredient_number=table_entry.ingredient_number,
-            quantity=table_entry.quantity,
-        ).exists():
-            # TODO: This defintiely seems rough and should be reviewed (probably wont have key conflicts but its not really a natural way to create the map
-            d_map[len(d_map.keys())] = table_entry
+    if Sku.objects.filter(
+        number=table_entry.number,
+        name=table_entry.name,
+        case_upc=table_entry.case_upc,
+        unit_upc=table_entry.unit_upc,
+        count=table_entry.count,
+        product_line=table_entry.product_line,
+    ).exists():
+        ret = False
+    else:
+        skus_map[table_entry.number] = table_entry
+    return ret
+
+
+def process_ingredients(upload):
+    """
+    :param upload: File to be processed, expected to be a csv of ingredients
+    :return: A map representing the ingredients created
+    """
+    reader = csv.DictReader(upload)
+    ingredients_map = {}
+    for row in reader:
+        vendor, vendor_created = Vendor.objects.get_or_create(
+            info=row["Vendor Info"]
+        )
+        created, created_bool = Ingredient.objects.get_or_create(
+            number=row["Ingr#"],
+            name=row["Name"],
+            vendor=vendor,
+            size=row["Size"],
+            cost=row["Cost"],
+            comment=row["Comment"],
+        )
+        if check_ingredient_duplicates(
+            created, ingredients_map
+        ):
+            created.save()
+        else:
+            print("Error here")
+            # TODO raise DuplicateException(row)
+    return ingredients_map
+
+
+def check_ingredient_duplicates(
+    table_entry, ingredients_map
+):
+    """
+    :param table_entry: The datastructure being checked for duplicates in the database
+    :param ingredients_map: The map to which the datastructure will be saved
+    :return: boolean representing if a duplicate exists
+    """
+    ret = True
+    if Ingredient.objects.filter(
+        number=table_entry.number,
+        name=table_entry.name,
+        vendor=table_entry.vendor,
+        size=table_entry.size,
+        cost=table_entry.cost,
+        comment=table_entry.comment,
+    ).exists():
+        ret = False
+    else:
+        ingredients_map[table_entry.number] = table_entry
+    return ret
+
+
+def process_product_lines(upload):
+    """
+    :param upload: File to be processed, expected to be a csv of Product lines
+    :return: A map representing the Product Lines created
+    """
+    reader = csv.DictReader(upload)
+    product_lines_map = {}
+    for row in reader:
+        created, created_bool = ProductLine.objects.get_or_create(
+            name=row["Name"]
+        )
+        if check_product_line_duplicates(
+            created, product_lines_map
+        ):
+            created.save()
+        else:
+            print("Error here")
+            # TODO raise DuplicateException(row)
+    return product_lines_map
+
+
+def check_product_line_duplicates(
+    table_entry, product_lines_map
+):
+    """
+    :param table_entry: The datastructure being checked for duplicates in the database
+    :param product_lines_map: The map to which the datastructure will be saved
+    :return: boolean representing if a duplicate exists
+    """
+    ret = True
+    if ProductLine.objects.filter(
+        name=table_entry.name
+    ).exists():
+        ret = False
+    else:
+        product_lines_map[table_entry.number] = table_entry
+    return ret
+
+
+def process_formula(upload):
+    """
+    :param upload: File to be processed, expected to be a csv of formulas
+    :return: A map representing the formulas created
+    """
+    reader = csv.DictReader(upload)
+    formula_map = {}
+    for row in reader:
+        sku_num = Sku.objects.get(number=row["SKU#"])
+        ing_num = Ingredient.objects.get(
+            number=row["Ingr#"]
+        )
+        created, created_bool = SkuIngredient.objects.get_or_create(
+            sku_number=sku_num,
+            ingredient_number=ing_num,
+            quantity=row["Quantity"],
+        )
+        if check_formula_duplicates(created, formula_map):
+            created.save()
+        else:
+            print("Error here")
+            # TODO raise DuplicateException(row)
+    return formula_map
+
+
+def check_formula_duplicates(table_entry, formula_map):
+    """
+    :param table_entry: The datastructure being checked for duplicates in the database
+    :param formula_map: The map to which the datastructure will be saved
+    :return: boolean representing if a duplicate exists
+    """
+    ret = True
+    # TODO: Update models to be formula
+    if not SkuIngredient.objects.filter(
+        sku_number=table_entry.sku_number,
+        ingredient_number=table_entry.ingredient_number,
+        quantity=table_entry.quantity,
+    ).exists():
+        ret = False
+    else:
+        formula_map[table_entry.__str__()] = table_entry
+    return ret
+
+
+def check_sku_integrity(input_map, input_map_2):
+    """
+
+    :param input_map: Sku_map
+    :param input_map_2: Product_line_map
+    :return: Boolean representing whether an unfulfilled relationship exists
+    """
+    ret = True
+    for index, t_model in input_map.items():
+        if not (
+            Upc.objects.filter(
+                upc_number=t_model.case_upc.upc_number
+            ).exists()
+            and Upc.objects.filter(
+                upc_number=t_model.unit_upc.upc_number
+            ).exists()
+            and (
+                ProductLine.objects.filter(
+                    name=t_model.product_line.name
+                ).exists()
+                or (
+                    t_model.product_line.name
+                    in input_map_2.keys()
+                )
+            )
+        ):
+            # TODO: store in bad referential data area
             ret = False
     return ret
 
 
-def check_referential_integrity(datatype, in_map):
+def check_ingredients_integrity(input_map):
     """
-    :param datatype: String representing what interpretation it should use (Sku, Ingredient, Product Line, or Formula
-    :param in_map: Same in_map as before, any relationships in the imported files must exist in either the DB or these maps
-    :return: Boolean that is True (if no referential integrity errors occur) and False otherwise
+
+    :param input_map: Ingredients_map
+    :return: Boolean representing whether an unfulfilled relationship exists
     """
     ret = True
-    d_map = in_map[datatype]
-    for key, t_model in d_map.items():
-        if datatype == "skus":
-            if not (
-                Upc.objects.filter(
-                    upc_number=t_model.case_upc
-                ).exists()
-                and Upc.objects.filter(
-                    upc_number=t_model.unit_upc
-                ).exists()
-                and ProductLine.objects.filter(
-                    name=t_model.product_line
-                ).exists()
-            ):
-                # TODO: store in bad referential data area
-                ret = False
-        if datatype == "ingr":
-            if not (
-                Vendor.objects.filter(
-                    info=t_model.vendor
-                ).exists()
-            ):
-                # TODO: store in bad referential data structure
-                ret = False
-        if datatype == "sku_":
-            if not (
+    for index, t_model in input_map.items():
+        if not (
+            Vendor.objects.filter(
+                info=t_model.vendor.info
+            ).exists()
+        ):
+            # TODO: store in bad referential data area
+            ret = False
+    return ret
+
+
+def check_product_line_integrity(input_map):
+    """
+
+    :param input_map: Product_line_map, added in case later erferential integrity checks need to be done
+    :return: True for now
+    """
+    return True
+
+
+def check_formula_integrity(
+    input_map, input_map_2, input_map_3
+):
+    """
+
+    :param input_map: formula_map
+    :param input_map_2: Sku_map
+    :param input_map_3: Ingredient_map
+    :return: Boolean representing if an unfulfilled relationship exists
+    """
+    ret = True
+    for index, t_model in input_map.items():
+        if not (
+            (
                 Sku.objects.filter(
-                    number=t_model.sku_number
+                    number=t_model.sku_number.number
                 ).exists()
-                and Ingredient.objects.filter(
-                    number=t_model.ingredient_number
+                or (
+                    t_model.sku_number.number
+                    in input_map_2.keys()
+                )
+            )
+            and (
+                Ingredient.objects.filter(
+                    number=t_model.ingredient_number.number
                 ).exists()
-            ):
-                # TODO: store in bad refrential data structure
-                ret = False
+                or (
+                    t_model.ingredient_number.number
+                    in input_map_3.keys()
+                )
+            )
+        ):
+            # TODO: store in bad refrential data structure
+            ret = False
     return ret
