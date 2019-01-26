@@ -69,18 +69,32 @@ class Ingredient(models.Model):
 class Sku(models.Model):
     name = models.CharField(max_length=32, blank=False, unique=True)
     number = models.IntegerField(
-        blank=False, verbose_name="SKU Number", unique=True, primary_key=True
+        blank=False, verbose_name="SKU#", unique=True, primary_key=True
     )
     case_upc = models.ForeignKey(
-        Upc, blank=False, on_delete=models.CASCADE, related_name="+"
+        Upc,
+        verbose_name="Case UPC#",
+        blank=False,
+        on_delete=models.CASCADE,
+        related_name="+",
     )
     unit_upc = models.ForeignKey(
-        Upc, blank=False, on_delete=models.CASCADE, related_name="+"
+        Upc,
+        verbose_name="Unit UPC#",
+        blank=False,
+        on_delete=models.CASCADE,
+        related_name="+",
     )
     unit_size = models.CharField(max_length=100, blank=False)
-    count = models.IntegerField(blank=False)
-    product_line = models.ForeignKey(ProductLine, blank=False, on_delete=models.CASCADE)
-    ingredients = models.ManyToManyField(Ingredient, through="SkuIngredient")
+    count = models.IntegerField(
+        verbose_name="Count per case", blank=False, help_text="Number of units per case"
+    )
+    product_line = models.ForeignKey(
+        ProductLine, verbose_name="Product Line", blank=False, on_delete=models.CASCADE
+    )
+    ingredients = models.ManyToManyField(
+        Ingredient, verbose_name="Ingredients", through="SkuIngredient"
+    )
     comment = models.CharField(max_length=200, blank=True)
 
     def __str__(self):

@@ -1,6 +1,5 @@
-from django.conf.urls import url
-from django.urls import path
 from django.contrib.auth import views as auth_views
+from django.urls import path
 
 from . import views
 
@@ -10,7 +9,8 @@ urlpatterns = [
     # SKU views
     path("sku", views.sku, name="sku"),
     path("remove-skus", views.remove_skus, name="remove_skus"),
-    path("query-skus", views.query_skus, name="query_skus"),
+    path("add-sku", views.add_sku, name="add_sku"),
+    path("edit-sku/<int:sku_number>", views.edit_sku, name="edit_sku"),
     path(
         "ac-ingredients",
         views.autocomplete_ingredients,

@@ -1,17 +1,17 @@
 import operator
 
+import jsonpickle
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db import transaction, DatabaseError
 from django.http import JsonResponse
-from django.shortcuts import render, get_list_or_404, redirect
-
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from meals import utils
-from meals.forms import SkuFilterForm
-from meals.models import User, Sku, Ingredient, ProductLine
+from meals.forms import SkuFilterForm, EditSkuForm
+from meals.models import Sku, Ingredient, ProductLine
 
 
 def index(request):
@@ -50,6 +50,40 @@ def sku(request):
 
 
 @login_required
+def edit_sku(request, sku_number):
+    instance = get_object_or_404(Sku, number=sku_number)
+    if request.method == "POST":
+        form = EditSkuForm(request.POST, instance=instance)
+        if form.is_valid():
+            form.save()
+            return redirect("sku")
+    else:
+        form = EditSkuForm(instance=instance)
+    return render(
+        request,
+        template_name="meals/sku/edit.html",
+        context={
+            "form": form,
+            "sku_number": sku_number,
+            "sku_name": str(instance),
+            "editing": True,
+        },
+    )
+
+
+@login_required
+def add_sku(request):
+    if request.method == "POST":
+        form = EditSkuForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("sku")
+    else:
+        form = EditSkuForm()
+    return render(request, template_name="meals/sku/edit.html", context={"form": form})
+
+
+@login_required
 def autocomplete_ingredients(request):
     term = request.GET.get("term", "")
     ingredients = list(
@@ -59,6 +93,7 @@ def autocomplete_ingredients(request):
         )
     )
     return JsonResponse(ingredients, safe=False)
+
 
 @login_required
 def autocomplete_product_lines(request):
@@ -75,16 +110,11 @@ def autocomplete_product_lines(request):
 @login_required
 @csrf_exempt
 @require_POST
-@utils.exception_to_error
-def query_skus(request):
-    page_num = request.GET.get("page", 1)
-    pages = Sku.query_from_request(request)
-    return JsonResponse(pages.get_page(page_num), safe=False)
-
-
-@login_required
-@csrf_exempt
-@require_POST
 def remove_skus(request):
-    print(request.POST.keys())
-    return JsonResponse({"error": None, "resp": "Removed"})
+    to_remove = jsonpickle.loads(request.POST.get("to_remove", "[]"))
+    try:
+        with transaction.atomic():
+            num_deleted, _ = Sku.objects.filter(pk__in=to_remove).delete()
+            return JsonResponse({"error": None, "resp": f"Removed {num_deleted} SKUs"})
+    except DatabaseError as e:
+        return JsonResponse({"error": str(e), "resp": "Not removed"})
