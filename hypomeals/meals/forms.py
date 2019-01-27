@@ -71,8 +71,8 @@ class UpcField(forms.CharField):
     max_length = 12
     min_length = 12
 
-    def clean(self, *args, **kwargs):
-        value = str(super().clean(*args, **kwargs))
+    def clean(self, value):
+        value = str(super().clean(value))
         # add 0 if number is less than 12 digits
         value = "0" * (12 - len(value)) + value
         if utils.is_valid_upc(value):
