@@ -46,10 +46,10 @@ def make_token_with_timestamp(*args: string_types) -> string_types:
     key_salt = "EVENT_CALENDAR_TOKEN_GENERATOR"
     secret = settings.SECRET_KEY
 
-    hash = salted_hmac(
+    hash_value = salted_hmac(
         key_salt, _make_hash_value(timestamp, *args), secret=secret
     ).hexdigest()[::2]
-    return "%s-%s" % (ts_b36, hash)
+    return "%s-%s" % (ts_b36, hash_value)
 
 
 @deconstructible

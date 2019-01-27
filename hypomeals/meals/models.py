@@ -1,11 +1,5 @@
-from django.core.exceptions import FieldDoesNotExist
-from django.core.paginator import Paginator
-from django.db import models
 from django.contrib.auth.models import AbstractUser
-
-import jsonpickle
-
-from meals.exceptions import QueryException
+from django.db import models
 
 
 class User(AbstractUser):

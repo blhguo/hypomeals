@@ -1,6 +1,6 @@
 class QueryException(Exception):
 
-    def __init__(self, msg="A query exception has occurred", ex=None, code=None, *args):
+    def __init__(self, *args, msg="A query exception has occurred", ex=None, code=None):
         """
         Initializes a new `QueryException` instance with the parameters
         :param msg: a message to include in the exception. Generally user-visible.
