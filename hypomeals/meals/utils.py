@@ -12,16 +12,18 @@ from django.utils.deconstruct import deconstructible
 from django.utils.http import int_to_base36
 from six import string_types
 
-from .models import *
+from .models import Sku, SkuIngredient, Upc, ProductLine, Ingredient, Vendor
 
 
 # from django.shortcuts import render
 def process_files(csv_files):
     """
-    :param csv_files: FILES uploaded by the user (should be a dictionary of form-attributes:file)
+    :param csv_files: FILES uploaded by the user
+    (should be a dictionary of form-attributes:file)
     :return: None
-    This function calls a helper function called "process_(type)", who's function is described below.
-    This function then called check_(type)_integrity() to ensure that all relationships exist in the database or in another file
+    This function calls a helper function called "process_(type)"
+    This function then called check_(type)_integrity() to ensure
+    that all relationships exist in thedatabase or in another file
     """
     skus_map = {}
     ingredients_map = {}
@@ -40,7 +42,7 @@ def process_files(csv_files):
     if not edited:
         ret = csv_files.values()
     for upload in ret:
-        head, tail = os.path.split(upload.name)
+        tail = os.path.split(upload.name)[1]
         if re.match(r"skus(\S)*\.csv", tail):
             skus_map = process_skus(upload)
         elif re.match(r"ingredients(\S)*\.csv", tail):
@@ -54,7 +56,7 @@ def process_files(csv_files):
     if (
         check_sku_integrity(skus_map, product_line_map)
         and check_ingredients_integrity(ingredients_map)
-        and check_product_line_integrity(product_line_map)
+        and check_product_line_integrity()
         and check_formula_integrity(
             formula_map, skus_map, ingredients_map
         )
@@ -74,16 +76,16 @@ def process_skus(upload):
     skus_map = {}
     for row in reader:
         print(row["Case UPC"])
-        case_upc, case_created = Upc.objects.get_or_create(
+        case_upc = Upc.objects.get_or_create(
             upc_number=row["Case UPC"]
-        )
-        unit_upc, unit_created = Upc.objects.get_or_create(
+        )[0]
+        unit_upc = Upc.objects.get_or_create(
             upc_number=row["Unit UPC"]
-        )
-        product_line, product_line_created = ProductLine.objects.get_or_create(
+        )[0]
+        product_line = ProductLine.objects.get_or_create(
             name=row["Product Line Name"]
-        )
-        created, created_bool = Sku.objects.get_or_create(
+        )[0]
+        created = Sku.objects.get_or_create(
             number=row["SKU#"],
             name=row["Name"],
             case_upc=case_upc,
@@ -92,7 +94,7 @@ def process_skus(upload):
             count=row["Count per case"],
             product_line=product_line,
             comment=row["Comment"],
-        )
+        )[0]
         if check_sku_duplicates(created, skus_map):
             print("saving")
             created.save()
@@ -132,17 +134,17 @@ def process_ingredients(upload):
     reader = csv.DictReader(temp)
     ingredients_map = {}
     for row in reader:
-        vendor, vendor_created = Vendor.objects.get_or_create(
+        vendor = Vendor.objects.get_or_create(
             info=row["Vendor Info"]
-        )
-        created, created_bool = Ingredient.objects.get_or_create(
+        )[0]
+        created = Ingredient.objects.get_or_create(
             number=row["Ingr#"],
             name=row["Name"],
             vendor=vendor,
             size=row["Size"],
             cost=row["Cost"],
             comment=row["Comment"],
-        )
+        )[0]
         if check_ingredient_duplicates(
             created, ingredients_map
         ):
@@ -185,9 +187,9 @@ def process_product_lines(upload):
     reader = csv.DictReader(temp)
     product_lines_map = {}
     for row in reader:
-        created, created_bool = ProductLine.objects.get_or_create(
+        created = ProductLine.objects.get_or_create(
             name=row["Name"]
-        )
+        )[0]
         if check_product_line_duplicates(
             created, product_lines_map
         ):
@@ -229,11 +231,11 @@ def process_formula(upload):
         ing_num = Ingredient.objects.get(
             number=row["Ingr#"]
         )
-        created, created_bool = SkuIngredient.objects.get_or_create(
+        created = SkuIngredient.objects.get_or_create(
             sku_number=sku_num,
             ingredient_number=ing_num,
             quantity=row["Quantity"],
-        )
+        )[0]
         if check_formula_duplicates(created, formula_map):
             created.save()
         else:
@@ -310,10 +312,10 @@ def check_ingredients_integrity(input_map):
     return ret
 
 
-def check_product_line_integrity(input_map):
+def check_product_line_integrity():
     """
 
-    :param input_map: Product_line_map, added in case later erferential integrity checks need to be done
+
     :return: True for now
     """
     return True
@@ -330,7 +332,7 @@ def check_formula_integrity(
     :return: Boolean representing if an unfulfilled relationship exists
     """
     ret = True
-    for index, t_model in input_map.items():
+    for t_model in input_map.values():
         if not (
             (
                 Sku.objects.filter(
