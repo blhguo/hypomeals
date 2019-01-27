@@ -96,7 +96,7 @@ def parameterized(decorator):
         decorated = functools.wraps(decorator)(
             functools.partial(decorator, *args, **kwargs)
         )
-        if len(args) > 0 and callable(args[0]):
+        if args and callable(args[0]):
             return decorated()
         return decorated
 
@@ -129,6 +129,6 @@ class BootstrapFormControlMixin:
     """
 
     @classmethod
-    def __init_subclass__(cls, **kwargs):
+    def __init_subclass__(cls, **_):
 
         cls.__init__ = inject_form_control(getattr(cls, "__init__"))
