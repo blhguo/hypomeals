@@ -8,26 +8,30 @@ from .utils import process_files
 
 # Create your views here.
 
+
 def index(request):
     return render(request, template_name="meals/index.html")
 
+
 @login_required
 def import_page(request):
-    template = "meals/import.html"
+    template = "meals/import/import.html"
 
     if request.method == "GET":
-        form1 = ImportFileForm()
-        form2 = ImportZipForm()
-        return render(request, template, {'form1':form1, 'form2':form2})
-    csv_file = request.FILES
-    #print(csv_file)
-    process_files(csv_file)
+        csv_file_form = ImportFileForm()
+        zip_file_form = ImportZipForm()
+        return render(
+            request, template, {"csv_form": csv_file_form, "zip_form": zip_file_form}
+        )
+    process_files(request.FILES)
     return redirect("import_landing")
+
 
 @login_required
 def import_landing(request):
-    response = render(request, template_name="meals/import_landing.html")
+    response = render(request, template_name="meals/import/import_landing.html")
     return response
+
 
 @login_required
 def logout_view(request):

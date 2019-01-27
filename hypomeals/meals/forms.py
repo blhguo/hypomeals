@@ -1,11 +1,15 @@
 from django import forms
 
-class ImportFileForm(forms.Form):
-    #title = forms.CharField(max_length=50)
-    Sku = forms.FileField(required=False)
-    Ingredients = forms.FileField(required=False)
-    Product_Lines = forms.FileField(required=False)
-    Quantities = forms.FileField(required=False)
+from meals.utils import BootstrapFormControlMixin
 
-class ImportZipForm(forms.Form):
-    Zip = forms.FileField(required=True)
+
+class ImportFileForm(forms.Form, BootstrapFormControlMixin):
+
+    sku = forms.FileField(required=False, label="SKU")
+    ingredients = forms.FileField(required=False, label="Ingredients")
+    product_lines = forms.FileField(required=False, label="Product Lines")
+    formulas = forms.FileField(required=False, label="Formulas")
+
+
+class ImportZipForm(forms.Form, BootstrapFormControlMixin):
+    zip = forms.FileField(required=True, label="ZIP File")

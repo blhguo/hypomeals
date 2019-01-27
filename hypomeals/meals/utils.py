@@ -57,9 +57,7 @@ def process_files(csv_files):
         check_sku_integrity(skus_map, product_line_map)
         and check_ingredients_integrity(ingredients_map)
         and check_product_line_integrity()
-        and check_formula_integrity(
-            formula_map, skus_map, ingredients_map
-        )
+        and check_formula_integrity(formula_map, skus_map, ingredients_map)
     ):
         print("Referential Integrity Preserved")
     else:
@@ -76,15 +74,11 @@ def process_skus(upload):
     skus_map = {}
     for row in reader:
         print(row["Case UPC"])
-        case_upc = Upc.objects.get_or_create(
-            upc_number=row["Case UPC"]
-        )[0]
-        unit_upc = Upc.objects.get_or_create(
-            upc_number=row["Unit UPC"]
-        )[0]
-        product_line = ProductLine.objects.get_or_create(
-            name=row["Product Line Name"]
-        )[0]
+        case_upc = Upc.objects.get_or_create(upc_number=row["Case UPC"])[0]
+        unit_upc = Upc.objects.get_or_create(upc_number=row["Unit UPC"])[0]
+        product_line = ProductLine.objects.get_or_create(name=row["Product Line Name"])[
+            0
+        ]
         created = Sku.objects.get_or_create(
             number=row["SKU#"],
             name=row["Name"],
@@ -134,9 +128,7 @@ def process_ingredients(upload):
     reader = csv.DictReader(temp)
     ingredients_map = {}
     for row in reader:
-        vendor = Vendor.objects.get_or_create(
-            info=row["Vendor Info"]
-        )[0]
+        vendor = Vendor.objects.get_or_create(info=row["Vendor Info"])[0]
         created = Ingredient.objects.get_or_create(
             number=row["Ingr#"],
             name=row["Name"],
@@ -145,9 +137,7 @@ def process_ingredients(upload):
             cost=row["Cost"],
             comment=row["Comment"],
         )[0]
-        if check_ingredient_duplicates(
-            created, ingredients_map
-        ):
+        if check_ingredient_duplicates(created, ingredients_map):
             created.save()
         else:
             print("Error here")
@@ -155,9 +145,7 @@ def process_ingredients(upload):
     return ingredients_map
 
 
-def check_ingredient_duplicates(
-    table_entry, ingredients_map
-):
+def check_ingredient_duplicates(table_entry, ingredients_map):
     """
     :param table_entry: The datastructure being checked for duplicates in the database
     :param ingredients_map: The map to which the datastructure will be saved
@@ -187,12 +175,8 @@ def process_product_lines(upload):
     reader = csv.DictReader(temp)
     product_lines_map = {}
     for row in reader:
-        created = ProductLine.objects.get_or_create(
-            name=row["Name"]
-        )[0]
-        if check_product_line_duplicates(
-            created, product_lines_map
-        ):
+        created = ProductLine.objects.get_or_create(name=row["Name"])[0]
+        if check_product_line_duplicates(created, product_lines_map):
             created.save()
         else:
             print("Error here")
@@ -200,18 +184,14 @@ def process_product_lines(upload):
     return product_lines_map
 
 
-def check_product_line_duplicates(
-    table_entry, product_lines_map
-):
+def check_product_line_duplicates(table_entry, product_lines_map):
     """
     :param table_entry: The datastructure being checked for duplicates in the database
     :param product_lines_map: The map to which the datastructure will be saved
     :return: boolean representing if a duplicate exists
     """
     ret = True
-    if ProductLine.objects.filter(
-        name=table_entry.name
-    ).exists():
+    if ProductLine.objects.filter(name=table_entry.name).exists():
         ret = False
     else:
         product_lines_map[table_entry.number] = table_entry
@@ -228,13 +208,9 @@ def process_formula(upload):
     formula_map = {}
     for row in reader:
         sku_num = Sku.objects.get(number=row["SKU#"])
-        ing_num = Ingredient.objects.get(
-            number=row["Ingr#"]
-        )
+        ing_num = Ingredient.objects.get(number=row["Ingr#"])
         created = SkuIngredient.objects.get_or_create(
-            sku_number=sku_num,
-            ingredient_number=ing_num,
-            quantity=row["Quantity"],
+            sku_number=sku_num, ingredient_number=ing_num, quantity=row["Quantity"]
         )[0]
         if check_formula_duplicates(created, formula_map):
             created.save()
@@ -273,20 +249,11 @@ def check_sku_integrity(input_map, input_map_2):
     ret = True
     for t_model in input_map.values():
         if not (
-            Upc.objects.filter(
-                upc_number=t_model.case_upc.upc_number
-            ).exists()
-            and Upc.objects.filter(
-                upc_number=t_model.unit_upc.upc_number
-            ).exists()
+            Upc.objects.filter(upc_number=t_model.case_upc.upc_number).exists()
+            and Upc.objects.filter(upc_number=t_model.unit_upc.upc_number).exists()
             and (
-                ProductLine.objects.filter(
-                    name=t_model.product_line.name
-                ).exists()
-                or (
-                    t_model.product_line.name
-                    in input_map_2.keys()
-                )
+                ProductLine.objects.filter(name=t_model.product_line.name).exists()
+                or (t_model.product_line.name in input_map_2.keys())
             )
         ):
             # TODO: store in bad referential data area
@@ -302,11 +269,7 @@ def check_ingredients_integrity(input_map):
     """
     ret = True
     for t_model in input_map.values():
-        if not (
-            Vendor.objects.filter(
-                info=t_model.vendor.info
-            ).exists()
-        ):
+        if not (Vendor.objects.filter(info=t_model.vendor.info).exists()):
             # TODO: store in bad referential data area
             ret = False
     return ret
@@ -321,9 +284,7 @@ def check_product_line_integrity():
     return True
 
 
-def check_formula_integrity(
-    input_map, input_map_2, input_map_3
-):
+def check_formula_integrity(input_map, input_map_2, input_map_3):
     """
 
     :param input_map: formula_map
@@ -335,22 +296,14 @@ def check_formula_integrity(
     for t_model in input_map.values():
         if not (
             (
-                Sku.objects.filter(
-                    number=t_model.sku_number.number
-                ).exists()
-                or (
-                    t_model.sku_number.number
-                    in input_map_2.keys()
-                )
+                Sku.objects.filter(number=t_model.sku_number.number).exists()
+                or (t_model.sku_number.number in input_map_2.keys())
             )
             and (
                 Ingredient.objects.filter(
                     number=t_model.ingredient_number.number
                 ).exists()
-                or (
-                    t_model.ingredient_number.number
-                    in input_map_3.keys()
-                )
+                or (t_model.ingredient_number.number in input_map_3.keys())
             )
         ):
             # TODO: store in bad refrential data structure
@@ -360,14 +313,11 @@ def check_formula_integrity(
 
 def _make_hash_value(timestamp, *args):
     return "".join(
-        [django_six.text_type(arg) for arg in args]
-        + [django_six.text_type(timestamp)]
+        [django_six.text_type(arg) for arg in args] + [django_six.text_type(timestamp)]
     )
 
 
-def make_token_with_timestamp(
-    *args: string_types
-) -> string_types:
+def make_token_with_timestamp(*args: string_types) -> string_types:
     # timestamp is number of nanoseconds since epoch
     # the last 4 digits should give us enough entropy
     timestamp = int(time.time() * 1e9)
@@ -384,9 +334,7 @@ def make_token_with_timestamp(
     secret = settings.SECRET_KEY
 
     hash_value = salted_hmac(
-        key_salt,
-        _make_hash_value(timestamp, *args),
-        secret=secret,
+        key_salt, _make_hash_value(timestamp, *args), secret=secret
     ).hexdigest()[::2]
     return "%s-%s" % (ts_b36, hash_value)
 

@@ -1,0 +1,94 @@
+{% extends 'meals/base.html' %}
+
+{% if messages %}
+    {%  for message in messages %}
+        <div>
+            <strong>{{ message|safe }}</strong>
+        </div>
+    {%  endfor %}
+{%  else %}
+{%  endif %}
+
+{% block body %}
+    <div class="container m-auto">
+        <div class="alert alert-success my-4">
+            <h3>Import your files below</h3>
+            <p>Select individual CSV files, or a ZIP file containing the CSV files below.</p>
+            <p>Click on the buttons to view examples of each type of file.</p>
+            <div class="w-100 btn-group" role="group">
+                <button class="btn btn-primary w-100 show-example"
+                        data-toggle="collapse"
+                        data-target="#SKU">Example SKU Layout
+                </button>
+                <button class="btn btn-primary w-100 show-example"
+                        data-toggle="collapse"
+                        data-target="#Ingredients">Example Ingredients Layout
+                </button>
+                <button class="btn btn-primary w-100 show-example"
+                        data-toggle="collapse"
+                        data-target="#ProductLines">Example Product Lines Layout
+                </button>
+                <button class="btn btn-primary w-100 show-example"
+                        data-toggle="collapse"
+                        data-target="#Formulas">Example Formula Layout
+                </button>
+            </div>
+        </div>
+
+        <div id="example-tables">
+            {% include 'meals/import/example_tables.html' %}
+        </div>
+        <div class="row">
+        <div class="col-sm-6">
+        <form action="" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <table class="table">
+            <tbody>
+            {% for field in csv_form %}
+            <tr>
+                <td>{{ field.label_tag }}</td>
+                <td>
+                    {{ field }}
+                    {% if field.errors %}<small>{{ field.errors }}</small>{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+            </table>
+            <input type="submit" class="btn btn-primary" value="Submit CSV Files">
+        </form>
+        </div>
+        <div class="col-sm-6 align-middle h-100">
+        <form action="" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <table class="table">
+            <tbody>
+            {% for field in zip_form %}
+            <tr>
+                <td>{{ field.label_tag }}</td>
+                <td>
+                    {{ field }}
+                    {% if field.errors %}<small>{{ field.errors }}</small>{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+            </table>
+            <input type="submit" class="btn btn-primary" value="Submit ZIP File">
+        </form>
+        </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scriptend %}
+<script lang="javascript">
+$(function() {
+
+});
+</script>
+{% endblock %}
+
+{% block sku_active %}active{% endblock %}
+
+{% block title %}Import Files{% endblock %}
