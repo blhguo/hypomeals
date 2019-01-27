@@ -78,6 +78,7 @@ class UploadToPathAndRename:
     actual filename is `example_file.jpg`, the final uploaded path of the file will be:
     `desired/path/12345-c16o-b6beb44a1fa35a75fe6f.jpg`.
     """
+
     def __init__(self, field_name, path):
         self.field_name = field_name
         self.sub_path = path
