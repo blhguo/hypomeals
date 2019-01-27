@@ -6,3 +6,5 @@ six
 requests
 jsonpickle
 ipython
+django-storages[google]
+prospector

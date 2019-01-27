@@ -1,0 +1,18 @@
+output-format: json
+
+strictness: medium
+test-warnings: true
+doc-warnings: false
+
+ignore-paths:
+  - hypomeals/meals/migrations
+
+pep8:
+  options:
+    max-line-length: 88
+
+mccabe:
+  run: false
+
+dodgy:
+  run: false

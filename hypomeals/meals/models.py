@@ -17,6 +17,9 @@ class Upc(models.Model):
 
     __repr__ = __str__
 
+    class Meta:
+        ordering = ["pk"]
+
 
 class ProductLine(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -26,6 +29,9 @@ class ProductLine(models.Model):
 
     __repr__ = __str__
 
+    class Meta:
+        ordering = ["pk"]
+
 
 class Vendor(models.Model):
     info = models.CharField(max_length=200)
@@ -34,6 +40,9 @@ class Vendor(models.Model):
         return f"Vendor #{self.pk}"
 
     __repr__ = __str__
+
+    class Meta:
+        ordering = ["pk"]
 
 
 class Ingredient(models.Model):
@@ -49,6 +58,9 @@ class Ingredient(models.Model):
 
     __repr__ = __str__
 
+    class Meta:
+        ordering = ["number"]
+
 
 class Sku(models.Model):
     name = models.CharField(max_length=32, blank=False, unique=True)
@@ -63,7 +75,7 @@ class Sku(models.Model):
     )
     unit_size = models.CharField(max_length=100, blank=False)
     count = models.IntegerField(blank=False)
-    product_line = models.ForeignKey(ProductLine, on_delete=models.CASCADE)
+    product_line = models.ForeignKey(ProductLine, blank=False, on_delete=models.CASCADE)
     ingredients = models.ManyToManyField(Ingredient, through="SkuIngredient")
     comment = models.CharField(max_length=200, blank=True)
 
@@ -72,11 +84,16 @@ class Sku(models.Model):
 
     __repr__ = __str__
 
+    class Meta:
+        ordering = ["number"]
+
 
 class SkuIngredient(models.Model):
 
-    sku_number = models.ForeignKey(Sku, on_delete=models.CASCADE)
-    ingredient_number = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
+    sku_number = models.ForeignKey(Sku, blank=False, on_delete=models.CASCADE)
+    ingredient_number = models.ForeignKey(
+        Ingredient, blank=False, on_delete=models.CASCADE
+    )
     quantity = models.FloatField(blank=False)
 
     def __str__(self):
