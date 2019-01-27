@@ -1,9 +1,8 @@
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, get_list_or_404, redirect
+from django.shortcuts import render, redirect
 
 # Create your views here.
-from meals.models import User
 
 
 def index(request):
