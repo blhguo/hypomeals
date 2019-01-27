@@ -1,4 +1,6 @@
 # HypoMeals
+[![pipeline status](https://gitlab.oit.duke.edu/hypomeals/hypomeals/badges/master/pipeline.svg)](https://gitlab.oit.duke.edu/hypomeals/hypomeals/commits/master)
+
 HypoMeals is a sophisticated food manufacturing management software. It features SKU and ingredients managment, product lines, and much more.
 
 ## Developer Guide
