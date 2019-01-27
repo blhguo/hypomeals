@@ -2,6 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="5062f4e7-6b77-406a-98b3-ceae23f9af93" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/meals/forms.py" beforeDir="false" afterPath="$PROJECT_DIR$/meals/forms.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/meals/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/meals/utils.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -28,7 +30,7 @@
         <entry file="file://$PROJECT_DIR$/meals/forms.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="187">
-              <caret line="11" column="32" lean-forward="true" selection-start-line="11" selection-start-column="32" selection-end-line="11" selection-end-column="32" />
+              <caret line="11" selection-start-line="11" selection-end-line="11" />
             </state>
           </provider>
         </entry>
@@ -64,8 +66,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/meals/utils.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="126">
-              <caret line="334" column="38" selection-start-line="334" selection-start-column="38" selection-end-line="334" selection-end-column="38" />
+            <state relative-caret-position="194">
+              <caret line="303" column="37" selection-start-line="303" selection-start-column="37" selection-end-line="303" selection-end-column="37" />
               <folding>
                 <element signature="e#0#10#0" expanded="true" />
               </folding>
@@ -117,6 +119,7 @@
       <find>bool</find>
       <find>created</find>
       <find>get_or</find>
+      <find>index</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -140,11 +143,11 @@
         <option value="$PROJECT_DIR$/meals/templates/meals/import_landing.html" />
         <option value="$PROJECT_DIR$/meals/templates/meals/import.html" />
         <option value="$PROJECT_DIR$/meals/tests.py" />
-        <option value="$PROJECT_DIR$/meals/forms.py" />
         <option value="$PROJECT_DIR$/meals/views.py" />
         <option value="$PROJECT_DIR$/meals/urls.py" />
         <option value="$PROJECT_DIR$/meals/models.py" />
         <option value="$PROJECT_DIR$/meals/utils.py" />
+        <option value="$PROJECT_DIR$/meals/forms.py" />
       </list>
     </option>
   </component>
@@ -269,12 +272,12 @@
       <workItem from="1548437358099" duration="4340000" />
       <workItem from="1548542529634" duration="8584000" />
       <workItem from="1548555350694" duration="3879000" />
-      <workItem from="1548560591522" duration="4527000" />
+      <workItem from="1548560591522" duration="4851000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="2426000" />
+    <option name="totallyTimeSpent" value="2750000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="953" y="0" width="974" height="1057" extended-state="0" />
@@ -349,13 +352,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/meals/forms.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="187">
-          <caret line="11" column="32" lean-forward="true" selection-start-line="11" selection-start-column="32" selection-end-line="11" selection-end-column="32" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/meals/templates/meals/import.html">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="2873">
@@ -376,10 +372,17 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/meals/forms.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="187">
+          <caret line="11" selection-start-line="11" selection-end-line="11" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/meals/utils.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="126">
-          <caret line="334" column="38" selection-start-line="334" selection-start-column="38" selection-end-line="334" selection-end-column="38" />
+        <state relative-caret-position="194">
+          <caret line="303" column="37" selection-start-line="303" selection-start-column="37" selection-end-line="303" selection-end-column="37" />
           <folding>
             <element signature="e#0#10#0" expanded="true" />
           </folding>

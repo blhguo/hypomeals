@@ -271,7 +271,7 @@ def check_sku_integrity(input_map, input_map_2):
     :return: Boolean representing whether an unfulfilled relationship exists
     """
     ret = True
-    for index, t_model in input_map.items():
+    for t_model in input_map.values():
         if not (
             Upc.objects.filter(
                 upc_number=t_model.case_upc.upc_number
@@ -301,7 +301,7 @@ def check_ingredients_integrity(input_map):
     :return: Boolean representing whether an unfulfilled relationship exists
     """
     ret = True
-    for index, t_model in input_map.items():
+    for t_model in input_map.values():
         if not (
             Vendor.objects.filter(
                 info=t_model.vendor.info
