@@ -3,6 +3,8 @@ import io
 import csv
 from .models import *
 import re
+import zipfile
+import os.path
 
 
 # from django.shortcuts import render
@@ -17,15 +19,28 @@ def process_files(csv_files):
     ingredients_map = {}
     product_line_map = {}
     formula_map = {}
-
+    
+    ret = []
+    edited = False
     for upload in csv_files.values():
-        if re.match(r"skus(\S)*\.csv", upload.name):
+        if re.match(r"(\S)*\.zip", upload.name):
+            zf = zipfile.ZipFile(upload)
+            names = zf.namelist()
+            for name in names:
+                ret.append(zf.open(name))
+                edited = True
+    if not edited:
+        ret = csv_files.values()
+
+    for upload in ret:
+        head, tail = os.path.split(upload.name)
+        if re.match(r"skus(\S)*\.csv", tail):
             skus_map = process_skus(upload)
-        elif re.match(r"ingredients(\S)*\.csv", upload.name):
+        elif re.match(r"ingredients(\S)*\.csv", tail):
             ingredients_map = process_ingredients(upload)
-        elif re.match(r"product_lines(\S)*\.csv", upload.name):
+        elif re.match(r"product_lines(\S)*\.csv", tail):
             product_line_map = process_product_lines(upload)
-        elif re.match(r"formula(\S)*\.csv", upload.name):
+        elif re.match(r"formula(\S)*\.csv", tail):
             formula_map = process_formula(upload)
         else:
             print("DOES NOT MATCH")
@@ -106,7 +121,8 @@ def process_ingredients(upload):
     :param upload: File to be processed, expected to be a csv of ingredients
     :return: A map representing the ingredients created
     """
-    reader = csv.DictReader(upload)
+    temp = upload.read().decode("UTF-8").splitlines()
+    reader = csv.DictReader(temp)
     ingredients_map = {}
     for row in reader:
         vendor, vendor_created = Vendor.objects.get_or_create(
@@ -158,7 +174,8 @@ def process_product_lines(upload):
     :param upload: File to be processed, expected to be a csv of Product lines
     :return: A map representing the Product Lines created
     """
-    reader = csv.DictReader(upload)
+    temp = upload.read().decode("UTF-8").splitlines()
+    reader = csv.DictReader(temp)
     product_lines_map = {}
     for row in reader:
         created, created_bool = ProductLine.objects.get_or_create(
@@ -197,7 +214,8 @@ def process_formula(upload):
     :param upload: File to be processed, expected to be a csv of formulas
     :return: A map representing the formulas created
     """
-    reader = csv.DictReader(upload)
+    temp = upload.read().decode("UTF-8").splitlines()
+    reader = csv.DictReader(temp)
     formula_map = {}
     for row in reader:
         sku_num = Sku.objects.get(number=row["SKU#"])

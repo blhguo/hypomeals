@@ -12,11 +12,8 @@
     <div class="container m-auto">
     <div class="jumbotron">
     <h3>Welcome{% if user.is_authenticated %}, {{ user.first_name }}{% endif %}!</h3>
-    <p>What would you like to do next?</p>
-    <ul>
-        <li><a href="#">Review SKUs</a></li>
-        <li><a href="#">Review Ingredients</a></li>
-    </ul>
+        <p>Import Successful! All files were imported</p>
+                <p><a href="/">Click here to return to the home page</p>
     </div>
     </div>
 {% endblock %}

@@ -13,4 +13,5 @@ urlpatterns = [
     url(r"^login/$", auth_views.LoginView.as_view(), name="login"),
     path("logout/", views.logout_view, name="logout"),
     path("import-page/", views.import_page, name="import_page"),
+    path("import_landing/", views.import_landing, name="import_landing")
 ]

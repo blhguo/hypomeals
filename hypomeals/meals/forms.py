@@ -15,3 +15,6 @@ class ImportFileForm(forms.Form):
     #Doing database operations
     #^assumes all files being imported have no collisions
     #def clean_Sku(self):
+
+class ImportZipForm(forms.Form):
+    Zip = forms.FileField(required=True)
