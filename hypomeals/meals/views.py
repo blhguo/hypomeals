@@ -1,8 +1,10 @@
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+
 from .forms import ImportFileForm, ImportZipForm
 from .utils import process_files
-from django.shortcuts import render, redirect
+
 
 # Create your views here.
 

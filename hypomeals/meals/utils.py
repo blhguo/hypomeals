@@ -1,16 +1,18 @@
+import csv
 import os
+import os.path
+import re
 import time
+import zipfile
+
 from django.conf import settings
 from django.utils import six as django_six
 from django.utils.crypto import salted_hmac
 from django.utils.deconstruct import deconstructible
 from django.utils.http import int_to_base36
 from six import string_types
-import csv
+
 from .models import *
-import re
-import zipfile
-import os.path
 
 
 # from django.shortcuts import render
