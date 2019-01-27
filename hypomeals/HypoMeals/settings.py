@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
 import os
+
 from google.oauth2 import service_account
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -38,9 +39,14 @@ LOGIN_REDIRECT_URL = "/"
 GOOGLE_APPLICATION_CREDENTIALS = os.path.join(BASE_DIR, "hypomeals-a5a72f65b399.json")
 DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
 GS_BUCKET_NAME = "hypomeals"
-GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
-    GOOGLE_APPLICATION_CREDENTIALS
-)
+if os.path.exists(GOOGLE_APPLICATION_CREDENTIALS):
+    GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
+        GOOGLE_APPLICATION_CREDENTIALS
+    )
+else:
+    # If this file is not configured, we are likely in test mode and will / should
+    # never access Google cloud anyway. So just go ahead and ignore it.
+    GS_CREDENTIALS = None
 GS_DEFAULT_ACL = "publicRead"
 
 # Application definition
@@ -106,7 +112,8 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+        "NAME": "django.contrib.auth.password_validation."
+        "UserAttributeSimilarityValidator"
     },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
