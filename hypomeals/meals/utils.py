@@ -16,7 +16,6 @@ from six import string_types
 from .models import Sku, SkuIngredient, Upc, ProductLine, Ingredient, Vendor
 
 
-# from django.shortcuts import render
 def process_files(csv_files):
     """
     :param csv_files: FILES uploaded by the user
