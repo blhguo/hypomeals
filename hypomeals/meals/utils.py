@@ -1,6 +1,3 @@
-from django.contrib import messages
-import io
-
 import os
 import time
 from django.conf import settings
@@ -28,7 +25,7 @@ def process_files(csv_files):
     ingredients_map = {}
     product_line_map = {}
     formula_map = {}
-    
+
     ret = []
     edited = False
     for upload in csv_files.values():
@@ -40,7 +37,6 @@ def process_files(csv_files):
                 edited = True
     if not edited:
         ret = csv_files.values()
-
     for upload in ret:
         head, tail = os.path.split(upload.name)
         if re.match(r"skus(\S)*\.csv", tail):
@@ -75,7 +71,7 @@ def process_skus(upload):
     reader = csv.DictReader(temp)
     skus_map = {}
     for row in reader:
-        print(row['Case UPC'])
+        print(row["Case UPC"])
         case_upc, case_created = Upc.objects.get_or_create(
             upc_number=row["Case UPC"]
         )
@@ -358,14 +354,16 @@ def check_formula_integrity(
     return ret
 
 
-
 def _make_hash_value(timestamp, *args):
     return "".join(
-        [django_six.text_type(arg) for arg in args] + [django_six.text_type(timestamp)]
+        [django_six.text_type(arg) for arg in args]
+        + [django_six.text_type(timestamp)]
     )
 
 
-def make_token_with_timestamp(*args: string_types) -> string_types:
+def make_token_with_timestamp(
+    *args: string_types
+) -> string_types:
     # timestamp is number of nanoseconds since epoch
     # the last 4 digits should give us enough entropy
     timestamp = int(time.time() * 1e9)
@@ -382,7 +380,9 @@ def make_token_with_timestamp(*args: string_types) -> string_types:
     secret = settings.SECRET_KEY
 
     hash_value = salted_hmac(
-        key_salt, _make_hash_value(timestamp, *args), secret=secret
+        key_salt,
+        _make_hash_value(timestamp, *args),
+        secret=secret,
     ).hexdigest()[::2]
     return "%s-%s" % (ts_b36, hash_value)
 
@@ -421,7 +421,10 @@ class UploadToPathAndRename:
     def __call__(self, instance, filename):
         ext = os.path.splitext(filename)
         filename = (
-            make_token_with_timestamp(getattr(instance, self.field_name)) + ext[1]
+            make_token_with_timestamp(
+                getattr(instance, self.field_name)
+            )
+            + ext[1]
         )
         if instance.pk:
             filename = f"{instance.pk}-{filename}"
