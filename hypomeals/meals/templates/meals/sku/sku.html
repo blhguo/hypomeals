@@ -4,15 +4,15 @@
 
 {% block body %}
 <div class="container-fluid m-auto">
-<form method="post">
+<form method="post" id="skuFilterForm">
 {% csrf_token %}
 <div class="row">
 <div class="col-sm-8">
 <nav>
-    <ul class="pagination my-4">
+    <ul class="pagination my-4" id="pageList">
     {% if skus.has_previous %}
         <li class="page-item">
-        <a class="page-link" href="?page={{ skus.previous_page_number }}">
+        <a class="page-link" page="{{ skus.previous_page_number }}" href="#">
             <span>&laquo;</span>
         </a>
         </li>
@@ -25,12 +25,12 @@
     {% endif %}
 
     {% for page in pages %}
-        {% if page == forloop.counter %}
+        {% if current_page == forloop.counter %}
         <li class="page-item active">
         {% else %}
         <li class="page-item">
         {% endif %}
-        <a class="page-link" href="?page={{ forloop.counter }}">
+        <a class="page-link" page="{{ forloop.counter }}" href="#">
         {{ forloop.counter }}
         </a>
         </li>
@@ -38,7 +38,7 @@
 
     {% if skus.has_next %}
         <li class="page-item">
-        <a class="page-link" href="?page={{ skus.next_page_number }}">
+        <a class="page-link" page="{{ skus.next_page_number }}" href="#">
             <span>&raquo;</span>
         </a>
         </li>
@@ -75,27 +75,55 @@
 </div>
 <div class="row">
 <div class="col-sm-2">
+{% if form.non_field_errors %}
+<div class="alert alert-danger">
+    <p>Please correct the following error:</p>
+    {{ form.non_field_errors }}
+</div>
+{% endif %}
+{{ form.page_num }}
 <div class="form-group">
     <label for="{{ form.num_per_page.id_for_label }}">Number per page:</label>
     {{ form.num_per_page }}
-</div>
-<div class="form-group">
-    <label for="{{ form.keyword.id_for_label }}">Search:</label>
-    {{ form.keyword }}
+    {% if form.num_per_page.errors %}
+    <small>{{ form.num_per_page.errors }}</small>
+    {% endif %}
 </div>
 <div class="form-group">
     <label for="{{ form.sort_by.id_for_label }}">Sort by:</label>
     {{ form.sort_by }}
+    {% if form.sort_by.errors %}
+    <small>{{ form.sort_by.errors }}</small>
+    {% endif %}
+</div>
+<div class="form-group">
+    <label for="{{ form.keyword.id_for_label }}">Search:</label>
+    {{ form.keyword }}
+    {% if form.keyword.errors %}
+    <small>{{ form.keyword.errors }}</small>
+    {% endif %}
 </div>
 <div class="form-group">
     <label for="{{ form.ingredients.id_for_label }}">Contains ingredient(s):</label>
-    <input type="text" class="form-control" id="ingredientInput" placeholder="Start typing...">
+    <input type="text"
+           class="form-control mb-2"
+           id="ingredientInput"
+           placeholder="Start typing...">
     {{ form.ingredients }}
+    {% if form.ingredients.errors %}
+    <small>{{ form.ingredients.errors }}</small>
+    {% endif %}
 </div>
 <div class="form-group">
     <label for="{{ form.product_lines.id_for_label }}">Belongs to product line(s):</label>
-    <input type="text" class="form-control" id="productLineInput" placeholder="Start typing...">
+    <input type="text"
+           class="form-control mb-2"
+           id="productLineInput"
+           placeholder="Start typing...">
     {{ form.product_lines }}
+    {% if form.product_lines.errors %}
+    <small>{{ form.product_lines.errors }}</small>
+    {% endif %}
 </div>
 <div class="btn-group w-100" role="group">
 <input type="submit" class="btn btn-success w-100" value="Filter">
@@ -139,33 +167,6 @@
 </div>
 </form>
 </div>
-<div class="modal fade" id="editModal" tabindex="-1" role="dialog">
-<div class="modal-dialog modal-lg" role="document">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h5 class="modal-title" id="modalHeaderText"></h5>
-            <button type="button"
-                    class="close"
-                    data-dismiss="modal">
-                <span aria-hidden="true">&times;</span>
-            </button>
-        </div>
-        <div class="modal-body" id="modalBodyDiv">
-        <p>Please wait...</p>
-        <div class="alert alert-danger m-4" style="display: none;">
-        </div>
-        </div>
-        <div class="modal-footer">
-            <button type="button"
-                    class="btn btn-secondary"
-                    data-dismiss="modal">Close</button>
-            <button type="button"
-                    id="modalSaveButton"
-                    class="btn btn-success">Save</button>
-        </div>
-    </div>
-</div>
-</div>
 {% endblock %}
 
 {% block scriptend %}
@@ -208,6 +209,13 @@ $(function() {
                             `Please refresh the page and try again later.`);
                 });
         }
+    });
+
+    /************** Pagination ****************/
+    $("#pageList").find("a").on("click", function() {
+        let page = $(this).attr("page");
+        $("#{{ form.page_num.id_for_label }}").val(page);
+        $("#skuFilterForm").submit();
     });
 
     /************** Autocomplete for Ingredients and Product Lines **************/

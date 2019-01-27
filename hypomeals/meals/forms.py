@@ -1,14 +1,12 @@
 from collections import OrderedDict
 
-import jsonpickle
 from django import forms
-from django.core.exceptions import FieldDoesNotExist, ValidationError
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db import transaction, IntegrityError
+from django.db import transaction
 from django.db.models import Q, BLANK_CHOICE_DASH
 
 from meals import utils
-from meals.exceptions import QueryException
 from meals.models import Sku, Ingredient, ProductLine, Upc
 
 
@@ -22,10 +20,13 @@ def get_product_line_choices():
 
 class SkuFilterForm(forms.Form):
 
-    NUM_PER_PAGE_CHOICES = [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
+    NUM_PER_PAGE_CHOICES = (
+        [(1, "1")] + [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
+    )
 
-    num_per_page = forms.ChoiceField(choices=NUM_PER_PAGE_CHOICES)
-    sort_by = forms.ChoiceField(choices=Sku.get_sortable_fields)
+    page_num = forms.IntegerField(widget=forms.HiddenInput(), initial=1, required=False)
+    num_per_page = forms.ChoiceField(choices=NUM_PER_PAGE_CHOICES, required=True)
+    sort_by = forms.ChoiceField(choices=Sku.get_sortable_fields, required=True)
     keyword = forms.CharField(required=False, max_length=100)
     ingredients = forms.MultipleChoiceField(
         required=False,
@@ -45,12 +46,15 @@ class SkuFilterForm(forms.Form):
             field.widget.attrs["class"] = "form-control mb-2"
 
     def query(self) -> Paginator:
+        # Generate the correct query, execute it, and return the requested page.
+        # Requirement 2.3.2.1
+        # Modified according to https://piazza.com/class/jpvlvyxg51d1nc?cid=40
         params = self.cleaned_data
-        num_per_page = params.get("num_per_page", 50)
+        num_per_page = int(params.get("num_per_page", 50))
         sort_by = params.get("sort_by", "")
         query_filter = Q()
         if params["keyword"]:
-            query_filter |= Q(name__icontains=params["keyword"])
+            query_filter &= Q(name__icontains=params["keyword"])
         if params["ingredients"]:
             query_filter |= Q(ingredients__in=params["ingredients"])
         if params["product_lines"]:
@@ -58,7 +62,9 @@ class SkuFilterForm(forms.Form):
         query = Sku.objects.filter(query_filter)
         if sort_by:
             query.order_by(sort_by)
-        return Paginator(query.distinct(), num_per_page)
+        if num_per_page != -1:
+            return Paginator(query.distinct(), num_per_page)
+        return query.distinct()
 
 
 class UpcField(forms.CharField):
@@ -119,11 +125,13 @@ class EditSkuForm(forms.ModelForm):
         if "instance" in kwargs:
             instance = kwargs["instance"]
             if hasattr(instance, "pk") and instance.pk:
-                initial.update({
-                    "case_upc": instance.case_upc.upc_number,
-                    "unit_upc": instance.unit_upc.upc_number,
-                    "product_line": instance.product_line.name,
-                })
+                initial.update(
+                    {
+                        "case_upc": instance.case_upc.upc_number,
+                        "unit_upc": instance.unit_upc.upc_number,
+                        "product_line": instance.product_line.name,
+                    }
+                )
         super().__init__(*args, initial=initial, **kwargs)
         reordered_fields = OrderedDict()
         for field_name in self.Meta.fields:
@@ -136,7 +144,6 @@ class EditSkuForm(forms.ModelForm):
             instance = kwargs["instance"]
             if hasattr(instance, "pk") and instance.pk:
                 self.fields["number"].disabled = True
-
 
     @staticmethod
     def _clean_upc(upc):

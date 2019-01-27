@@ -36,7 +36,12 @@ def sku(request):
     else:
         form = SkuFilterForm()
         skus = Paginator(Sku.objects.all(), 50)
-    page = int(request.GET.get("page", "1"))
+    page = getattr(form, "cleaned_data", {"page_num": 1}).get("page_num", 1)
+    if page > skus.num_pages:
+        # For whatever reason, if the page being requested is larger than the actual
+        # number of pages, just start over from the first page.
+        page = 1
+        form.initial["page_num"] = 1
     return render(
         request,
         template_name="meals/sku/sku.html",
