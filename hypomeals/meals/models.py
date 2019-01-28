@@ -108,8 +108,10 @@ class SkuIngredient(models.Model):
 
 
 class ManufactureGoal(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='+', default=1)
-    form_name = models.CharField(max_length=100, default='Morton')
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="+", default=1
+    )
+    form_name = models.CharField(max_length=100, default="Morton")
     save_time = models.DateTimeField(default=timezone.now, blank=True)
 
 
