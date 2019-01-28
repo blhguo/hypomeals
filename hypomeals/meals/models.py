@@ -1,5 +1,7 @@
-from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.db import models
+from django.utils import timezone
+
 
 # Create your models here.
 
@@ -103,3 +105,15 @@ class SkuIngredient(models.Model):
 
     class Meta:
         unique_together = (("sku_number", "ingredient_number"),)
+
+
+class ManufactureGoal(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='+', default=1)
+    form_name = models.CharField(max_length=100, default='Morton')
+    save_time = models.DateTimeField(default=timezone.now, blank=True)
+
+
+class ManufactureDetail(models.Model):
+    form_name = models.ForeignKey(ManufactureGoal, on_delete=models.CASCADE)
+    sku = models.CharField(max_length=100)
+    quantity = models.IntegerField()
