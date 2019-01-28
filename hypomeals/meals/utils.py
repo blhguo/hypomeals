@@ -1,314 +1,20 @@
-import csv
 import functools
+import logging
 import os
 import os.path
-import re
 import time
-import zipfile
 
+import magic
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
+from django.db.models.fields.related import ForeignKey
+from django.template.defaultfilters import filesizeformat
 from django.utils import six as django_six
 from django.utils.crypto import salted_hmac
 from django.utils.deconstruct import deconstructible
 from django.utils.http import int_to_base36
 from six import string_types
-
-from .models import Sku, SkuIngredient, Upc, ProductLine, Ingredient, Vendor
-
-
-def process_files(csv_files):
-    """
-    :param csv_files: FILES uploaded by the user
-    (should be a dictionary of form-attributes:file)
-    :return: None
-    This function calls a helper function called "process_(type)"
-    This function then called check_(type)_integrity() to ensure
-    that all relationships exist in thedatabase or in another file
-    """
-    skus_map = {}
-    ingredients_map = {}
-    product_line_map = {}
-    formula_map = {}
-
-    ret = []
-    edited = False
-    for upload in csv_files.values():
-        if re.match(r"(\S)*\.zip", upload.name):
-            zf = zipfile.ZipFile(upload)
-            names = zf.namelist()
-            for name in names:
-                ret.append(zf.open(name))
-                edited = True
-    if not edited:
-        ret = csv_files.values()
-    for upload in ret:
-        tail = os.path.split(upload.name)[1]
-        if re.match(r"skus(\S)*\.csv", tail):
-            skus_map = process_skus(upload)
-        elif re.match(r"ingredients(\S)*\.csv", tail):
-            ingredients_map = process_ingredients(upload)
-        elif re.match(r"product_lines(\S)*\.csv", tail):
-            product_line_map = process_product_lines(upload)
-        elif re.match(r"formula(\S)*\.csv", tail):
-            formula_map = process_formula(upload)
-        else:
-            print("DOES NOT MATCH")
-    if (
-        check_sku_integrity(skus_map, product_line_map)
-        and check_ingredients_integrity(ingredients_map)
-        and check_product_line_integrity()
-        and check_formula_integrity(formula_map, skus_map, ingredients_map)
-    ):
-        print("Referential Integrity Preserved")
-    else:
-        print("Referential Integrity Broken")
-
-
-def process_skus(upload):
-    """
-    :param upload: The file to be processed, expected to be a csv of SKUs
-    :return: A map representing the SKUs created
-    """
-    temp = upload.read().decode("UTF-8").splitlines()
-    reader = csv.DictReader(temp)
-    skus_map = {}
-    for row in reader:
-        print(row["Case UPC"])
-        case_upc = Upc.objects.get_or_create(upc_number=row["Case UPC"])[0]
-        unit_upc = Upc.objects.get_or_create(upc_number=row["Unit UPC"])[0]
-        product_line = ProductLine.objects.get_or_create(name=row["Product Line Name"])[
-            0
-        ]
-        created = Sku.objects.get_or_create(
-            number=row["SKU#"],
-            name=row["Name"],
-            case_upc=case_upc,
-            unit_upc=unit_upc,
-            unit_size=row["Unit size"],
-            count=row["Count per case"],
-            product_line=product_line,
-            comment=row["Comment"],
-        )[0]
-        if check_sku_duplicates(created, skus_map):
-            print("saving")
-            created.save()
-        else:
-            print("Error here")
-            # TODO raise DuplicateException(row)
-    return skus_map
-
-
-def check_sku_duplicates(table_entry, skus_map):
-    """
-    :param table_entry: The datastructure being checked for duplicates in the database
-    :param skus_map: The map to which the datastructure will be saved
-    :return: boolean representing if a duplicate exists
-    """
-    ret = True
-    if Sku.objects.filter(
-        number=table_entry.number,
-        name=table_entry.name,
-        case_upc=table_entry.case_upc,
-        unit_upc=table_entry.unit_upc,
-        count=table_entry.count,
-        product_line=table_entry.product_line,
-    ).exists():
-        ret = False
-    else:
-        skus_map[table_entry.number] = table_entry
-    return ret
-
-
-def process_ingredients(upload):
-    """
-    :param upload: File to be processed, expected to be a csv of ingredients
-    :return: A map representing the ingredients created
-    """
-    temp = upload.read().decode("UTF-8").splitlines()
-    reader = csv.DictReader(temp)
-    ingredients_map = {}
-    for row in reader:
-        vendor = Vendor.objects.get_or_create(info=row["Vendor Info"])[0]
-        created = Ingredient.objects.get_or_create(
-            number=row["Ingr#"],
-            name=row["Name"],
-            vendor=vendor,
-            size=row["Size"],
-            cost=row["Cost"],
-            comment=row["Comment"],
-        )[0]
-        if check_ingredient_duplicates(created, ingredients_map):
-            created.save()
-        else:
-            print("Error here")
-            # TODO raise DuplicateException(row)
-    return ingredients_map
-
-
-def check_ingredient_duplicates(table_entry, ingredients_map):
-    """
-    :param table_entry: The datastructure being checked for duplicates in the database
-    :param ingredients_map: The map to which the datastructure will be saved
-    :return: boolean representing if a duplicate exists
-    """
-    ret = True
-    if Ingredient.objects.filter(
-        number=table_entry.number,
-        name=table_entry.name,
-        vendor=table_entry.vendor,
-        size=table_entry.size,
-        cost=table_entry.cost,
-        comment=table_entry.comment,
-    ).exists():
-        ret = False
-    else:
-        ingredients_map[table_entry.number] = table_entry
-    return ret
-
-
-def process_product_lines(upload):
-    """
-    :param upload: File to be processed, expected to be a csv of Product lines
-    :return: A map representing the Product Lines created
-    """
-    temp = upload.read().decode("UTF-8").splitlines()
-    reader = csv.DictReader(temp)
-    product_lines_map = {}
-    for row in reader:
-        created = ProductLine.objects.get_or_create(name=row["Name"])[0]
-        if check_product_line_duplicates(created, product_lines_map):
-            created.save()
-        else:
-            print("Error here")
-            # TODO raise DuplicateException(row)
-    return product_lines_map
-
-
-def check_product_line_duplicates(table_entry, product_lines_map):
-    """
-    :param table_entry: The datastructure being checked for duplicates in the database
-    :param product_lines_map: The map to which the datastructure will be saved
-    :return: boolean representing if a duplicate exists
-    """
-    ret = True
-    if ProductLine.objects.filter(name=table_entry.name).exists():
-        ret = False
-    else:
-        product_lines_map[table_entry.number] = table_entry
-    return ret
-
-
-def process_formula(upload):
-    """
-    :param upload: File to be processed, expected to be a csv of formulas
-    :return: A map representing the formulas created
-    """
-    temp = upload.read().decode("UTF-8").splitlines()
-    reader = csv.DictReader(temp)
-    formula_map = {}
-    for row in reader:
-        sku_num = Sku.objects.get(number=row["SKU#"])
-        ing_num = Ingredient.objects.get(number=row["Ingr#"])
-        created = SkuIngredient.objects.get_or_create(
-            sku_number=sku_num, ingredient_number=ing_num, quantity=row["Quantity"]
-        )[0]
-        if check_formula_duplicates(created, formula_map):
-            created.save()
-        else:
-            print("Error here")
-            # TODO raise DuplicateException(row)
-    return formula_map
-
-
-def check_formula_duplicates(table_entry, formula_map):
-    """
-    :param table_entry: The datastructure being checked for duplicates in the database
-    :param formula_map: The map to which the datastructure will be saved
-    :return: boolean representing if a duplicate exists
-    """
-    ret = True
-    # TODO: Update models to be formula
-    if not SkuIngredient.objects.filter(
-        sku_number=table_entry.sku_number,
-        ingredient_number=table_entry.ingredient_number,
-        quantity=table_entry.quantity,
-    ).exists():
-        ret = False
-    else:
-        formula_map[table_entry.__str__()] = table_entry
-    return ret
-
-
-def check_sku_integrity(input_map, input_map_2):
-    """
-
-    :param input_map: Sku_map
-    :param input_map_2: Product_line_map
-    :return: Boolean representing whether an unfulfilled relationship exists
-    """
-    ret = True
-    for t_model in input_map.values():
-        if not (
-            Upc.objects.filter(upc_number=t_model.case_upc.upc_number).exists()
-            and Upc.objects.filter(upc_number=t_model.unit_upc.upc_number).exists()
-            and (
-                ProductLine.objects.filter(name=t_model.product_line.name).exists()
-                or (t_model.product_line.name in input_map_2.keys())
-            )
-        ):
-            # TODO: store in bad referential data area
-            ret = False
-    return ret
-
-
-def check_ingredients_integrity(input_map):
-    """
-
-    :param input_map: Ingredients_map
-    :return: Boolean representing whether an unfulfilled relationship exists
-    """
-    ret = True
-    for t_model in input_map.values():
-        if not (Vendor.objects.filter(info=t_model.vendor.info).exists()):
-            # TODO: store in bad referential data area
-            ret = False
-    return ret
-
-
-def check_product_line_integrity():
-    """
-
-
-    :return: True for now
-    """
-    return True
-
-
-def check_formula_integrity(input_map, input_map_2, input_map_3):
-    """
-
-    :param input_map: formula_map
-    :param input_map_2: Sku_map
-    :param input_map_3: Ingredient_map
-    :return: Boolean representing if an unfulfilled relationship exists
-    """
-    ret = True
-    for t_model in input_map.values():
-        if not (
-            (
-                Sku.objects.filter(number=t_model.sku_number.number).exists()
-                or (t_model.sku_number.number in input_map_2.keys())
-            )
-            and (
-                Ingredient.objects.filter(
-                    number=t_model.ingredient_number.number
-                ).exists()
-                or (t_model.ingredient_number.number in input_map_3.keys())
-            )
-        ):
-            # TODO: store in bad refrential data structure
-            ret = False
-    return ret
 
 
 def _make_hash_value(timestamp, *args):
@@ -433,3 +139,131 @@ class BootstrapFormControlMixin:
     def __init_subclass__(cls, **_):
 
         cls.__init__ = inject_form_control(getattr(cls, "__init__"))
+
+
+@deconstructible
+class FilenameRegexValidator(RegexValidator):
+    def __call__(self, value):
+        return super().__call__(value.name)
+
+
+@deconstructible
+class GeneralFileValidator:
+    """
+    A validator for uploaded files. Adapted with modification from
+    https://stackoverflow.com/questions/20272579/django-validate-file-type-of-uploaded-file
+    """
+
+    error_messages = {
+        "max_size": (
+            "Ensure this file size is not greater than %(max_size)s."
+            " Your file size is %(size)s."
+        ),
+        "min_size": (
+            "Ensure this file size is not less than %(min_size)s. "
+            "Your file size is %(size)s."
+        ),
+        "content_type": "Files of type %(content_type)s are not supported.",
+    }
+
+    def __init__(self, max_size=None, min_size=None, content_types=()):
+        self.max_size = max_size
+        self.min_size = min_size
+        self.content_types = content_types
+
+    def __call__(self, data):
+        if self.max_size is not None and data.size > self.max_size:
+            params = {
+                "max_size": filesizeformat(self.max_size),
+                "size": filesizeformat(data.size),
+            }
+            raise ValidationError(self.error_messages["max_size"], "max_size", params)
+
+        if self.min_size is not None and data.size < self.min_size:
+            params = {
+                "min_size": filesizeformat(self.mix_size),
+                "size": filesizeformat(data.size),
+            }
+            raise ValidationError(self.error_messages["min_size"], "min_size", params)
+
+        if self.content_types:
+            content_type = magic.from_buffer(data.read(), mime=True)
+            data.seek(0)
+            if content_type not in self.content_types:
+                params = {"content_type": content_type}
+                raise ValidationError(
+                    self.error_messages["content_type"], "content_type", params
+                )
+
+    def __eq__(self, other):
+        return isinstance(other, GeneralFileValidator)
+
+
+@parameterized
+def log_exceptions(func, logger=None, exclude=()):
+
+    if logger is None:
+        # If logger is not supplied, use the root logger
+        logger = logging.getLogger()
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            if exclude:
+                if any(isinstance(e, excluded) for excluded in exclude):
+                    logger.debug(
+                        f"{e.__class__.__name__} raised when "
+                        f"calling function {func.__qualname__} but excluded."
+                    )
+            logger.exception(
+                f"Exception occurred when calling function {func.__qualname__}"
+            )
+            raise e
+
+    return wrapper
+
+
+@parameterized
+def register_to_dict(func, dct, key):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    dct[key] = wrapper
+    return wrapper
+
+
+def method_memoize_forever(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if "__result__" not in func.__dict__:
+            func.__dict__["__result__"] = func(*args, **kwargs)
+        return func.__dict__["__result__"]
+
+    return wrapper
+
+
+class ModelFieldsCompareMixin:
+
+    excluded_fields = ()
+
+    @classmethod
+    def compare_instances(cls, i1, i2):
+        for field in cls._meta.fields:
+            if field.name in cls.excluded_fields:
+                continue
+            value1 = getattr(i1, field.name)
+            value2 = getattr(i2, field.name)
+            if isinstance(field, ForeignKey):
+                deep_compare_fn = getattr(
+                    field.related_model, "compare_instances", None
+                )
+                if deep_compare_fn:
+                    if not deep_compare_fn(field.related_model, value1, value2):
+                        return False
+            else:
+                if value1 != value2:
+                    return False
+        return True

@@ -2,7 +2,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 
-# Create your models here.
+from meals import utils
 
 
 class User(AbstractUser):
@@ -10,7 +10,9 @@ class User(AbstractUser):
     pass
 
 
-class Upc(models.Model):
+class Upc(models.Model, utils.ModelFieldsCompareMixin):
+    excluded_fields = ("id",)
+
     upc_number = models.CharField(max_length=12, unique=True)
 
     def __str__(self):
@@ -22,7 +24,9 @@ class Upc(models.Model):
         ordering = ["pk"]
 
 
-class ProductLine(models.Model):
+class ProductLine(models.Model, utils.ModelFieldsCompareMixin):
+    excluded_fields = ("id",)
+
     name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
@@ -34,7 +38,9 @@ class ProductLine(models.Model):
         ordering = ["pk"]
 
 
-class Vendor(models.Model):
+class Vendor(models.Model, utils.ModelFieldsCompareMixin):
+    excluded_fields = ("id",)
+
     info = models.CharField(max_length=200)
 
     def __str__(self):
@@ -46,7 +52,9 @@ class Vendor(models.Model):
         ordering = ["pk"]
 
 
-class Ingredient(models.Model):
+class Ingredient(models.Model, utils.ModelFieldsCompareMixin):
+    excluded_fields = ("number",)
+
     name = models.CharField(max_length=100, unique=True, blank=False)
     number = models.IntegerField(blank=False, primary_key=True)
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE)
@@ -63,7 +71,9 @@ class Ingredient(models.Model):
         ordering = ["number"]
 
 
-class Sku(models.Model):
+class Sku(models.Model, utils.ModelFieldsCompareMixin):
+    excluded_fields = ("number",)
+
     name = models.CharField(max_length=32, blank=False, unique=True)
     number = models.IntegerField(
         blank=False, verbose_name="SKU Number", unique=True, primary_key=True
@@ -89,7 +99,8 @@ class Sku(models.Model):
         ordering = ["number"]
 
 
-class SkuIngredient(models.Model):
+class SkuIngredient(models.Model, utils.ModelFieldsCompareMixin):
+    excluded_fields = ("id",)
 
     sku_number = models.ForeignKey(Sku, blank=False, on_delete=models.CASCADE)
     ingredient_number = models.ForeignKey(

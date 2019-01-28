@@ -2,11 +2,7 @@ from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 
-from .forms import ImportFileForm, ImportZipForm
-from .utils import process_files
-
-
-# Create your views here.
+from .forms import ImportCsvForm, ImportZipForm
 
 
 def index(request):
@@ -17,14 +13,23 @@ def index(request):
 def import_page(request):
     template = "meals/import/import.html"
 
-    if request.method == "GET":
-        csv_file_form = ImportFileForm()
-        zip_file_form = ImportZipForm()
+    if request.method == "POST":
+        csv_file_form = ImportCsvForm(request.POST, request.FILES)
+        zip_file_form = ImportZipForm(request.POST, request.FILES)
+        if (csv_file_form.has_changed() and csv_file_form.is_valid()) or (
+            zip_file_form.has_changed() and zip_file_form.is_valid()
+        ):
+            return redirect("import_landing")
         return render(
-            request, template, {"csv_form": csv_file_form, "zip_form": zip_file_form}
+            request,
+            template_name=template,
+            context={"csv_form": csv_file_form, "zip_form": zip_file_form},
         )
-    process_files(request.FILES)
-    return redirect("import_landing")
+    csv_file_form = ImportCsvForm()
+    zip_file_form = ImportZipForm()
+    return render(
+        request, template, {"csv_form": csv_file_form, "zip_form": zip_file_form}
+    )
 
 
 @login_required

@@ -42,6 +42,12 @@
         <div class="col-sm-6">
         <form action="" method="post" enctype="multipart/form-data">
             {% csrf_token %}
+            {% if csv_form.non_field_errors %}
+            <div class="alert alert-danger">
+            <p>Please correct the following errors:</p>
+            {{ csv_form.non_field_errors | linebreaks }}
+            </div>
+            {% endif %}
             <table class="table">
             <tbody>
             {% for field in csv_form %}
