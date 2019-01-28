@@ -65,11 +65,11 @@ class Ingredient(models.Model):
 
 
 class Sku(models.Model):
-    name = models.CharField(max_length=32, blank=False, unique=True)
+    name = models.CharField(max_length=32, blank=False)
     number = models.IntegerField(
         blank=False, verbose_name="SKU Number", unique=True, primary_key=True
     )
-    case_upc = models.ForeignKey(
+    case_upc = models.OneToOneField(
         Upc, blank=False, on_delete=models.CASCADE, related_name="+"
     )
     unit_upc = models.ForeignKey(
