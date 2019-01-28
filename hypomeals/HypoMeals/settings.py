@@ -133,7 +133,7 @@ LOGGING = {
         "medium": {"format": "{asctime} {levelname}: {message}", "style": "{"},
         "simple": {"format": "{levelname} {message}", "style": "{"},
         "sql_statements": {
-            "format": "{asctime} {levelname} {message} ({duration}) ({sql} {params})",
+            "format": "{asctime} {levelname} {message} ({sql} {params})",
             "style": "{",
         },
     },
