@@ -1,7 +1,10 @@
+# pylint: disable-msgs=protected-access
+
+import re
 from collections import OrderedDict
 
 from django import forms
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, FieldDoesNotExist
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, BLANK_CHOICE_DASH
@@ -18,25 +21,63 @@ def get_product_line_choices():
     return [(pl.name, pl.name) for pl in ProductLine.objects.all()]
 
 
+class CsvModelAttributeField(forms.CharField):
+    COMMA_SPLIT_REGEX = re.compile(r",\s*")
+
+    attr = "pk"
+
+    def __init__(self, model, *args, attr, **kwargs):
+        super().__init__(*args, **kwargs)
+        try:
+            model._meta.get_field(attr)
+        except FieldDoesNotExist:
+            raise AssertionError(
+                f"Model '{model._meta.model_name}' has no attribute '{attr}'"
+            )
+        self.model = model
+        self.attr = attr
+
+    def clean(self, value):
+        # Get rid of any empty values
+        items = {item.strip() for item in self.COMMA_SPLIT_REGEX.split(value)} - {""}
+        if not items:
+            return items
+        query = Q(**{f"{self.attr}__in": items})
+        found = set(self.model.objects.filter(query).values_list(self.attr, flat=True))
+        not_found = items - found
+        if not_found:
+            errors = []
+            for item in not_found:
+                errors.append(
+                    ValidationError(
+                        "'%(item)s' cannot be found.", params={"item": item}
+                    )
+                )
+            raise ValidationError(errors)
+        return found
+
+
 class SkuFilterForm(forms.Form):
 
-    NUM_PER_PAGE_CHOICES = (
-        [(1, "1")] + [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
-    )
+    NUM_PER_PAGE_CHOICES = [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
 
     page_num = forms.IntegerField(widget=forms.HiddenInput(), initial=1, required=False)
     num_per_page = forms.ChoiceField(choices=NUM_PER_PAGE_CHOICES, required=True)
     sort_by = forms.ChoiceField(choices=Sku.get_sortable_fields, required=True)
     keyword = forms.CharField(required=False, max_length=100)
-    ingredients = forms.MultipleChoiceField(
+    ingredients = CsvModelAttributeField(
+        model=Ingredient,
         required=False,
-        choices=get_ingredient_choices,
-        # widget=forms.SelectMultiple(attrs={"style": "display: none"}),
+        attr="name",
+        widget=forms.TextInput(attrs={"placeholder": "Start typing..."}),
+        help_text="Enter ingredients separated by commas"
     )
-    product_lines = forms.MultipleChoiceField(
+    product_lines = CsvModelAttributeField(
+        model=ProductLine,
         required=False,
-        choices=get_product_line_choices,
-        # widget=forms.SelectMultiple(attrs={"style": "display: none"}),
+        attr="name",
+        widget=forms.TextInput(attrs={"placeholder": "Start typing..."}),
+        help_text="Enter Product Lines separated by commas"
     )
 
     def __init__(self, *args, **kwargs):
@@ -56,15 +97,15 @@ class SkuFilterForm(forms.Form):
         if params["keyword"]:
             query_filter &= Q(name__icontains=params["keyword"])
         if params["ingredients"]:
-            query_filter |= Q(ingredients__in=params["ingredients"])
+            query_filter |= Q(ingredients__name__in=params["ingredients"])
         if params["product_lines"]:
             query_filter |= Q(product_line__name__in=params["product_lines"])
         query = Sku.objects.filter(query_filter)
         if sort_by:
             query.order_by(sort_by)
-        if num_per_page != -1:
-            return Paginator(query.distinct(), num_per_page)
-        return query.distinct()
+        if num_per_page == -1:
+            num_per_page = query.count()
+        return Paginator(query.distinct(), num_per_page)
 
 
 class UpcField(forms.CharField):

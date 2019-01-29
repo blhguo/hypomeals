@@ -1,4 +1,5 @@
 import operator
+import time
 
 import jsonpickle
 from django.contrib.auth import logout
@@ -27,6 +28,7 @@ def logout_view(request):
 ############################  SKU Views  ###############################
 @login_required
 def sku(request):
+    start = time.time()
     if request.method == "POST":
         form = SkuFilterForm(request.POST)
         if form.is_valid():
@@ -42,6 +44,7 @@ def sku(request):
         # number of pages, just start over from the first page.
         page = 1
         form.initial["page_num"] = 1
+    end = time.time()
     return render(
         request,
         template_name="meals/sku/sku.html",
@@ -50,6 +53,7 @@ def sku(request):
             "form": form,
             "pages": range(1, skus.num_pages + 1),
             "current_page": page,
+            "duration": "{:0.3f}".format(end - start),
         },
     )
 
