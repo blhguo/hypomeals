@@ -49,6 +49,9 @@ else:
     GS_CREDENTIALS = None
 GS_DEFAULT_ACL = "publicRead"
 
+# Database
+USE_LOCAL_DB = os.getenv("DJANGO_USE_LOCAL_DB", "0") == "1"
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -101,7 +104,7 @@ DATABASES = {
         "NAME": "postgres",
         "USER": "postgres",
         "PASSWORD": "Hyp0Mea1sR0cks!",
-        "HOST": "vcm-4081.vm.duke.edu",
+        "HOST": "127.0.0.1" if USE_LOCAL_DB else "vcm-4081.vm.duke.edu",
         "PORT": "5432",
     }
 }
