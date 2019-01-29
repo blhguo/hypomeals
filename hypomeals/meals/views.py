@@ -1,6 +1,7 @@
 import operator
 
 import jsonpickle
+from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -10,8 +11,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from meals.forms import SkuFilterForm, EditSkuForm
-from meals.models import Sku, Ingredient, ProductLine
+from meals.forms import SkuFilterForm, EditSkuForm, FormulaFormSet
+from meals.models import Sku, Ingredient, ProductLine, SkuIngredient
 
 
 def index(request):
@@ -66,7 +67,7 @@ def edit_sku(request, sku_number):
         form = EditSkuForm(instance=instance)
     return render(
         request,
-        template_name="meals/sku/edit.html",
+        template_name="meals/sku/edit_sku.html",
         context={
             "form": form,
             "sku_number": sku_number,
@@ -81,11 +82,35 @@ def add_sku(request):
     if request.method == "POST":
         form = EditSkuForm(request.POST)
         if form.is_valid():
-            form.save()
+            instance = form.save()
+            messages.info(request, f"SKU #{instance.pk} has been saved successfully.")
             return redirect("sku")
     else:
         form = EditSkuForm()
-    return render(request, template_name="meals/sku/edit.html", context={"form": form})
+    return render(
+        request,
+        template_name="meals/sku/edit_sku.html",
+        context={"form": form, "editing": False},
+    )
+
+
+@login_required
+def edit_formula(request, sku_number):
+    sku = get_object_or_404(Sku, pk=sku_number)
+    if request.method == "POST":
+        pass
+    else:
+        formulas = SkuIngredient.objects.filter(sku_number=sku_number)
+        initial_data = [
+            {"ingredient_number": formula.ingredient.name, "quantity": formula.quantity}
+            for formula in formulas
+        ]
+        formset = FormulaFormSet(initial=initial_data, form_kwargs={"sku": sku})
+    return render(
+        request,
+        template_name="meals/formula/edit_formula.html",
+        context={"sku": sku, "formset": formset},
+    )
 
 
 @login_required

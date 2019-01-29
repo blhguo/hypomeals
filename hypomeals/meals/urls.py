@@ -21,6 +21,7 @@ urlpatterns = [
         views.autocomplete_product_lines,
         name="autocomplete_product_lines",
     ),
+    path("edit-formula/<int:sku_number>", views.edit_formula, name="edit_formula"),
     # Import/export views
     # Account management views
     path("accounts/login/", auth_views.LoginView.as_view(), name="login"),

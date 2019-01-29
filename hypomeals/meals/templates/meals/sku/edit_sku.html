@@ -15,7 +15,7 @@
             <h3>Add a new SKU</h3>
             <p>Enter the information about a new SKU below. All fields are required.</p>
             <p>
-                You will have a chance to enter ingredient information
+                You will have a chance to enter formulas associated with this SKU
                 on the next page.
             </p>
             {% endif %}
@@ -48,7 +48,7 @@
     </form>
     <div class="btn-group">
         <a href="#" id="nextButton" class="btn btn-success">Next<br/><small>Enter Ingredients</small></a>
-        <a href="#" class="btn btn-secondary">Cancel<br/><small>Return to SKUs</small></a>
+        <a href="{% url 'sku' %}" class="btn btn-secondary">Cancel<br/><small>Return to SKUs</small></a>
         <a href="#" class="btn btn-primary">Finish<br/><small>without adding ingredients</small></a>
     </div>
     </div>

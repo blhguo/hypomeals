@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, BLANK_CHOICE_DASH
+from django.forms import formset_factory
 
 from meals import utils
 from meals.models import Sku, Ingredient, ProductLine, Upc
@@ -18,7 +19,7 @@ def get_product_line_choices():
     return [(pl.name, pl.name) for pl in ProductLine.objects.all()]
 
 
-class SkuFilterForm(forms.Form):
+class SkuFilterForm(forms.Form, utils.BootstrapFormControlMixin):
 
     NUM_PER_PAGE_CHOICES = (
         [(1, "1")] + [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
@@ -43,7 +44,9 @@ class SkuFilterForm(forms.Form):
         super().__init__(*args, **kwargs)
 
         for field in self.fields.values():
-            field.widget.attrs["class"] = "form-control mb-2"
+            field.widget.attrs["class"] = (
+                getattr(field.widget.attrs, "class", "") + " mb-2"
+            )
 
     def query(self) -> Paginator:
         # Generate the correct query, execute it, and return the requested page.
@@ -82,7 +85,7 @@ class UpcField(forms.CharField):
         )
 
 
-class EditSkuForm(forms.ModelForm):
+class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
 
     case_upc = UpcField(
         label="Case UPC#", widget=forms.NumberInput(attrs={"maxlength": 12})
@@ -137,7 +140,6 @@ class EditSkuForm(forms.ModelForm):
         for field_name in self.Meta.fields:
             if field_name in self.fields:
                 reordered_fields[field_name] = self.fields[field_name]
-                reordered_fields[field_name].widget.attrs["class"] = "form-control"
         self.fields = reordered_fields
 
         if "instance" in kwargs:
@@ -145,18 +147,23 @@ class EditSkuForm(forms.ModelForm):
             if hasattr(instance, "pk") and instance.pk:
                 self.fields["number"].disabled = True
 
-    @staticmethod
-    def _clean_upc(upc):
+    def clean_case_upc(self):
+        upc = self.cleaned_data["case_upc"]
+        sku = Sku.objects.filter(case_upc__upc_number=upc)
+        if sku.exists():
+            raise ValidationError(
+                "An SKU with Case UPC #%(case_upc)s "
+                "already exists. Old SKU is #%(sku)d",
+                params={"case_upc": upc, "sku": sku[0].pk},
+            )
+        return Upc.objects.get_or_create(upc_number=upc)[0]
+
+    def clean_unit_upc(self):
+        upc = self.cleaned_data["unit_upc"]
         try:
             return Upc.objects.get(upc_number=upc)
         except Upc.DoesNotExist:
             return Upc(upc_number=upc)
-
-    def clean_case_upc(self):
-        return self._clean_upc(self.cleaned_data["case_upc"])
-
-    def clean_unit_upc(self):
-        return self._clean_upc(self.cleaned_data["unit_upc"])
 
     def clean(self):
         # The main thing to check for here is whether the user has supplied a custom
@@ -188,3 +195,18 @@ class EditSkuForm(forms.ModelForm):
             setattr(instance, fk, self.cleaned_data[fk])
         instance.save()
         self.save_m2m()
+        return instance
+
+
+class FormulaForm(forms.Form, utils.BootstrapFormControlMixin):
+
+    ingredient = forms.CharField(
+        required=True, widget=forms.TextInput(attrs={"placeholder": "Start typing..."})
+    )
+    quantity = forms.DecimalField(required=True)
+
+    def __init__(self, *args, sku, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.sku = sku
+
+FormulaFormSet = formset_factory(FormulaForm, extra=1, can_delete=True)
