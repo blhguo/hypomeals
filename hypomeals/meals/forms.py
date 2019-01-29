@@ -1,4 +1,4 @@
-# pylint: disable-msgs=protected-access
+# pylint: disable-msg=protected-access
 
 import re
 from collections import OrderedDict

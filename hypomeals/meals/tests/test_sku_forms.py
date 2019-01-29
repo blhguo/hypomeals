@@ -1,3 +1,5 @@
+#pylint: disable-msg=expression-not-assigned
+
 from django.core.exceptions import ValidationError
 
 from meals import utils
@@ -86,7 +88,7 @@ class TestCsvModelAttributeField(SkuFormsBaseTest):
         expected_values = [set(), set(), set(), {"apple"}, {"pear"}]
         for test_case, expected in zip(test_cases, expected_values):
             result = form.clean(test_case)
-            self.assertEquals(expected, result, "Empty result should not be returned")
+            self.assertEqual(expected, result, "Empty result should not be returned")
 
     def test_nonexistent_ingredients(self):
         """Nonexistent ingredients should cause an exception to be raised"""
@@ -102,7 +104,7 @@ class TestCsvModelAttributeField(SkuFormsBaseTest):
                 "watermelon",
             ]
         ]
-        with self.assertRaises(ValidationError, expected_regex=r"kiwi fruit") as cm:
+        with self.assertRaises(ValidationError, expected_regex=r"kiwi fruit"):
             form.clean("apple, pear, kiwi fruit")
 
 
