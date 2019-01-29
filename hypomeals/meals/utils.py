@@ -1,5 +1,7 @@
 import functools
 import os
+import random
+import string
 import time
 
 from django.conf import settings
@@ -132,3 +134,49 @@ class BootstrapFormControlMixin:
     def __init_subclass__(cls, **_):
 
         cls.__init__ = inject_form_control(getattr(cls, "__init__"))
+
+
+def upc_check_digit(number: django_six.text_type) -> int:
+    """
+    Computes the check digit of a UPC-A standard code.
+    Adapted from
+    https://en.wikipedia.org/wiki/Universal_Product_Code#Check_digit_calculation
+    :param number:
+    :return:
+    """
+    if len(number) not in [11, 12]:
+        raise ValueError("The UPC must be either 11 or 12 characters long")
+    current_sum = 0
+    for i in [1, 3, 5, 7, 9, 11]:
+        current_sum += int(number[i - 1])
+    current_sum *= 3
+    for i in [2, 4, 6, 8, 10]:
+        current_sum += int(number[i - 1])
+    check_digit = current_sum % 10
+    return 0 if check_digit == 0 else (10 - check_digit)
+
+
+def is_valid_upc(number: django_six.text_type) -> bool:
+    """
+    Checks whether a number is compliant with the UPC-A standard. Note that according
+    to the standard, first digits should also be in range [0-1,6-9].
+
+    :param number: the UPC number to check, as a string
+    :return: true iff the number is a valid UPC number
+    """
+    if len(number) != 12:
+        return False
+    if number[0] not in {"0", "1", "6", "7", "8", "9"}:
+        return False
+    check_digit = upc_check_digit(number)
+    return number[11] == str(check_digit)
+
+
+def generate_random_upc() -> str:
+    """
+    Generates a valid UPC number
+    :return: a valid UPC number, as a string
+    """
+    random_number = random.choice(["0", "1", "6", "7", "8", "9"])
+    random_number += "".join(random.choices(string.digits, k=10))
+    return random_number + str(upc_check_digit(random_number))
