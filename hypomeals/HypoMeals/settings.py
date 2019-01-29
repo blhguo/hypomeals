@@ -120,6 +120,81 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
+# Logging
+# https://docs.djangoproject.com/en/2.1/topics/logging/
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{asctime} {levelname} {module} {process:d} {thread:d} {message}",
+            "style": "{",
+        },
+        "medium": {"format": "{asctime} {levelname}: {message}", "style": "{"},
+        "simple": {"format": "{levelname} {message}", "style": "{"},
+        "sql_statements": {
+            "format": "{asctime} {levelname} {message} ({sql} {params})",
+            "style": "{",
+        },
+    },
+    "filters": {"require_debug_true": {"()": "django.utils.log.RequireDebugTrue"}},
+    "handlers": {
+        "console": {
+            "level": "DEBUG",
+            "filters": ["require_debug_true"],
+            "class": "logging.StreamHandler",
+            "formatter": "medium",
+        },
+        "sql_file": {
+            "level": "DEBUG",
+            "filters": [],
+            "class": "logging.FileHandler",
+            "formatter": "sql_statements",
+            "filename": os.path.join(BASE_DIR, "logs", "sql_debug.log"),
+        },
+        "server_file": {
+            "level": "INFO",
+            "filters": [],
+            "class": "logging.FileHandler",
+            "formatter": "verbose",
+            "filename": os.path.join(BASE_DIR, "logs", "server.log"),
+        },
+        "file": {
+            "level": "INFO",
+            "filters": [],
+            "class": "logging.FileHandler",
+            "formatter": "verbose",
+            "filename": os.path.join(BASE_DIR, "logs", "debug.log"),
+        },
+    },
+    "loggers": {
+        # Project loggers
+        # This is the catch-all root logger. It simply logs everything to console
+        "": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        # This is all the loggers in our project. It logs to both the console and to
+        # a special file called debug.log in the logs/ directory.
+        "meals": {
+            "handlers": ["console", "file"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+        # Django loggers
+        "django": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        # Log all the SQL statements used in the project
+        "django.db.backends": {
+            "handlers": ["sql_file"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+        # This configures all loggers related to the request-response cycle to log to
+        # a file called server.log
+        **{
+            logger: {"handlers": ["server_file"], "level": "DEBUG", "propagate": True}
+            for logger in ["django.request", "django.server", "django.template"]
+        },
+    },
+}
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/2.1/topics/i18n/
