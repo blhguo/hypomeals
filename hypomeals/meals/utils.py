@@ -1,3 +1,4 @@
+import functools
 import os
 import random
 import string
@@ -43,7 +44,7 @@ def make_token_with_timestamp(*args: string_types) -> string_types:
     # invalid as soon as it is used.
     # We limit the hash to 20 chars to keep URL short
 
-    key_salt = "EVENT_CALENDAR_TOKEN_GENERATOR"
+    key_salt = "HYPOMEALS_TOKEN_GENERATOR"
     secret = settings.SECRET_KEY
 
     hash_value = salted_hmac(
@@ -93,6 +94,61 @@ class UploadToPathAndRename:
         return os.path.join(self.sub_path, filename)
 
 
+def parameterized(decorator):
+    """
+    A meta-decorator to make decorators accept parameters.
+
+    Traditionally, in Python, to make a decorator, we simple define a function that
+    returns another function. However, the problem arises when the decorator itself,
+    rather than the function being decorated, wishes to accept arguments.
+
+    :param decorator: a decorator to decorate
+    :return:
+    """
+
+    @functools.wraps(decorator)
+    def wrapper(*args, **kwargs):
+        decorated = functools.wraps(decorator)(
+            functools.partial(decorator, *args, **kwargs)
+        )
+        if args and callable(args[0]):
+            return decorated()
+        return decorated
+
+    return wrapper
+
+
+@parameterized
+def inject_form_control(func, exclude_names=()):
+    """
+    Injects the "form-control" class to all widgets in a form.
+    """
+
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        func(self, *args, **kwargs)
+        for name, field in self.fields.items():
+            if name in exclude_names:
+                continue
+            field.widget.attrs["class"] = (
+                field.widget.attrs.get("class", "") + " form-control"
+            )
+
+    return wrapper
+
+
+class BootstrapFormControlMixin:
+    """
+    Injects the "form-control" class to all widgets bound to a form that inherits from
+    this class.
+    """
+
+    @classmethod
+    def __init_subclass__(cls, **_):
+
+        cls.__init__ = inject_form_control(getattr(cls, "__init__"))
+
+
 def upc_check_digit(number: django_six.text_type) -> int:
     """
     Computes the check digit of a UPC-A standard code.
@@ -115,12 +171,15 @@ def upc_check_digit(number: django_six.text_type) -> int:
 
 def is_valid_upc(number: django_six.text_type) -> bool:
     """
-    Checks whether a number is compliant with the UPC-A standard
+    Checks whether a number is compliant with the UPC-A standard. Note that according
+    to the standard, first digits should also be in range [0-1,6-9].
 
     :param number: the UPC number to check, as a string
     :return: true iff the number is a valid UPC number
     """
     if len(number) != 12:
+        return False
+    if number[0] not in {"0", "1", "6", "7", "8", "9"}:
         return False
     check_digit = upc_check_digit(number)
     return number[11] == str(check_digit)
@@ -129,7 +188,8 @@ def is_valid_upc(number: django_six.text_type) -> bool:
 def generate_random_upc() -> str:
     """
     Generates a valid UPC number
-    :return:
+    :return: a valid UPC number, as a string
     """
-    random_number = "".join(random.choices(string.digits, k=11))
+    random_number = random.choice(["0", "1", "6", "7", "8", "9"])
+    random_number += "".join(random.choices(string.digits, k=10))
     return random_number + str(upc_check_digit(random_number))

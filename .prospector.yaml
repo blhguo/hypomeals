@@ -11,6 +11,13 @@ pep8:
   options:
     max-line-length: 88
 
+pylint:
+  disable:
+    - logging-fstring-interpolation
+    - too-many-arguments
+    - too-many-locals
+    - no-value-for-parameter
+
 mccabe:
   run: false
 
