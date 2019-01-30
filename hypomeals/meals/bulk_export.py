@@ -33,8 +33,8 @@ FILE_TYPE_TO_FIELDS = {
     },
 }
 FILE_TYPE_TO_FIELDS_REV = {}
-for key in FILE_TYPE_TO_FIELDS:
-    FILE_TYPE_TO_FIELDS_REV[key] = {v: k for k, v in FILE_TYPE_TO_FIELDS[key].items()}
+for key, value in FILE_TYPE_TO_FIELDS:
+    FILE_TYPE_TO_FIELDS_REV[key] = {v: k for k, v in value.items()}
 
 HEADERS = {
     "skus": ["SKU#","Name", "Case UPC", "Unit UPC", "Unit size",
