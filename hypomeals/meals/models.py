@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
+from . import utils
 
 
 # Create your models here.
@@ -113,7 +114,10 @@ class ManufactureGoal(models.Model):
     )
     form_name = models.CharField(max_length=100, default="Morton")
     save_time = models.DateTimeField(default=timezone.now, blank=True)
-
+    file = models.FileField(
+        upload_to = utils.UploadToPathAndRename("pk", "manufacture_goal/"),
+        default = "manufacture_goal/"
+    )
 
 class ManufactureDetail(models.Model):
     form_name = models.ForeignKey(ManufactureGoal, on_delete=models.CASCADE)
