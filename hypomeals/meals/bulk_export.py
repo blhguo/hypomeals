@@ -68,7 +68,7 @@ def formula_export(export_data):
             for formula in formula_list:
                 csv_dict = {}
                 for header in HEADERS['formula']:
-                    if header is not 'Quantity':
+                    if header != 'Quantity':
                         csv_dict[header] = getattr(formula, field_dict[header]).number
                     else:
                         csv_dict[header] = getattr(formula, field_dict[header])

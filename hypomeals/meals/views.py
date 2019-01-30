@@ -40,7 +40,9 @@ def import_landing(request):
 
 @login_required
 def export_test(request):
-    response = process_export(Sku.objects.all())
+    response = render(request, template_name="meals/index.html")
+    if request :
+        response = process_export(Sku.objects.all())
     return response
 
 
