@@ -1,7 +1,6 @@
 import csv
-import tempfile
 import zipfile
-from wsgiref.util import FileWrapper
+from io import BytesIO
 
 from django.http import HttpResponse
 
@@ -33,10 +32,12 @@ FILE_TYPE_TO_FIELDS = {
         "quantity": "Quantity",
     },
 }
+FILE_TYPE_TO_FIELDS_REVERSED = {}
+for key in FILE_TYPE_TO_FIELDS.keys():
+    FILE_TYPE_TO_FIELDS_REVERSED[key] = {v: k for k, v in FILE_TYPE_TO_FIELDS[key].items()}
 
-FILE_TYPE_TO_FIELDS_REVERSED = dict((v, k) for k, v in FILE_TYPE_TO_FIELDS.items())
 HEADERS = {
-    "skus": ["SKU#,Name", "Case UPC", "Unit UPC", "Unit size",
+    "skus": ["SKU#","Name", "Case UPC", "Unit UPC", "Unit size",
     "Count per case", "Product Line Name", "Comment"],
     "ingredients": ["Ingr#","Name","Vendor Info","Size","Cost", "Comment"],
     "product_lines": ["Name"],
@@ -69,7 +70,7 @@ def formula_export(export_data):
                 for header in HEADERS['formula']:
                     csv_dict[header] = getattr(formula, field_dict[header])
                 writer.writerow(csv_dict)
-    return myFile
+    return "formulas_export.csv"
 
 def sku_export(export_data):
     '''
@@ -87,7 +88,7 @@ def sku_export(export_data):
             for header in HEADERS['skus']:
                 csv_dict[header] = getattr(sku_object, field_dict[header])
             writer.writerow(csv_dict)
-    return myFile
+    return 'skus_export.csv'
 
 def process_export(export_data):
     '''
@@ -95,17 +96,17 @@ def process_export(export_data):
     :param export_data: data to be exported
     :return: response containing a zip file
     '''
-    temp = tempfile.TemporaryFile()
-    archive = zipfile.ZipFile(temp, 'w', zipfile.ZIP_DEFLATED)
     sku_data = sku_export(export_data)
     formula_data = formula_export(export_data)
     files = [sku_data, formula_data]
+
+    byte_data = BytesIO()
+    zf = zipfile.ZipFile(byte_data, 'w')
+
     for file in files:
-        archive.write(file)
-    archive.close()
-    wrapper = FileWrapper(temp)
-    response = HttpResponse(wrapper, content_type='application.zip')
+        zf.write(file)
+    zf.close()
+    response = HttpResponse(byte_data.getvalue(), content_type='application/zip')
     response['Content-Disposition'] = 'attachment; filename=export.zip'
-    response['Content-Length'] = temp.tell()
-    temp.seek(0)
+
     return response
