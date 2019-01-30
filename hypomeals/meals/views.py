@@ -3,7 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 
 from .forms import ImportCsvForm, ImportZipForm
-
+from .bulk_export import process_export
+from .models import Sku
 
 def index(request):
     return render(request, template_name="meals/index.html")
@@ -35,6 +36,11 @@ def import_page(request):
 @login_required
 def import_landing(request):
     response = render(request, template_name="meals/import/import_landing.html")
+    return response
+
+@login_required
+def export_test(request):
+    response = process_export(Sku.objects.all())
     return response
 
 

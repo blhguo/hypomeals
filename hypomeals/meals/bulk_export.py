@@ -33,7 +33,7 @@ FILE_TYPE_TO_FIELDS = {
     },
 }
 FILE_TYPE_TO_FIELDS_REV = {}
-for key, value in FILE_TYPE_TO_FIELDS:
+for key, value in FILE_TYPE_TO_FIELDS.items():
     FILE_TYPE_TO_FIELDS_REV[key] = {v: k for k, v in value.items()}
 
 HEADERS = {
@@ -68,7 +68,10 @@ def formula_export(export_data):
             for formula in formula_list:
                 csv_dict = {}
                 for header in HEADERS['formula']:
-                    csv_dict[header] = getattr(formula, field_dict[header])
+                    if header is not 'Quantity':
+                        csv_dict[header] = getattr(formula, field_dict[header]).number
+                    else:
+                        csv_dict[header] = getattr(formula, field_dict[header])
                 writer.writerow(csv_dict)
     return "formulas_export.csv"
 
