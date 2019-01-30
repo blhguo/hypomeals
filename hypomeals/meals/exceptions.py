@@ -1,5 +1,5 @@
 # pylint: disable-msg=too-many-arguments
-import sys
+#import sys
 import traceback
 
 from django.conf import settings
