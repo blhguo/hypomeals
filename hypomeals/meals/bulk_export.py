@@ -32,9 +32,9 @@ FILE_TYPE_TO_FIELDS = {
         "quantity": "Quantity",
     },
 }
-FILE_TYPE_TO_FIELDS_REVERSED = {}
-for key in FILE_TYPE_TO_FIELDS.keys():
-    FILE_TYPE_TO_FIELDS_REVERSED[key] = {v: k for k, v in FILE_TYPE_TO_FIELDS[key].items()}
+FILE_TYPE_TO_FIELDS_REV = {}
+for key in FILE_TYPE_TO_FIELDS:
+    FILE_TYPE_TO_FIELDS_REV[key] = {v: k for k, v in FILE_TYPE_TO_FIELDS[key].items()}
 
 HEADERS = {
     "skus": ["SKU#","Name", "Case UPC", "Unit UPC", "Unit size",
@@ -59,7 +59,7 @@ def formula_export(export_data):
     '''
     skus_to_export = [getattr(sku, 'number') for sku in export_data]
     myFile = open('formulas_export.csv', 'w')
-    field_dict = FILE_TYPE_TO_FIELDS_REVERSED['formula']
+    field_dict = FILE_TYPE_TO_FIELDS_REV['formula']
     with myFile:
         writer = csv.DictWriter(myFile, fieldnames=HEADERS['formula'])
         writer.writeheader()
@@ -79,7 +79,7 @@ def sku_export(export_data):
     :return: csv file
     '''
     myFile = open('skus_export.csv', 'w')
-    field_dict = FILE_TYPE_TO_FIELDS_REVERSED['skus']
+    field_dict = FILE_TYPE_TO_FIELDS_REV['skus']
     with myFile:
         writer = csv.DictWriter(myFile, fieldnames=HEADERS['skus'])
         writer.writeheader()
