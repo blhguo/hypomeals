@@ -60,9 +60,7 @@ def remove_ingredients(request):
     try:
         with transaction.atomic():
             num_deleted, _ = Ingredient.objects.filter(pk__in=to_remove).delete()
-            return JsonResponse(
-                {"error": None,
-                 "resp": f"Removed {num_deleted} Ingredients"})
+            return JsonResponse({"error": None, "resp": f"Removed {num_deleted} Ingredients"})
     except DatabaseError as e:
         return JsonResponse({"error": str(e), "resp": "Not removed"})
 
