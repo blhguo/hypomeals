@@ -60,6 +60,22 @@ class Ingredient(models.Model):
     class Meta:
         ordering = ["number"]
 
+    @classmethod
+    def get_sortable_fields(cls):
+        """
+        Returns a list of fields that this model is sortable by. For now this is hard-
+        coded because there is no easy way to tell whether it makes sense to sort by
+        a particular field.
+        :return: a list of 2-tuples (field identifier, human-readable name) suitable
+            for use in, for example, a ChoiceField in a form.
+        """
+        return [
+            ("name", "Name"),
+            ("number", "Number"),
+            ("vendor", "Vendor"),
+            ("size", "Size"),
+            ("cost", "Cost"),
+        ]
 
 class Sku(models.Model):
     name = models.CharField(max_length=32, blank=False)

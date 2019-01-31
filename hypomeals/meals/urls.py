@@ -21,6 +21,11 @@ urlpatterns = [
         views.autocomplete_product_lines,
         name="autocomplete_product_lines",
     ),
+    path("ingredient", views.ingredient, name="ingredient"),
+    path("remove-ingredient", views.remove_ingredients, name="remove_ingredients"),
+    path("add-ingredient", views.add_ingredient, name="add_ingredient"),
+    path("edit-ingredient/<int:ingredient_number>", views.edit_ingredient, name="edit_ingredient"),
+    path("ac-sku", views.autocomplete_skus, name="autocomplete_SKUs"),
     # Import/export views
     # Account management views
     path("accounts/login/", auth_views.LoginView.as_view(), name="login"),

@@ -1,0 +1,241 @@
+{% extends "meals/base.html" %}
+
+{% block ingredient_active %}active{% endblock %}
+
+{% block body %}
+<div class="container-fluid m-auto">
+    <div method="post" id="ingredientFilterForm">
+        {%  csrf_token %}
+        <div class="row">
+            <div class="col-sm-8">
+                <nav>
+                    <ul class="pagination my-4" id="pageList">
+                        {% if ingredients.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" page="{{  ingredients.previous_page_number }}" href="#">
+                                    <span>&laquo;</span>
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#">
+                                    <span>&laquo;</span>
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        {% for page in pages %}
+                            {%  if current_page == forloop.counter %}
+                                <li class="page-item active">
+                            {% else %}
+                                <li class="page-item">
+                            {% endif %}
+                                <a class="page-link" page="{{ forloop.counter }}" href="#">
+                                {{ forloop.counter }}
+                                </a>
+                            </li>
+                        {% endfor %}
+
+                        {% if skus.has_next %}
+                            <li class="page-item">
+                            <a class="page-link" page="{{ ingredients.next_page_number }}" href="#">
+                                <span>&raquo;</span>
+                            </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                            <a class="page-link" href="#">
+                                <span>&raquo;</span>
+                            </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        <div class="col-sm-4">
+            <div class="btn-group my-4" style="float:right;">
+                <a id="addIngredientButton"
+                   href="{%  url 'add_ingredient' %}"
+                   class="btn btn-primary">
+                    <span class="fa fa-plus"></span> Add a new Ingredient
+                </a>
+                <button type="button"
+                        class="btn btn-danger"
+                        disabled
+                        data-toggle="tooltip"
+                        data-placement="top"
+                        title="Select Ingredientss below to remove them."
+                        id="removeButton">
+                    <span class="fa fa-minus"></span> Remove Selected
+                </button>
+            </div>
+        </div>
+        </div>
+    <div class="row">
+        <div class="col-sm-2">
+            {%  if form.non_field_errors %}
+            <div class="alert alert-danger">
+                <p>Please correct the following error</p>
+                {{  form.non_field_errors }}
+            </div>
+            {% endif %}
+        {{ form.page_num }}
+        </div>
+        <div class="form-group">
+            <label for="{{ form.num_per_page.id_for_label }}">Number per page:</label>
+            {{ form.num_per_page }}
+            {% if form.num_per_page.errors %}
+            <small>{{ form.num_per_page.errors }}</small>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="{{ form.sort_by.id_for_label }}">Sort by:</label>
+            {{ form.sort_by }}
+            {% if form.sort_by.errors %}
+            <small>{{ form.sort_by.errors }}</small>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="{{ form.keyword.id_for_label }}">Search:</label>
+            {{ form.keyword }}
+            {% if form.keyword.errors %}
+            <small>{{ form.keyword.errors }}</small>
+            {% endif %}
+        </div>
+         <div class="form-group">
+            <label for="{{ form.skus.id_for_label }}">SKUs that use this ingredient:</label>
+            {{ form.skus }}
+            {% if form.skus.errors %}
+            <small>{{ form.skus.errors }}</small>
+            {% endif %}
+        </div>
+        <div class="btn-group w-100" role="group">
+            <input type="submit" class="btn btn-success w-100" value="Filter">
+            <a href="#" id="reserAllButton" class="btn btn-danger w-100">Reset</a>
+        </div>
+        </div>
+    <div class="col-sm-10">
+        <table class="table">
+            <thead class="thead-light">
+            <tr>
+                <th><input type="checkbox" id="selectAll"> </th>
+                <th>Ingr#</th>
+                <th>Name</th>
+                <th>Vendor</th>
+                <th>Size</th>
+                <th>Cost</th>
+            </tr>
+            </thead>
+            <tbody class="table-striped">
+            {% for ingredient in ingredients %}
+            <tr>
+                <td><input type="checkbox" class="ingredient-checkbox" id="{{ ingredient.number }}"> </td>
+                <td>{{ ingredient.number }}</td>
+                <td><a href="{% url "edit_ingredient" ingredient.number %}">{{ ingredient.name }}</a></td>
+                <td>{{ ingredient.vendor }}</td>
+                <td>{{ ingredient.size }}</td>
+                <td>{{ ingredient.cost }}</td>
+            </tr>
+            {%  empty %}
+                <div class="alert alert-danger">
+                    No results were found. Please modify your search parameters and try again.
+                </div>
+            {% endfor %}
+            </tbody>
+        </table>
+    <div>
+        <p>Found {{ ingredients.paginator.count }} matches in {{ duration }} seconds</p>
+    </div>
+    </div>
+    </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scriptend %}
+<script>
+    $(function() {
+        var removeButton = $("#removeButton");
+        var ingredientCheckboxes = $(".ingredient-checkbox").toArray()
+        ingredientCheckboxes.forEach(function (cb) {
+            cb.onchange = function(ev) {
+                removeButton.prop("disabled", !ingredientCheckboxes.some(function (elem) {
+                    return elem.checked;
+                }));
+            }
+        });
+
+        $("selectAll").on("change", function(ev) {
+            let value = $(this).prop("checked");
+            ingredientCheckboxes.forEach(function(cb) {
+                cb.checked = value;
+            });
+        });
+
+        removeButton.on("click", function(ev) {
+            var toRemove = [];
+            ingredientCheckboxes.forEach(function(cb) {
+                if (cb.checked) {
+                    toRemove.push(cb.id);
+                }
+            });
+            if (confirm(`Are you sure you would like to remove ${toRemove.length} Ingredient(s)?` +
+                'This cannot be undone.')) {
+                $.post("{% url 'remove_ingredients' %}",
+                    {"to_remove": JSON.stringify(toRemove)},
+                        function(data) {
+                            alert(data.resp);
+                        }, "json")
+                            .fail(function(jqXHR, status, data){
+                                alert(`[Status=${status}] Error removing ${toRemove.length} Ingredient(s): ` +
+                                ("error" in data) ? data.error : "" + "\n" +
+                                    `Please refresh the page and try again later.`);
+                            });
+            }
+
+    });
+
+        $("#pageList").find("a").on("click", function() {
+            let page = $(this).attr("page");
+            $("#{{  form.page_num.id_for_label }}").val(page);
+            $("#ingredientFilterForm").submit();
+        });
+
+        function split(val) {
+            return val.split(/,\s*/);
+        }
+
+        function lastTerm(val) {
+            return split(val).pop();
+        }
+
+        $("#{{ form.skus.id_for_label }}")
+            .on("keydown", function(ev) {
+                if (ev.keyCode === $.ui.keyCode.TAB
+                && $(this).autocomplete("instance").menu.active) {
+                    ev.preventDefault();
+                }
+            }).autocomplete({
+                source: function(request, response) {
+                    $.getJSON("{% url 'autocomplete_SKUs' %}", {
+                        term: lastTerm(request.term)
+                    }, response)
+                },
+                search: function() {
+                    let term = lastTerm(this.value);
+                    if (term.lenth < 2) {
+                        return false;
+                    }
+                },
+                focus: function() {
+                    return false;
+                },
+        });
+
+        $("#reserAllButton").click(function(ev) {
+            window.location.href = "{% url 'ingredient' %}"
+        });
+    });
+
+</script>
+{%  endblock %}
