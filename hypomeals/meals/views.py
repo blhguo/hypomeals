@@ -11,8 +11,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from meals.forms import SkuFilterForm, EditSkuForm
-from meals.forms import IngredientFilterForm, EditIngredientForm
+from meals.forms import SkuFilterForm, EditSkuForm, IngredientFilterForm, EditIngredientForm
 from meals.models import Sku, Ingredient, ProductLine
 
 
