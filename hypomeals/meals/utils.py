@@ -13,7 +13,6 @@ from django.utils.deconstruct import deconstructible
 from django.utils.http import int_to_base36
 from six import string_types
 
-
 def exception_to_error(func):
     @wraps(func)
     def wrapper(request, *args, **kwargs):
