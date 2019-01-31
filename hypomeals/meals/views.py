@@ -105,13 +105,13 @@ def edit_ingredient(request, ingredient_number):
 @login_required
 def autocomplete_skus(request):
     term = request.GET.get("term", "")
-    ingredients = list(
+    skus = list(
         map(
             operator.attrgetter("name"),
             Sku.objects.filter(name__istartswith=term),
         )
     )
-    return JsonResponse(ingredients, safe=False)
+    return JsonResponse(skus, safe=False)
 ############################  SKU Views  ###############################
 @login_required
 def sku(request):

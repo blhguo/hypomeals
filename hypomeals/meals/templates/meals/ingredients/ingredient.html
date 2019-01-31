@@ -4,7 +4,7 @@
 
 {% block body %}
 <div class="container-fluid m-auto">
-    <div method="post" id="ingredientFilterForm">
+    <form method="post" id="ingredientFilterForm">
         {%  csrf_token %}
         <div class="row">
             <div class="col-sm-8">
@@ -36,7 +36,7 @@
                             </li>
                         {% endfor %}
 
-                        {% if skus.has_next %}
+                        {% if ingredients.has_next %}
                             <li class="page-item">
                             <a class="page-link" page="{{ ingredients.next_page_number }}" href="#">
                                 <span>&raquo;</span>
@@ -64,7 +64,7 @@
                         disabled
                         data-toggle="tooltip"
                         data-placement="top"
-                        title="Select Ingredientss below to remove them."
+                        title="Select Ingredients below to remove them."
                         id="removeButton">
                     <span class="fa fa-minus"></span> Remove Selected
                 </button>
@@ -80,7 +80,6 @@
             </div>
             {% endif %}
         {{ form.page_num }}
-        </div>
         <div class="form-group">
             <label for="{{ form.num_per_page.id_for_label }}">Number per page:</label>
             {{ form.num_per_page }}
@@ -149,7 +148,7 @@
     </div>
     </div>
     </form>
-</div>
+</form>
 {% endblock %}
 
 {% block scriptend %}

@@ -87,7 +87,7 @@ class IngredientFilterForm(forms.Form):
         if params['keyword']:
             query_filter &= Q(name__icontains=params["keyword"])
         if params["skus"]:
-            query_filter |= Q(skus__name__in=params["ingredients"])
+            query_filter |= Q(sku__name__in=params["skus"])
         query = Ingredient.objects.filter(query_filter)
         if sort_by:
             query.order_by(sort_by)
