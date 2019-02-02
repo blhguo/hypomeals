@@ -1,14 +1,22 @@
+# pylint: disable-msg=protected-access
+
+import re
 from collections import OrderedDict
 
 from django import forms
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, FieldDoesNotExist
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, BLANK_CHOICE_DASH
 from django.forms import formset_factory
 
 from meals import utils
-from meals.models import Sku, Ingredient, ProductLine, Upc
+from meals.models import Sku, Ingredient, ProductLine, Upc, SkuIngredient
+
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_ingredient_choices():
@@ -19,25 +27,63 @@ def get_product_line_choices():
     return [(pl.name, pl.name) for pl in ProductLine.objects.all()]
 
 
+class CsvModelAttributeField(forms.CharField):
+    COMMA_SPLIT_REGEX = re.compile(r",\s*")
+
+    attr = "pk"
+
+    def __init__(self, model, *args, attr, **kwargs):
+        super().__init__(*args, **kwargs)
+        try:
+            model._meta.get_field(attr)
+        except FieldDoesNotExist:
+            raise AssertionError(
+                f"Model '{model._meta.model_name}' has no attribute '{attr}'"
+            )
+        self.model = model
+        self.attr = attr
+
+    def clean(self, value):
+        # Get rid of any empty values
+        items = {item.strip() for item in self.COMMA_SPLIT_REGEX.split(value)} - {""}
+        if not items:
+            return items
+        query = Q(**{f"{self.attr}__in": items})
+        found = set(self.model.objects.filter(query).values_list(self.attr, flat=True))
+        not_found = items - found
+        if not_found:
+            errors = []
+            for item in not_found:
+                errors.append(
+                    ValidationError(
+                        "'%(item)s' cannot be found.", params={"item": item}
+                    )
+                )
+            raise ValidationError(errors)
+        return found
+
+
 class SkuFilterForm(forms.Form, utils.BootstrapFormControlMixin):
 
-    NUM_PER_PAGE_CHOICES = (
-        [(1, "1")] + [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
-    )
+    NUM_PER_PAGE_CHOICES = [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
 
     page_num = forms.IntegerField(widget=forms.HiddenInput(), initial=1, required=False)
     num_per_page = forms.ChoiceField(choices=NUM_PER_PAGE_CHOICES, required=True)
     sort_by = forms.ChoiceField(choices=Sku.get_sortable_fields, required=True)
     keyword = forms.CharField(required=False, max_length=100)
-    ingredients = forms.MultipleChoiceField(
+    ingredients = CsvModelAttributeField(
+        model=Ingredient,
         required=False,
-        choices=get_ingredient_choices,
-        # widget=forms.SelectMultiple(attrs={"style": "display: none"}),
+        attr="name",
+        widget=forms.TextInput(attrs={"placeholder": "Start typing..."}),
+        help_text="Enter ingredients separated by commas",
     )
-    product_lines = forms.MultipleChoiceField(
+    product_lines = CsvModelAttributeField(
+        model=ProductLine,
         required=False,
-        choices=get_product_line_choices,
-        # widget=forms.SelectMultiple(attrs={"style": "display: none"}),
+        attr="name",
+        widget=forms.TextInput(attrs={"placeholder": "Start typing..."}),
+        help_text="Enter Product Lines separated by commas",
     )
 
     def __init__(self, *args, **kwargs):
@@ -59,15 +105,15 @@ class SkuFilterForm(forms.Form, utils.BootstrapFormControlMixin):
         if params["keyword"]:
             query_filter &= Q(name__icontains=params["keyword"])
         if params["ingredients"]:
-            query_filter |= Q(ingredients__in=params["ingredients"])
+            query_filter |= Q(ingredients__name__in=params["ingredients"])
         if params["product_lines"]:
             query_filter |= Q(product_line__name__in=params["product_lines"])
         query = Sku.objects.filter(query_filter)
         if sort_by:
             query.order_by(sort_by)
-        if num_per_page != -1:
-            return Paginator(query.distinct(), num_per_page)
-        return query.distinct()
+        if num_per_page == -1:
+            num_per_page = query.count()
+        return Paginator(query.distinct(), num_per_page)
 
 
 class UpcField(forms.CharField):
@@ -203,10 +249,62 @@ class FormulaForm(forms.Form, utils.BootstrapFormControlMixin):
     ingredient = forms.CharField(
         required=True, widget=forms.TextInput(attrs={"placeholder": "Start typing..."})
     )
-    quantity = forms.DecimalField(required=True)
+    quantity = forms.DecimalField(required=True, min_value=0.00001)
 
     def __init__(self, *args, sku, **kwargs):
         super().__init__(*args, **kwargs)
         self.sku = sku
 
-FormulaFormSet = formset_factory(FormulaForm, extra=1, can_delete=True)
+    def clean_ingredient(self):
+        raw = self.cleaned_data["ingredient"]
+        ingr = Ingredient.objects.filter(name=raw)
+        if not ingr.exists():
+            raise ValidationError(
+                "Ingredient with name '%(name)s' does not exist.", params={"name": raw}
+            )
+        return ingr[0]
+
+    def save(self, commit=True):
+        instance = SkuIngredient(
+            sku_number=self.sku,
+            ingredient_number=self.cleaned_data["ingredient"],
+            quantity=self.cleaned_data["quantity"],
+        )
+        if commit:
+            instance.save()
+        return instance
+
+
+class FormulaFormsetBase(forms.BaseFormSet):
+    def clean(self):
+        if any(self.errors):
+            return
+        ingredients = {}
+        errors = []
+        for index, form in enumerate(self.forms, start=1):
+
+            if "DELETE" not in form.cleaned_data or form.cleaned_data["DELETE"]:
+                continue
+            logger.info(form.cleaned_data)
+            ingr_number = form.cleaned_data["ingredient"].number
+            if ingr_number in ingredients:
+                errors.append(
+                    ValidationError(
+                        "Row %(error_row)d: Ingredient '%(name)s' "
+                        "is already specified in row %(orig_row)d",
+                        params={
+                            "name": form.cleaned_data["ingredient"].name,
+                            "orig_row": ingredients[ingr_number],
+                            "error_row": index,
+                        },
+                    )
+                )
+            else:
+                ingredients[ingr_number] = index
+        if errors:
+            raise ValidationError(errors)
+
+
+FormulaFormset = formset_factory(
+    FormulaForm, extra=0, can_delete=True, formset=FormulaFormsetBase
+)

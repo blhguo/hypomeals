@@ -10,6 +10,10 @@
     <p>Add, remove, or edit formula ingredients and quantities below.</p>
     <p>As you type, ingredients will be autocompleted. If you need to create an ingredient,
     click on the "Create new Ingredient" button.</p>
+    <p>
+        Too add more rows to the table, click on the "Add row" button. To delete a
+        row, check the "Delete" box to the left. Empty rows will not be processed.
+    </p>
     </div>
 </div>
 </div>
@@ -38,20 +42,40 @@
 <form action="{% url 'edit_formula' sku.number %}" method="post">
 {% csrf_token %}
 {{ formset.management_form }}
+{% if formset.non_form_errors %}
+<div class="alert alert-danger">
+Please correct the following error(s):
+{{ formset.non_form_errors }}
+</div>
+{% endif %}
 <table class="table">
 <thead class="thead-light">
 <tr>
-    <th><input type="checkbox" id="selectAll"></th>
+{#    <th><input type="checkbox" id="selectAll"></th>#}
     <th>Ingredient</th>
     <th>Quantity</th>
+    <th>Action</th>
 </tr>
 </thead>
 <tbody id="formsetTable">
 {% for form in formset %}
 <tr>
-    <td>{{ form.DELETE }}</td>
-    <td>{{ form.ingredient }}</td>
-    <td>{{ form.quantity }}</td>
+    <td class="align-middle">
+        {{ form.ingredient }}
+        {% if form.ingredient.errors %}
+        <small>{{ form.ingredient.errors }}</small>
+        {% endif %}
+    </td>
+    <td class="align-middle">
+        {{ form.quantity }}
+        {% if form.quantity.errors %}
+        <small>{{ form.quantity.errors }}</small>
+        {% endif %}
+    </td>
+    <td class="align-middle">
+        {{ form.DELETE }}
+        <a href="#" class="deleteButton">Delete</a>
+    </td>
 </tr>
 {% endfor %}
 <div class="alert alert-success" id="emptyAlert" style="display: none;">
@@ -74,7 +98,7 @@ add another ingredient to this SKU.
 {% endblock %}
 
 {% block scriptend %}
-<script lang="javascript" src="{% static 'meals/edit_formula.js' %}"></script>
+<script lang="javascript" src="{% static 'meals/formula/edit_formula.js' %}"></script>
 {% endblock %}
 
 {% block sku_active %}active{% endblock %}

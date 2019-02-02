@@ -1,4 +1,5 @@
 import operator
+import time
 
 import jsonpickle
 from django.contrib import messages
@@ -11,8 +12,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from meals.forms import SkuFilterForm, EditSkuForm, FormulaFormSet
+from meals.forms import SkuFilterForm, EditSkuForm, FormulaFormset
 from meals.models import Sku, Ingredient, ProductLine, SkuIngredient
+
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 def index(request):
@@ -28,6 +34,7 @@ def logout_view(request):
 ############################  SKU Views  ###############################
 @login_required
 def sku(request):
+    start = time.time()
     if request.method == "POST":
         form = SkuFilterForm(request.POST)
         if form.is_valid():
@@ -43,6 +50,7 @@ def sku(request):
         # number of pages, just start over from the first page.
         page = 1
         form.initial["page_num"] = 1
+    end = time.time()
     return render(
         request,
         template_name="meals/sku/sku.html",
@@ -51,6 +59,7 @@ def sku(request):
             "form": form,
             "pages": range(1, skus.num_pages + 1),
             "current_page": page,
+            "duration": "{:0.3f}".format(end - start),
         },
     )
 
@@ -94,18 +103,35 @@ def add_sku(request):
     )
 
 
+##################### Formula Views ########################
 @login_required
 def edit_formula(request, sku_number):
     sku = get_object_or_404(Sku, pk=sku_number)
     if request.method == "POST":
-        pass
+        formset = FormulaFormset(request.POST, form_kwargs={"sku": sku})
+        if formset.is_valid():
+            logger.info(formset.cleaned_data)
+            saved = []
+            with transaction.atomic():
+                SkuIngredient.objects.filter(sku_number=sku).delete()
+                for form, data in zip(formset.forms, formset.cleaned_data):
+                    if "DELETE" not in data or data["DELETE"]:
+                        continue
+                    saved.append(form.save(commit=False))
+                if saved:
+                    SkuIngredient.objects.bulk_create(saved)
+            messages.info(request, f"Successfully inserted {len(saved)} ingredients.")
+            return redirect("sku")
     else:
         formulas = SkuIngredient.objects.filter(sku_number=sku_number)
         initial_data = [
-            {"ingredient_number": formula.ingredient.name, "quantity": formula.quantity}
+            {
+                "ingredient": formula.ingredient_number.name,
+                "quantity": formula.quantity,
+            }
             for formula in formulas
         ]
-        formset = FormulaFormSet(initial=initial_data, form_kwargs={"sku": sku})
+        formset = FormulaFormset(initial=initial_data, form_kwargs={"sku": sku})
     return render(
         request,
         template_name="meals/formula/edit_formula.html",
