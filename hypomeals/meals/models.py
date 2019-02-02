@@ -3,6 +3,7 @@ from django.db import models
 
 
 from meals import utils
+from django.utils import timezone
 
 
 class User(AbstractUser):
@@ -75,19 +76,34 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin):
     excluded_fields = ("number",)
 
     name = models.CharField(max_length=32, blank=False, unique=True)
+
     number = models.IntegerField(
-        blank=False, verbose_name="SKU Number", unique=True, primary_key=True
+        blank=False, verbose_name="SKU#", unique=True, primary_key=True
     )
-    case_upc = models.ForeignKey(
-        Upc, blank=False, on_delete=models.CASCADE, related_name="+"
+    case_upc = models.OneToOneField(
+        Upc,
+        blank=False,
+        on_delete=models.CASCADE,
+        related_name="+",
+        verbose_name="Case UPC#",
     )
     unit_upc = models.ForeignKey(
-        Upc, blank=False, on_delete=models.CASCADE, related_name="+"
+        Upc,
+        verbose_name="Unit UPC#",
+        blank=False,
+        on_delete=models.CASCADE,
+        related_name="+",
     )
     unit_size = models.CharField(max_length=100, blank=False)
-    count = models.IntegerField(blank=False)
-    product_line = models.ForeignKey(ProductLine, blank=False, on_delete=models.CASCADE)
-    ingredients = models.ManyToManyField(Ingredient, through="SkuIngredient")
+    count = models.IntegerField(
+        verbose_name="Count per case", blank=False, help_text="Number of units per case"
+    )
+    product_line = models.ForeignKey(
+        ProductLine, verbose_name="Product Line", blank=False, on_delete=models.CASCADE
+    )
+    ingredients = models.ManyToManyField(
+        Ingredient, verbose_name="Ingredients", through="SkuIngredient"
+    )
     comment = models.CharField(max_length=200, blank=True)
 
     def __str__(self):
@@ -97,6 +113,24 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin):
 
     class Meta:
         ordering = ["number"]
+
+    @classmethod
+    def get_sortable_fields(cls):
+        """
+        Returns a list of fields that this model is sortable by. For now this is hard-
+        coded because there is no easy way to tell whether it makes sense to sort by
+        a particular field.
+        :return: a list of 2-tuples (field identifier, human-readable name) suitable
+            for use in, for example, a ChoiceField in a form.
+        """
+        return [
+            ("name", "Name"),
+            ("number", "Number"),
+            ("case_upc", "Case UPC"),
+            ("unit_upc", "Unit UPC"),
+            ("count", "Count per case"),
+            ("product_line", "Product Line"),
+        ]
 
 
 class SkuIngredient(models.Model, utils.ModelFieldsCompareMixin):
@@ -115,3 +149,17 @@ class SkuIngredient(models.Model, utils.ModelFieldsCompareMixin):
 
     class Meta:
         unique_together = (("sku_number", "ingredient_number"),)
+
+
+class ManufactureGoal(models.Model):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="+", default=1
+    )
+    form_name = models.CharField(max_length=100, default="Morton")
+    save_time = models.DateTimeField(default=timezone.now, blank=True)
+
+
+class ManufactureDetail(models.Model):
+    form_name = models.ForeignKey(ManufactureGoal, on_delete=models.CASCADE)
+    sku = models.CharField(max_length=100)
+    quantity = models.IntegerField()
