@@ -16,7 +16,6 @@ from meals.models import Sku, Ingredient, ProductLine
 
 from .bulk_export import process_export
 from .forms import ImportCsvForm, ImportZipForm
-from .models import Sku
 
 
 def index(request):
