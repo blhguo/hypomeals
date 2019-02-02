@@ -1,20 +1,18 @@
 
-from django import forms
-from django.core.exceptions import ValidationError
-
-from meals import bulk_import
-from meals.utils import BootstrapFormControlMixin, FilenameRegexValidator
 import re
 from collections import OrderedDict
 
 from django import forms
-from django.core.exceptions import ValidationError, FieldDoesNotExist
+from django.core.exceptions import FieldDoesNotExist
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, BLANK_CHOICE_DASH
-
+from meals import bulk_import
 from meals import utils
 from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor
+from meals.utils import BootstrapFormControlMixin, FilenameRegexValidator
+
 
 class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
 
@@ -86,15 +84,11 @@ class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
         return self._imported
 
 
-
-
 class ImportZipForm(forms.Form, BootstrapFormControlMixin):
 
     zip = forms.FileField(required=False, label="ZIP File")
 
 # pylint: disable-msg=protected-access
-
-
 
 
 def get_ingredient_choices():
@@ -103,6 +97,7 @@ def get_ingredient_choices():
 
 def get_product_line_choices():
     return [(pl.name, pl.name) for pl in ProductLine.objects.all()]
+
 
 def get_vendor_choices():
     return [(ven.info, ven.info) for ven in Vendor.objects.all()]
@@ -142,6 +137,7 @@ class CsvModelAttributeField(forms.CharField):
                 )
             raise ValidationError(errors)
         return found
+
 
 class IngredientFilterForm(forms.Form):
     NUM_PER_PAGE_CHOICES = [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
@@ -263,6 +259,7 @@ class EditIngredientForm(forms.ModelForm):
             setattr(instance, fk, self.cleaned_data[fk])
         instance.save()
         self.save_m2m()
+
 
 class SkuFilterForm(forms.Form):
 
