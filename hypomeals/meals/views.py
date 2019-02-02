@@ -2,7 +2,10 @@ from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 
-# Create your views here.
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 def index(request):
