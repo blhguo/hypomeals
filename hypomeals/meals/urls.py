@@ -22,6 +22,13 @@ urlpatterns = [
         views.autocomplete_product_lines,
         name="autocomplete_product_lines",
     ),
+    path("ingredient", views.ingredient, name="ingredient"),
+    path("remove-ingredient", views.remove_ingredients, name="remove_ingredients"),
+    path("add-ingredient", views.add_ingredient, name="add_ingredient"),
+    path("edit-ingredient/<int:ingredient_number>",
+         views.edit_ingredient,
+         name="edit_ingredient"),
+    path("ac-sku", views.autocomplete_skus, name="autocomplete_SKUs"),
     # Import/export views
     path("import-page/", views.import_page, name="import_page"),
     path("import_landing/", views.import_landing, name="import_landing"),
