@@ -17,6 +17,7 @@ pylint:
     - too-many-arguments
     - too-many-locals
     - no-value-for-parameter
+    - mixed-line-endings
 
 mccabe:
   run: false
