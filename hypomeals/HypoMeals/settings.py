@@ -130,10 +130,18 @@ LOGGING = {
     "disable_existing_loggers": False,
     "formatters": {
         "verbose": {
-            "format": "{asctime} {levelname} {module} {process:d} {thread:d} {message}",
+            "format": (
+                "{asctime} {levelname} {filename}:{lineno} "
+                "{module}.{funcName} {process:d} {thread:d} {message}"
+            ),
             "style": "{",
         },
-        "medium": {"format": "{asctime} {levelname}: {message}", "style": "{"},
+        "medium": {
+            "format": (
+                "[{asctime}] {levelname} {filename}:{lineno} {funcName}: {message}"
+            ),
+            "style": "{",
+        },
         "simple": {"format": "{levelname} {message}", "style": "{"},
         "sql_statements": {
             "format": "{asctime} {levelname} {message} ({sql} {params})",
@@ -192,7 +200,7 @@ LOGGING = {
         # This configures all loggers related to the request-response cycle to log to
         # a file called server.log
         **{
-            logger: {"handlers": ["server_file"], "level": "DEBUG", "propagate": True}
+            logger: {"handlers": ["server_file"], "level": "DEBUG", "propagate": False}
             for logger in ["django.request", "django.server", "django.template"]
         },
     },

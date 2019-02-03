@@ -1,0 +1,112 @@
+{% extends 'meals/base.html' %}
+
+{% block body %}
+<div class="container m-auto">
+<div class="row">
+    <div class="col-sm">
+        <div class="alert alert-success my-4">
+            {% if editing %}
+            <h3>Editing SKU #{{ sku_number }}: {{ sku_name }}</h3>
+            <p>
+                Modify the SKU using the form below. Note that you cannot change
+                some of the fields.
+            </p>
+            {% else %}
+            <h3>Add a new SKU</h3>
+            <p>Enter the information about a new SKU below. All fields are required.</p>
+            <p>
+                You will have a chance to enter formulas associated with this SKU
+                on the next page.
+            </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<div class="row mb-4">
+    <div class="col-sm">
+    {% if editing %}
+    <form method="post" action="{% url 'edit_sku' sku_number %}" id="editSkuForm">
+    {% else %}
+    <form method="post" action="{% url 'add_sku' %}" id="editSkuForm">
+    {% endif %}
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger">
+    <h5 style="color: red">Please correct the following errors before proceeding:</h5>
+    {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+    {% for field in form %}
+        <div class="form-group">
+        {{ field.label_tag }}
+        {{ field }}
+        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+        {% if field.errors %}{{ field.errors }}{% endif %}
+        </div>
+    {% endfor %}
+    </form>
+    <div class="btn-group">
+    {% if editing %}
+        <a href="#" id="nextButton" class="btn btn-success">Apply Changes</a>
+        <a href="{% url 'sku' %}" class="btn btn-secondary">Cancel</a>
+    {% else %}
+        <a href="#"
+           id="nextButton"
+           class="btn btn-success">
+            Next<br/><small>Enter Ingredients</small>
+        </a>
+        <a href="{% url 'sku' %}"
+           class="btn btn-secondary">
+            Cancel<br/><small>Return to SKUs</small>
+        </a>
+        <a href="#"
+           id="skipButton"
+           class="btn btn-primary">
+            Finish<br/><small>without adding ingredients</small>
+        </a>
+    {% endif %}
+    </div>
+    </div>
+</div>
+</div>
+{% endblock %}
+
+{% block scriptend %}
+<script lang="javascript">
+$(function() {
+    let form = $("#editSkuForm");
+    $("#nextButton").click(function() {
+        form.submit();
+    });
+    $("#skipButton").click(function() {
+        form.attr("action", form.attr("action") + "?skip=1");
+        form.submit();
+    });
+
+    let customPLDiv = $("#{{ form.custom_product_line.id_for_label }}").parent("div");
+    let productLineSelect = $("#{{ form.product_line.id_for_label }}");
+
+    customPLDiv.find("label").remove();
+    customPLDiv.prop("style", "display: none;");
+
+    function showCustomProductLine() {
+        let selected = productLineSelect
+            .find("option:selected")
+            .prop("value")
+            .toLowerCase();
+        if (selected === "custom") {
+            customPLDiv.prop("style", "");
+        } else {
+            customPLDiv.prop("style", "display: none;");
+        }
+    }
+
+    showCustomProductLine();  // Initializes page if form is already filled
+    $("#{{ form.product_line.id_for_label }}").change(function() {
+        showCustomProductLine();
+    })
+});
+</script>
+{% endblock %}
+
+{% block sku_active %}active{% endblock %}
