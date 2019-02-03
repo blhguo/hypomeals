@@ -70,7 +70,8 @@ def edit_sku(request, sku_number):
     if request.method == "POST":
         form = EditSkuForm(request.POST, instance=instance)
         if form.is_valid():
-            form.save()
+            instance = form.save()
+            messages.info(request, f"Successfully saved SKU #{instance.pk}")
             return redirect("sku")
     else:
         form = EditSkuForm(instance=instance)
@@ -88,12 +89,16 @@ def edit_sku(request, sku_number):
 
 @login_required
 def add_sku(request):
+    skip = request.GET.get("skip", "0") == "1"
+
     if request.method == "POST":
         form = EditSkuForm(request.POST)
         if form.is_valid():
             instance = form.save()
             messages.info(request, f"SKU #{instance.pk} has been saved successfully.")
-            return redirect("sku")
+            if skip:
+                return redirect("sku")
+            return redirect("edit_formula", instance.pk)
     else:
         form = EditSkuForm()
     return render(
@@ -107,10 +112,12 @@ def add_sku(request):
 @login_required
 def edit_formula(request, sku_number):
     sku = get_object_or_404(Sku, pk=sku_number)
+    in_flow = request.GET.get("in_flow", "0") == "1"
     if request.method == "POST":
+        logger.debug("Raw POST data: %s", request.POST)
         formset = FormulaFormset(request.POST, form_kwargs={"sku": sku})
         if formset.is_valid():
-            logger.info(formset.cleaned_data)
+            logger.info("Cleaned data: %s", formset.cleaned_data)
             saved = []
             with transaction.atomic():
                 SkuIngredient.objects.filter(sku_number=sku).delete()
@@ -135,7 +142,7 @@ def edit_formula(request, sku_number):
     return render(
         request,
         template_name="meals/formula/edit_formula.html",
-        context={"sku": sku, "formset": formset},
+        context={"sku": sku, "formset": formset, "in_flow": in_flow},
     )
 
 

@@ -196,7 +196,7 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
     def clean_case_upc(self):
         upc = self.cleaned_data["case_upc"]
         sku = Sku.objects.filter(case_upc__upc_number=upc)
-        if sku.exists():
+        if sku.exists() and sku[0] != self.instance:
             raise ValidationError(
                 "An SKU with Case UPC #%(case_upc)s "
                 "already exists. Old SKU is #%(sku)d",

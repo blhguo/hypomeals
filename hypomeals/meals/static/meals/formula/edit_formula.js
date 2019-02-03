@@ -37,11 +37,12 @@ $(function() {
     }
 
     function deleteButtonClicked() {
-        // $(`delete-${event.data}`).parents("tr").toggle(false);
         $(this).parents("tr").toggle(false);
+        // Check the "DELETE" box
         $(this).parent("td")
             .find("input")
             .attr("checked", true);
+        tableBody.trigger("table:changed");
     }
 
     function getDeleteButton(index) {
@@ -67,9 +68,10 @@ $(function() {
 
     function handleTableChanged() {
         // Update the management form with correct information
-        let numRows = tableBody.find("tr").length;
-        totalFormCount.val(numRows);
-        if (numRows === 0) {
+        let visibleRows = tableBody.find("tr:visible").length;
+        let totalRows = tableBody.find("tr").length;
+        totalFormCount.val(totalRows);
+        if (visibleRows === 0) {
             emptyAlert.toggle(true);
         } else {
             emptyAlert.toggle(false);

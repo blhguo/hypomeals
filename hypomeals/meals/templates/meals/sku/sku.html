@@ -1,4 +1,5 @@
 {% extends "meals/base.html" %}
+{% load staticfiles %}
 
 {% block sku_active %}active{% endblock %}
 
@@ -141,6 +142,7 @@
     <th>Unit Size</th>
     <th>Count Per Case</th>
     <th>Product Line</th>
+    <th>Actions</th>
 </tr>
 </thead>
 <tbody class="table-striped">
@@ -154,6 +156,7 @@
     <td>{{ sku.unit_size }}</td>
     <td>{{ sku.count }}</td>
     <td>{{ sku.product_line.name }}</td>
+    <td><a href="{% url 'edit_formula' sku.number %}">View Formula</a></td>
 </tr>
 {% empty %}
     <div class="alert alert-danger">
@@ -170,121 +173,18 @@
 </div>
 </form>
 </div>
+<!-- Hidden div with template data -->
+<div style="display: none;">
+<a href="{% url 'autocomplete_ingredients' %}" id="acIngredientUrl"></a>
+<a href="{% url 'autocomplete_product_lines' %}" id="acProductLineUrl"></a>
+<input id="ingredientsInputId" value="{{ form.ingredients.id_for_label }}">
+<input id="productLinesInputId" value="{{ form.product_lines.id_for_label }}">
+<input id="pageNumInputId" value="{{ form.page_num.id_for_label }}">
+<a href="{% url 'sku' %}" id="skuUrl"></a>
+<a href="{% url 'remove_skus' %}" id="removeSkuUrl"></a>
+</div>
 {% endblock %}
 
 {% block scriptend %}
-<script>
-$(function() {
-    var removeButton = $("#removeButton");
-    var skuCheckboxes = $(".sku-checkbox").toArray();
-    skuCheckboxes.forEach(function (cb) {
-        cb.onchange = function(ev) {
-            removeButton.prop("disabled", !skuCheckboxes.some(function(elem) {
-                return elem.checked;
-            }));
-        }
-    });
-
-    $("#selectAll").on("change", function(ev) {
-        let value = $(this).prop("checked");
-        skuCheckboxes.forEach(function(cb) {
-            cb.checked = value;
-        });
-    });
-
-    removeButton.on("click", function(ev) {
-        var toRemove = [];
-        skuCheckboxes.forEach(function(cb) {
-            if (cb.checked) {
-                toRemove.push(cb.id);
-            }
-        });
-        if (confirm(`Are you sure you want to remove ${toRemove.length} SKU(s)? `+
-            `This cannot be undone.`)) {
-            $.post("{% url 'remove_skus' %}",
-                {"to_remove": JSON.stringify(toRemove)},
-                function(data) {
-                    alert(data.resp);
-                }, "json")
-                    .fail(function(jqXHR, status, data){
-                    alert(`[Status=${status}] Error removing ${toRemove.length} SKU(s): ` +
-                        ("error" in data) ? data.error : "" + "\n" +
-                            `Please refresh the page and try again later.`);
-                });
-        }
-    });
-
-    /************** Pagination ****************/
-    $("#pageList").find("a").on("click", function() {
-        let page = $(this).attr("page");
-        $("#{{ form.page_num.id_for_label }}").val(page);
-        $("#skuFilterForm").submit();
-    });
-
-    /************** Autocomplete for Ingredients and Product Lines **************/
-    // Adapted from https://jqueryui.com/autocomplete/#multiple-remote
-
-    function split(val) {
-        return val.split(/,\s*/);
-    }
-
-    function lastTerm(val) {
-        return split(val).pop();
-    }
-
-    $("#{{ form.ingredients.id_for_label }}")
-        .on("keydown", function(ev) {
-            if (ev.keyCode === $.ui.keyCode.TAB
-                && $(this).autocomplete("instance").menu.active) {
-                ev.preventDefault();
-            }
-        })
-        .autocomplete({
-            source: function(request, response) {
-                $.getJSON("{% url 'autocomplete_ingredients' %}", {
-                    term: lastTerm(request.term)
-                }, response)
-            },
-            search: function() {
-                let term = lastTerm(this.value);
-                // Only perform a search when user has typed more than 2 chars
-                if (term.length < 2) {
-                    return false;
-                }
-            },
-            focus: function() {
-                return false;
-            },
-        });
-
-    $("#{{ form.product_lines.id_for_label }}")
-        .on("keydown", function(ev) {
-            if (ev.keyCode === $.ui.keyCode.TAB
-                && $(this).autocomplete("instance").menu.active) {
-                ev.preventDefault();
-            }
-        })
-        .autocomplete({
-            source: function(request, response) {
-                $.getJSON("{% url 'autocomplete_product_lines' %}", {
-                    term: lastTerm(request.term)
-                }, response)
-            },
-            search: function() {
-                let term = lastTerm(this.value);
-                // Only perform a search when user has typed more than 2 chars
-                if (term.length < 2) {
-                    return false;
-                }
-            },
-            focus: function() {
-                return false;
-            },
-        });
-
-    $("#resetAllButton").click(function(ev) {
-        window.location.href = "{% url 'sku' %}"
-    });
-});
-</script>
+<script src="{% static 'meals/sku/sku.js' %}"></script>
 {% endblock %}

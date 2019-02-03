@@ -44,12 +44,27 @@
         {% if field.errors %}{{ field.errors }}{% endif %}
         </div>
     {% endfor %}
-    <input type="submit" id="editSkuSubmitButton" style="display: none;">
     </form>
     <div class="btn-group">
-        <a href="#" id="nextButton" class="btn btn-success">Next<br/><small>Enter Ingredients</small></a>
-        <a href="{% url 'sku' %}" class="btn btn-secondary">Cancel<br/><small>Return to SKUs</small></a>
-        <a href="#" class="btn btn-primary">Finish<br/><small>without adding ingredients</small></a>
+    {% if editing %}
+        <a href="#" id="nextButton" class="btn btn-success">Apply Changes</a>
+        <a href="{% url 'sku' %}" class="btn btn-secondary">Cancel</a>
+    {% else %}
+        <a href="#"
+           id="nextButton"
+           class="btn btn-success">
+            Next<br/><small>Enter Ingredients</small>
+        </a>
+        <a href="{% url 'sku' %}"
+           class="btn btn-secondary">
+            Cancel<br/><small>Return to SKUs</small>
+        </a>
+        <a href="#"
+           id="skipButton"
+           class="btn btn-primary">
+            Finish<br/><small>without adding ingredients</small>
+        </a>
+    {% endif %}
     </div>
     </div>
 </div>
@@ -61,6 +76,10 @@
 $(function() {
     let form = $("#editSkuForm");
     $("#nextButton").click(function() {
+        form.submit();
+    });
+    $("#skipButton").click(function() {
+        form.attr("action", form.attr("action") + "?skip=1");
         form.submit();
     });
 

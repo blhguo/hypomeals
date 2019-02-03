@@ -7,12 +7,18 @@
 <div class="col-sm">
     <div class="alert alert-success my-4">
     <h3>Edit formula for SKU #{{ sku.number }}: {{ sku.name }}</h3>
+    {% if messages %}
+    {% for message in messages %}
+    <p>{{ message }}</p>
+    {% endfor %}
+    {% endif %}
     <p>Add, remove, or edit formula ingredients and quantities below.</p>
     <p>As you type, ingredients will be autocompleted. If you need to create an ingredient,
     click on the "Create new Ingredient" button.</p>
     <p>
         Too add more rows to the table, click on the "Add row" button. To delete a
-        row, check the "Delete" box to the left. Empty rows will not be processed.
+        row, click on the "Delete" button on the right.
+        Empty rows will not be processed.
     </p>
     </div>
 </div>
@@ -20,19 +26,16 @@
 
 <div class="row">
 <div class="col-sm mb-4">
-    <div class="btn-group mr-2" role="group">
-    <button type="button"
-            class="btn btn-primary">
-        <span class="fa fa-plus"></span> Create new Ingredient
-    </button>
-    </div>
     <div class="btn-group float-right" role="group">
     <button type="button"
             id="addRowButton"
             class="btn btn-primary">
         <span class="fa fa-plus"></span> Add row
     </button>
-    <button type="button" class="btn btn-danger"><span class="fa fa-minus"></span> Remove selected</button>
+    <button type="button"
+            class="btn btn-success">
+        <span class="fa fa-plus"></span> Create new Ingredient
+    </button>
     </div>
 </div>
 </div>
@@ -78,14 +81,21 @@ Please correct the following error(s):
     </td>
 </tr>
 {% endfor %}
-<div class="alert alert-success" id="emptyAlert" style="display: none;">
-There is no ingredient in this formula. Click on "Add a new Ingredient" to
+<div class="alert alert-danger" id="emptyAlert" style="display: none;">
+There is no ingredient in this formula. Click on "Add row" to
 add another ingredient to this SKU.
 </div>
 </tbody>
 </table>
 
-<input type="submit" class="btn btn-success" value="Submit">
+<div class="btn-group">
+{% if in_flow %}
+<input type="submit" class="btn btn-success" value="Finish">
+{% else %}
+<input type="submit" class="btn btn-success" value="Apply Changes">
+<a href="{% url 'sku' %}" class="btn btn-secondary">Cancel</a>
+{% endif %}
+</div>
 </form>
 
 {#Render an empty form to be picked up by JavaScript#}
