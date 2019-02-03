@@ -1,22 +1,96 @@
 # pylint: disable-msg=protected-access
-
+import logging
 import re
 from collections import OrderedDict
 
 from django import forms
-from django.core.exceptions import ValidationError, FieldDoesNotExist
+from django.core.exceptions import FieldDoesNotExist
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, BLANK_CHOICE_DASH
 from django.forms import formset_factory
 
+from meals import bulk_import
 from meals import utils
-from meals.models import Sku, Ingredient, ProductLine, Upc, SkuIngredient
-
-import logging
-
+from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor
+from meals.models import SkuIngredient
+from meals.utils import BootstrapFormControlMixin, FilenameRegexValidator
 
 logger = logging.getLogger(__name__)
+
+
+class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
+
+    skus = forms.FileField(
+        required=False,
+        label="SKU",
+        validators=[
+            FilenameRegexValidator(
+                regex=r"skus(\S)*\.csv",
+                message="Filename mismatch. Expected: "
+                "skusxxx.csv where xxx is any characters.",
+            )
+        ],
+    )
+    ingredients = forms.FileField(
+        required=False,
+        label="Ingredients",
+        validators=[
+            FilenameRegexValidator(
+                regex=r"ingredients(\S)*\.csv",
+                message="Filename mismatch. Expected: "
+                "ingredientsxxx.csv where xxx is any characters.",
+            )
+        ],
+    )
+    product_lines = forms.FileField(
+        required=False,
+        label="Product Lines",
+        validators=[
+            FilenameRegexValidator(
+                regex=r"product_lines(\S)*\.csv",
+                message="Filename mismatch. Expected: "
+                "product_linesxxx.csv where xxx is any characters.",
+            )
+        ],
+    )
+    formula = forms.FileField(
+        required=False,
+        label="Formulas",
+        validators=[
+            FilenameRegexValidator(
+                regex=r"formula(\S)*\.csv",
+                message="Filename mismatch. Expected: "
+                "formulaxxx.csv where xxx is any characters.",
+            )
+        ],
+    )
+
+    def __init__(self, *args, **kwargs):
+        self._imported = False
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        if not any(self.cleaned_data.values()):
+            raise ValidationError("You must upload at least one CSV file.")
+
+        try:
+            if bulk_import.process_csv_files(self.cleaned_data):
+                self._imported = True
+        except Exception as e:
+            raise ValidationError(str(e))
+
+        return self.cleaned_data
+
+    @property
+    def imported(self):
+        return self._imported
+
+
+class ImportZipForm(forms.Form, BootstrapFormControlMixin):
+
+    zip = forms.FileField(required=False, label="ZIP File")
 
 
 def get_ingredient_choices():
@@ -25,6 +99,10 @@ def get_ingredient_choices():
 
 def get_product_line_choices():
     return [(pl.name, pl.name) for pl in ProductLine.objects.all()]
+
+
+def get_vendor_choices():
+    return [(ven.info, ven.info) for ven in Vendor.objects.all()]
 
 
 class CsvModelAttributeField(forms.CharField):
@@ -61,6 +139,124 @@ class CsvModelAttributeField(forms.CharField):
                 )
             raise ValidationError(errors)
         return found
+
+
+class IngredientFilterForm(forms.Form):
+    NUM_PER_PAGE_CHOICES = [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
+
+    page_num = forms.IntegerField(widget=forms.HiddenInput(), initial=1, required=False)
+    num_per_page = forms.ChoiceField(choices=NUM_PER_PAGE_CHOICES, required=True)
+    sort_by = forms.ChoiceField(choices=Ingredient.get_sortable_fields, required=True)
+    keyword = forms.CharField(required=False, max_length=100)
+    skus = CsvModelAttributeField(
+        model=Sku,
+        required=False,
+        attr="name",
+        widget=forms.TextInput(attrs={"placeholder": "Start typing..."}),
+        help_text="Enter ingredients separated by commas",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-control mb-2"
+
+    def query(self) -> Paginator:
+        params = self.cleaned_data
+        num_per_page = int(params.get("num_per_page", 50))
+        sort_by = params.get("sort_by", "")
+        query_filter = Q()
+        if params["keyword"]:
+            query_filter &= Q(name__icontains=params["keyword"])
+        if params["skus"]:
+            query_filter |= Q(sku__name__in=params["skus"])
+        query = Ingredient.objects.filter(query_filter)
+        if sort_by:
+            query.order_by(sort_by)
+        if num_per_page == -1:
+            num_per_page = query.count()
+        return Paginator(query.distinct(), num_per_page)
+
+
+class EditIngredientForm(forms.ModelForm):
+
+    custom_vendor = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"placeholder": "Enter a new vendor..."}),
+        help_text="Note that this field is case sensitive!",
+    )
+    vendor = forms.ChoiceField(
+        choices=lambda: BLANK_CHOICE_DASH
+        + [("custom", "Custom")]
+        + get_vendor_choices(),
+        required=True,
+    )
+
+    class Meta:
+        model = Ingredient
+        fields = [
+            "name",
+            "number",
+            "vendor",
+            "custom_vendor",
+            "size",
+            "cost",
+            "comment",
+        ]
+        exclude = ["vendor"]
+        widgets = {"comment": forms.Textarea(attrs={"maxlength": 200})}
+        labels = {"number": "Ingr#"}
+        help_texts = {"name": "Name of the new Ingredient."}
+
+    def __init__(self, *args, **kwargs):
+        initial = {}
+        if "instance" in kwargs:
+            instance = kwargs["instance"]
+            if hasattr(instance, "pk") and instance.pk:
+                initial.update({"vendor": instance.vendor.info})
+        super().__init__(*args, initial=initial, **kwargs)
+        reordered_fields = OrderedDict()
+        for field_name in self.Meta.fields:
+            if field_name in self.fields:
+                reordered_fields[field_name] = self.fields[field_name]
+                reordered_fields[field_name].widget.attrs["class"] = "form-control"
+        self.fields = reordered_fields
+
+        if "instance" in kwargs:
+            instance = kwargs["instance"]
+            if hasattr(instance, "pk") and instance.pk:
+                self.fields["number"].disabled = True
+
+    def clean(self):
+        # The main thing to check for here is whether the user has supplied a custom
+        # Product Line, if "Custom" was chosen in the dropdown
+        data = super().clean()
+        if "vendor" in data:
+            if data["vendor"] == "custom":
+                if "custom_vendor" not in data or not data["custom_vendor"]:
+                    raise ValidationError(
+                        "You must specify a custom Vendor, or choose "
+                        "from an existing Vendor."
+                    )
+                data["vendor"] = data["custom_vendor"]
+            try:
+                data["vendor"] = Vendor.objects.get(info=data["vendor"])
+            except Vendor.DoesNotExist:
+                data["vendor"] = Vendor(info=data["vendor"])
+        return data
+
+    @transaction.atomic
+    def save(self, commit=False):
+        instance = super().save(commit)
+        # Manually save the foreign keys, then attach them to the instance
+        fks = ["vendor"]
+        for fk in fks:
+            self.cleaned_data[fk].save()
+            setattr(instance, fk, self.cleaned_data[fk])
+        instance.save()
+        self.save_m2m()
+        return instance
 
 
 class SkuFilterForm(forms.Form, utils.BootstrapFormControlMixin):

@@ -24,7 +24,7 @@
         color: red
     }
     .errorlist {
-        color: red
+        color: #721c24
     }
     {% block style %}
     {% endblock %}
@@ -53,7 +53,7 @@
                 <a class="nav-link" href="{% url 'sku' %}">SKUs</a>
             </li>
             <li class="nav-item {% block ingredient_active %}{% endblock %}">
-                <a class="nav-link" href="#">Ingredients</a>
+                <a class="nav-link" href="{% url 'ingredient' %}">Ingredients</a>
             </li>
         </ul>
 

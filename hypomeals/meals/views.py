@@ -1,4 +1,5 @@
-import operator
+import functools
+import logging
 import time
 
 import jsonpickle
@@ -12,11 +13,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from meals.forms import SkuFilterForm, EditSkuForm, FormulaFormset
-from meals.models import Sku, Ingredient, ProductLine, SkuIngredient
-
-import logging
-
+from meals.forms import FormulaFormset
+from meals.forms import IngredientFilterForm, EditIngredientForm
+from meals.forms import SkuFilterForm, EditSkuForm
+from meals.models import Sku, Ingredient, ProductLine
+from meals.models import SkuIngredient
+from .bulk_export import export_skus
+from .forms import ImportCsvForm, ImportZipForm
 
 logger = logging.getLogger(__name__)
 
@@ -26,15 +29,141 @@ def index(request):
 
 
 @login_required
+def import_page(request):
+    template = "meals/import/import.html"
+
+    if request.method == "POST":
+        csv_file_form = ImportCsvForm(request.POST, request.FILES)
+        zip_file_form = ImportZipForm(request.POST, request.FILES)
+        if (csv_file_form.has_changed() and csv_file_form.is_valid()) or (
+            zip_file_form.has_changed() and zip_file_form.is_valid()
+        ):
+            return redirect("import_landing")
+        return render(
+            request,
+            template_name=template,
+            context={"csv_form": csv_file_form, "zip_form": zip_file_form},
+        )
+    csv_file_form = ImportCsvForm()
+    zip_file_form = ImportZipForm()
+    return render(
+        request, template, {"csv_form": csv_file_form, "zip_form": zip_file_form}
+    )
+
+
+@login_required
+def import_landing(request):
+    response = render(request, template_name="meals/import/import_landing.html")
+    return response
+
+
+@login_required
+def export_test(request):
+    response = render(request, template_name="meals/index.html")
+    if request:
+        response = export_skus(Sku.objects.all())
+    return response
+
+
+@login_required
 def logout_view(request):
     logout(request)
     return redirect("index")
+
+
+########################### Ingredient Views ###########################
+@login_required
+def ingredient(request):
+    start = time.time()
+    if request.method == "POST":
+        form = IngredientFilterForm(request.POST)
+        if form.is_valid():
+            ingredients = form.query()
+        else:
+            ingredients = Paginator(Ingredient.objects.all(), 50)
+    else:
+        form = IngredientFilterForm()
+        ingredients = Paginator(Ingredient.objects.all(), 50)
+    page = getattr(form, "cleaned_data", {"page_num": 1}).get("page_num", 1)
+    if page > ingredients.num_pages:
+        page = 1
+        form.intial["page_num"] = 1
+    end = time.time()
+    return render(
+        request,
+        template_name="meals/ingredients/ingredient.html",
+        context={
+            "ingredients": ingredients.page(page),
+            "form": form,
+            "pages": range(1, ingredients.num_pages + 1),
+            "current_page": page,
+            "duration": "{:0.3f}".format(end - start),
+        },
+    )
+
+
+@login_required
+@csrf_exempt
+@require_POST
+def remove_ingredients(request):
+    to_remove = jsonpickle.loads(request.POST.get("to_remove", "[]"))
+    try:
+        with transaction.atomic():
+            num_deleted, _ = Ingredient.objects.filter(pk__in=to_remove).delete()
+            return JsonResponse(
+                {"error": None, "resp": f"Removed {num_deleted} Ingredients"}
+            )
+    except DatabaseError as e:
+        return JsonResponse({"error": str(e), "resp": "Not removed"})
+
+
+@login_required
+def add_ingredient(request):
+    if request.method == "POST":
+        form = EditIngredientForm(request.POST)
+        if form.is_valid():
+            instance = form.save()
+            messages.info(request, f"Ingredient '{instance.name}' added successfully")
+            return redirect("ingredient")
+    else:
+        form = EditIngredientForm()
+    return render(
+        request,
+        template_name="meals/ingredients/edit_ingredient.html",
+        context={"form": form},
+    )
+
+
+@login_required
+def edit_ingredient(request, ingredient_number):
+
+    instance = get_object_or_404(Ingredient, number=ingredient_number)
+    if request.method == "POST":
+        form = EditIngredientForm(request.POST, instance=instance)
+        if form.is_valid():
+            instance = form.save()
+            messages.info(request, f"Successfully saved {instance.name}")
+            return redirect("ingredient")
+    else:
+        form = EditIngredientForm(instance=instance)
+    return render(
+        request,
+        template_name="meals/ingredients/edit_ingredient.html",
+        context={
+            "form": form,
+            "ingredient_number": ingredient_number,
+            "ingredient_name": str(instance),
+            "editing": True,
+        },
+    )
 
 
 ############################  SKU Views  ###############################
 @login_required
 def sku(request):
     start = time.time()
+    export = request.GET.get("export", "0") == "1"
+    export_formula = request.GET.get("formulas", "0") == "1"
     if request.method == "POST":
         form = SkuFilterForm(request.POST)
         if form.is_valid():
@@ -51,6 +180,8 @@ def sku(request):
         page = 1
         form.initial["page_num"] = 1
     end = time.time()
+    if export:
+        return export_skus(skus.object_list, include_formulas=export_formula)
     return render(
         request,
         template_name="meals/sku/sku.html",
@@ -108,6 +239,19 @@ def add_sku(request):
     )
 
 
+@login_required
+@csrf_exempt
+@require_POST
+def remove_skus(request):
+    to_remove = jsonpickle.loads(request.POST.get("to_remove", "[]"))
+    try:
+        with transaction.atomic():
+            num_deleted, _ = Sku.objects.filter(pk__in=to_remove).delete()
+            return JsonResponse({"error": None, "resp": f"Removed {num_deleted} SKUs"})
+    except DatabaseError as e:
+        return JsonResponse({"error": str(e), "resp": "Not removed"})
+
+
 ##################### Formula Views ########################
 @login_required
 def edit_formula(request, sku_number):
@@ -132,10 +276,7 @@ def edit_formula(request, sku_number):
     else:
         formulas = SkuIngredient.objects.filter(sku_number=sku_number)
         initial_data = [
-            {
-                "ingredient": formula.ingredient_number.name,
-                "quantity": formula.quantity,
-            }
+            {"ingredient": formula.ingredient_number.name, "quantity": formula.quantity}
             for formula in formulas
         ]
         formset = FormulaFormset(initial=initial_data, form_kwargs={"sku": sku})
@@ -146,38 +287,19 @@ def edit_formula(request, sku_number):
     )
 
 
-@login_required
-def autocomplete_ingredients(request):
+#################### Autocomplete #######################
+def autocomplete(request, manager, key="name"):
     term = request.GET.get("term", "")
-    ingredients = list(
-        map(
-            operator.attrgetter("name"),
-            Ingredient.objects.filter(name__istartswith=term),
-        )
+    items = list(
+        manager.filter(name__istartswith=term).distinct().values_list(key, flat=True)
     )
-    return JsonResponse(ingredients, safe=False)
+    return JsonResponse(items, safe=False)
 
 
-@login_required
-def autocomplete_product_lines(request):
-    term = request.GET.get("term", "")
-    ingredients = list(
-        map(
-            operator.attrgetter("name"),
-            ProductLine.objects.filter(name__istartswith=term),
-        )
-    )
-    return JsonResponse(ingredients, safe=False)
-
-
-@login_required
-@csrf_exempt
-@require_POST
-def remove_skus(request):
-    to_remove = jsonpickle.loads(request.POST.get("to_remove", "[]"))
-    try:
-        with transaction.atomic():
-            num_deleted, _ = Sku.objects.filter(pk__in=to_remove).delete()
-            return JsonResponse({"error": None, "resp": f"Removed {num_deleted} SKUs"})
-    except DatabaseError as e:
-        return JsonResponse({"error": str(e), "resp": "Not removed"})
+autocomplete_skus = login_required(functools.partial(autocomplete, manager=Sku.objects))
+autocomplete_ingredients = login_required(
+    functools.partial(autocomplete, manager=Ingredient.objects)
+)
+autocomplete_product_lines = login_required(
+    functools.partial(autocomplete, manager=ProductLine.objects)
+)

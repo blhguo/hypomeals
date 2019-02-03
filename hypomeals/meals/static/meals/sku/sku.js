@@ -1,6 +1,6 @@
 $(function() {
     let removeButton = $("#removeButton");
-    let skuCheckboxes = $(".sku-checkbox").toArray();
+    let skuCheckboxes = $(".sku-checkbox");
     const acIngredientUrl = $("#acIngredientUrl").attr("href");
     const acProductLineUrl = $("#acProductLineUrl").attr("href");
     const ingredientsInputId = $("#ingredientsInputId").val();
@@ -9,24 +9,23 @@ $(function() {
     const skuUrl = $("#skuUrl").attr("href");
     const removeSkuUrl = $("#removeSkuUrl").attr("href");
     let selectAllButton = $("#selectAll");
+    let submitButton = $("#submitButton");
+    let exportButton = $("#exportButton");
+    let exportFormulaCheckbox = $("#exportFormulaCheckbox");
+    let skuFilterForm = $("#skuFilterForm");
 
     function refreshPage() {
         window.location.href = skuUrl;
     }
 
-    skuCheckboxes.forEach(function (cb) {
-        cb.onchange = function(ev) {
-            removeButton.prop("disabled", !skuCheckboxes.some(function(elem) {
-                return elem.checked;
-            }));
-        }
+    skuCheckboxes.change(function() {
+        removeButton.attr("disabled",
+            $(".sku-checkbox:checked").length === 0);
     });
 
-    selectAllButton.on("change", function(ev) {
-        let value = $(this).prop("checked");
-        skuCheckboxes.forEach(function(cb) {
-            cb.checked = value;
-        });
+    selectAllButton.change(function() {
+        skuCheckboxes.prop("checked", $(this).prop("checked"));
+        skuCheckboxes.trigger("change");
     });
 
     removeButton.on("click", function(ev) {
@@ -62,47 +61,26 @@ $(function() {
         }
     });
 
+    exportButton.click(function() {
+        let query = "?export=1";
+        if (exportFormulaCheckbox.prop("checked")) {
+            query += "&formulas=1";
+        }
+        skuFilterForm.attr("action", skuFilterForm.attr("action") + query)
+            .submit();
+        return false;
+    });
+
+    submitButton.click(function() {
+        skuFilterForm.submit();
+    });
+
     /************** Pagination ****************/
     $("#pageList").find("a").on("click", function() {
         let page = $(this).attr("page");
         $(`#${pageNumInputId}`).val(page);
-        $("#skuFilterForm").submit();
+        skuFilterForm.submit();
     });
-
-    /************** Autocomplete for Ingredients and Product Lines **************/
-    // Adapted from https://jqueryui.com/autocomplete/#multiple-remote
-
-    function split(val) {
-        return val.split(/,\s*/);
-    }
-
-    function lastTerm(val) {
-        return split(val).pop();
-    }
-
-    function registerAutocomplete(input, url) {
-        input.on("keydown", function(ev) {
-            if (ev.keyCode === $.ui.keyCode.TAB
-                && $(this).autocomplete("instance").menu.active) {
-                ev.preventDefault();
-            }
-        })
-        .autocomplete({
-            source: function(request, response) {
-                $.getJSON(url, {
-                    term: lastTerm(request.term)
-                }, response)
-            },
-            search: function() {
-                let term = lastTerm(this.value);
-                // Only perform a search when user has typed more than 2 chars
-                return term.length >= 2;
-            },
-            focus: function() {
-                return false;
-            },
-        });
-    }
 
     registerAutocomplete($(`#${ingredientsInputId}`), acIngredientUrl);
     registerAutocomplete($(`#${productLinesInputId}`), acProductLineUrl);

@@ -1,18 +1,24 @@
 import functools
+import logging
 import os
+import os.path
 import random
 import string
 import time
 from functools import wraps
 
+import magic
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
+from django.db.models.fields.related import ForeignKey
 from django.shortcuts import redirect
+from django.template.defaultfilters import filesizeformat
 from django.utils import six as django_six
 from django.utils.crypto import salted_hmac
 from django.utils.deconstruct import deconstructible
 from django.utils.http import int_to_base36
 from six import string_types
-
 
 def exception_to_error(func):
     @wraps(func)
@@ -148,6 +154,133 @@ class BootstrapFormControlMixin:
 
         cls.__init__ = inject_form_control(getattr(cls, "__init__"))
 
+
+@deconstructible
+class FilenameRegexValidator(RegexValidator):
+    def __call__(self, value):
+        return super().__call__(value.name)
+
+
+@deconstructible
+class GeneralFileValidator:
+    """
+    A validator for uploaded files. Adapted with modification from
+    https://stackoverflow.com/questions/20272579/django-validate-file-type-of-uploaded-file
+    """
+
+    error_messages = {
+        "max_size": (
+            "Ensure this file size is not greater than %(max_size)s."
+            " Your file size is %(size)s."
+        ),
+        "min_size": (
+            "Ensure this file size is not less than %(min_size)s. "
+            "Your file size is %(size)s."
+        ),
+        "content_type": "Files of type %(content_type)s are not supported.",
+    }
+
+    def __init__(self, max_size=None, min_size=None, content_types=()):
+        self.max_size = max_size
+        self.min_size = min_size
+        self.content_types = content_types
+
+    def __call__(self, data):
+        if self.max_size is not None and data.size > self.max_size:
+            params = {
+                "max_size": filesizeformat(self.max_size),
+                "size": filesizeformat(data.size),
+            }
+            raise ValidationError(self.error_messages["max_size"], "max_size", params)
+
+        if self.min_size is not None and data.size < self.min_size:
+            params = {
+                "min_size": filesizeformat(self.mix_size),
+                "size": filesizeformat(data.size),
+            }
+            raise ValidationError(self.error_messages["min_size"], "min_size", params)
+
+        if self.content_types:
+            content_type = magic.from_buffer(data.read(), mime=True)
+            data.seek(0)
+            if content_type not in self.content_types:
+                params = {"content_type": content_type}
+                raise ValidationError(
+                    self.error_messages["content_type"], "content_type", params
+                )
+
+    def __eq__(self, other):
+        return isinstance(other, GeneralFileValidator)
+
+
+@parameterized
+def log_exceptions(func, logger=None, exclude=()):
+
+    if logger is None:
+        # If logger is not supplied, use the root logger
+        logger = logging.getLogger()
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            if exclude:
+                if any(isinstance(e, excluded) for excluded in exclude):
+                    logger.debug(
+                        f"{e.__class__.__name__} raised when "
+                        f"calling function {func.__qualname__} but excluded."
+                    )
+            logger.exception(
+                f"Exception occurred when calling function {func.__qualname__}"
+            )
+            raise e
+
+    return wrapper
+
+
+@parameterized
+def register_to_dict(func, dct, key):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    dct[key] = wrapper
+    return wrapper
+
+
+def method_memoize_forever(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if "__result__" not in func.__dict__:
+            func.__dict__["__result__"] = func(*args, **kwargs)
+        return func.__dict__["__result__"]
+
+    return wrapper
+
+
+class ModelFieldsCompareMixin:
+
+    excluded_fields = ()
+
+    @classmethod
+    def compare_instances(cls, i1, i2):
+        for field in cls._meta.fields:
+            if field.name in cls.excluded_fields:
+                continue
+            value1 = getattr(i1, field.name)
+            value2 = getattr(i2, field.name)
+            if isinstance(field, ForeignKey):
+                deep_compare_fn = getattr(
+                    field.related_model, "compare_instances", None
+                )
+                if deep_compare_fn:
+                    if not deep_compare_fn(field.related_model, value1, value2):
+                        return False
+            else:
+                if value1 != value2:
+                    return False
+        return True
 
 def upc_check_digit(number: django_six.text_type) -> int:
     """

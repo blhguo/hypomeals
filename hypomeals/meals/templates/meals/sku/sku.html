@@ -2,10 +2,11 @@
 {% load staticfiles %}
 
 {% block sku_active %}active{% endblock %}
+{% block title %}Review SKUs{% endblock %}
 
 {% block body %}
 <div class="container-fluid m-auto">
-<form method="post" id="skuFilterForm">
+<form method="post" action="{% url 'sku' %}" id="skuFilterForm">
 {% csrf_token %}
 <div class="row">
 <div class="col-sm-8">
@@ -76,6 +77,7 @@
 </div>
 <div class="row">
 <div class="col-sm-2">
+<h3>Search</h3>
 {% if form.non_field_errors %}
 <div class="alert alert-danger">
     <p>Please correct the following error:</p>
@@ -119,8 +121,29 @@
     {% endif %}
 </div>
 <div class="btn-group w-100" role="group">
-<input type="submit" class="btn btn-success w-100" value="Filter">
-<a href="#" id="resetAllButton" class="btn btn-danger w-100">Reset</a>
+<button id="submitButton" class="btn btn-success w-100">
+    <span class="fas fa-filter"></span> Filter
+</button>
+<button id="resetAllButton" class="btn btn-danger w-100">
+    <span class="fas fa-trash-alt"></span> Reset
+</button>
+</div>
+<div>
+<!-- Export buttons -->
+<hr>
+<h3>Export</h3>
+<div class="form-check mb-2">
+    <input class="form-check-input"
+           type="checkbox"
+           id="exportFormulaCheckbox">
+    <label class="form-check-label"
+           for="exportFormulaCheckbox">
+        Also export formulas
+    </label>
+</div>
+<button class="btn btn-primary" id="exportButton">
+    <span class="fas fa-download"></span> Export Current Search
+</button>
 </div>
 </div>
 <div class="col-sm-10">
@@ -186,5 +209,6 @@
 {% endblock %}
 
 {% block scriptend %}
+<script src="{% static 'meals/common.js' %}"></script>
 <script src="{% static 'meals/sku/sku.js' %}"></script>
 {% endblock %}

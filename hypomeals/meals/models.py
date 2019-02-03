@@ -1,7 +1,8 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
-from . import utils
+
+from meals import utils
 
 
 class User(AbstractUser):
@@ -9,7 +10,9 @@ class User(AbstractUser):
     pass
 
 
-class Upc(models.Model):
+class Upc(models.Model, utils.ModelFieldsCompareMixin):
+    excluded_fields = ("id",)
+
     upc_number = models.CharField(max_length=12, unique=True)
 
     def __str__(self):
@@ -21,7 +24,9 @@ class Upc(models.Model):
         ordering = ["pk"]
 
 
-class ProductLine(models.Model):
+class ProductLine(models.Model, utils.ModelFieldsCompareMixin):
+    excluded_fields = ("id",)
+
     name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
@@ -33,7 +38,9 @@ class ProductLine(models.Model):
         ordering = ["pk"]
 
 
-class Vendor(models.Model):
+class Vendor(models.Model, utils.ModelFieldsCompareMixin):
+    excluded_fields = ("id",)
+
     info = models.CharField(max_length=200)
 
     def __str__(self):
@@ -45,7 +52,9 @@ class Vendor(models.Model):
         ordering = ["pk"]
 
 
-class Ingredient(models.Model):
+class Ingredient(models.Model, utils.ModelFieldsCompareMixin):
+    excluded_fields = ("number",)
+
     name = models.CharField(max_length=100, unique=True, blank=False)
     number = models.IntegerField(blank=False, primary_key=True)
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE)
@@ -61,9 +70,29 @@ class Ingredient(models.Model):
     class Meta:
         ordering = ["number"]
 
+    @classmethod
+    def get_sortable_fields(cls):
+        """
+        Returns a list of fields that this model is sortable by. For now this is hard-
+        coded because there is no easy way to tell whether it makes sense to sort by
+        a particular field.
+        :return: a list of 2-tuples (field identifier, human-readable name) suitable
+            for use in, for example, a ChoiceField in a form.
+        """
+        return [
+            ("name", "Name"),
+            ("number", "Number"),
+            ("vendor", "Vendor"),
+            ("size", "Size"),
+            ("cost", "Cost"),
+        ]
 
-class Sku(models.Model):
-    name = models.CharField(max_length=32, blank=False)
+
+class Sku(models.Model, utils.ModelFieldsCompareMixin):
+    excluded_fields = ("number",)
+
+    name = models.CharField(max_length=32, blank=False, unique=True)
+
     number = models.IntegerField(
         blank=False, verbose_name="SKU#", unique=True, primary_key=True
     )
@@ -120,7 +149,8 @@ class Sku(models.Model):
         ]
 
 
-class SkuIngredient(models.Model):
+class SkuIngredient(models.Model, utils.ModelFieldsCompareMixin):
+    excluded_fields = ("id",)
 
     sku_number = models.ForeignKey(Sku, blank=False, on_delete=models.CASCADE)
     ingredient_number = models.ForeignKey(
@@ -144,9 +174,10 @@ class ManufactureGoal(models.Model):
     form_name = models.CharField(max_length=100, default="Morton")
     save_time = models.DateTimeField(default=timezone.now, blank=True)
     file = models.FileField(
-        upload_to = utils.UploadToPathAndRename("pk", "manufacture_goal/"),
-        default = "manufacture_goal/"
+        upload_to=utils.UploadToPathAndRename("pk", "manufacture_goal/"),
+        default="manufacture_goal/",
     )
+
 
 class ManufactureDetail(models.Model):
     form_name = models.ForeignKey(ManufactureGoal, on_delete=models.CASCADE)
