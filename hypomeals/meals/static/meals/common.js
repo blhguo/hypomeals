@@ -32,3 +32,12 @@ function registerAutocomplete(input, url) {
         },
     });
 }
+
+$(function() {
+    let messagesDiv = $("#messagesDiv");
+    if (messagesDiv.length > 0) {
+        setTimeout(function() {
+            messagesDiv.fadeOut();
+        }, 3000);
+    }
+});

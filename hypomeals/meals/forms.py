@@ -164,6 +164,7 @@ class IngredientFilterForm(forms.Form):
 
     def query(self) -> Paginator:
         params = self.cleaned_data
+        logger.info("Querying ingredients with parameters %s", params)
         num_per_page = int(params.get("num_per_page", 50))
         sort_by = params.get("sort_by", "")
         query_filter = Q()
@@ -366,7 +367,7 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
         help_texts = {"name": "Name of the new SKU."}
 
     def __init__(self, *args, **kwargs):
-        initial = {}
+        initial = kwargs.pop("initial") if "initial" in kwargs else {}
         if "instance" in kwargs:
             instance = kwargs["instance"]
             if hasattr(instance, "pk") and instance.pk:
@@ -429,6 +430,8 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
 
     @transaction.atomic
     def save(self, commit=False):
+        if self.instance:
+            logger.info("Saving instance")
         instance = super().save(commit)
         # Manually save the foreign keys, then attach them to the instance
         fks = ["case_upc", "unit_upc", "product_line"]

@@ -2,12 +2,15 @@ import csv
 import logging
 import tempfile
 import zipfile
-from io import BytesIO, StringIO
+from io import BytesIO
 from pathlib import Path
 
 from django.http import HttpResponse
 
+from meals import utils
 from .models import Sku, Ingredient, ProductLine, SkuIngredient
+
+logger = logging.getLogger(__name__)
 
 FILE_TYPE_TO_FIELDS = {
     "skus": {
@@ -62,10 +65,7 @@ FILE_TYPES = {
     "formulas": SkuIngredient,
 }
 
-FILE_TYPE_TO_FILENAME = {
-    file_type: f"{file_type}.csv"
-    for file_type in FILE_TYPES
-}
+FILE_TYPE_TO_FILENAME = {file_type: f"{file_type}.csv" for file_type in FILE_TYPES}
 
 FILEIFY_THRESHOLD = 200
 
@@ -95,17 +95,14 @@ def _export_objs(stream, file_type, objects):
     writer = csv.DictWriter(stream, fieldnames=headers)
     writer.writeheader()
     writer.writerows(
-        {
-            header: getattr(obj, field_dict[header])
-            for header in headers
-        }
+        {header: getattr(obj, field_dict[header]) for header in headers}
         for obj in objects
     )
     stream.seek(0)
     return stream
 
 
-def export_skus(request, skus, include_formulas=False):
+def export_skus(skus, include_formulas=False, include_product_lines=False):
     """
     Exports a list of SKUs, and optionally ZIP up the formulas if the user requested
     that, too.
@@ -116,44 +113,58 @@ def export_skus(request, skus, include_formulas=False):
         this makes the export a ZIP file rather than a CSV file.
     :return: response containing the exported data, either as a CSV or a ZIP file.
     """
-    session_key = request.session.session_key
-    directory = TEMPDIR / session_key
+    directory = TEMPDIR / utils.make_token_with_timestamp("skus")
     directory.mkdir(parents=True, exist_ok=True)
+    logger.info("Will use directory %s", directory)
     sku_file = directory / FILE_TYPE_TO_FILENAME["skus"]
+    sku_file.touch(exist_ok=True)
     sku_data = sku_file.open("r+")
     _export_objs(sku_data, "skus", skus)
+    logger.info("Exported %d SKU records", len(skus))
+    exported_files = [sku_file]
     if include_formulas:
         formulas = SkuIngredient.objects.filter(sku_number__in=skus).order_by(
             "sku_number__number"
         )
         formula_file = directory / FILE_TYPE_TO_FILENAME["formulas"]
+        formula_file.touch(exist_ok=True)
         formula_data = formula_file.open("r+")
         _export_objs(formula_data, "formulas", formulas)
+        exported_files.append(formula_file)
+        logger.info("Exported %d Formula records", len(formulas))
 
+    if include_product_lines:
+        product_lines = ProductLine.objects.filter(sku__in=skus).distinct()
+        product_line_file = directory / FILE_TYPE_TO_FILENAME["product_lines"]
+        product_line_file.touch(exist_ok=True)
+        product_line_data = product_line_file.open("r+")
+        _export_objs(product_line_data, "product_lines", product_lines)
+        exported_files.append(product_line_file)
+        logger.info("Exported %d Product Line records", len(product_lines))
+
+    logger.info("exported_files is %s", exported_files)
+    if len(exported_files) > 1:
         byte_data = BytesIO()
         with zipfile.ZipFile(byte_data, "w") as zip_file:
-            zip_file.write(sku_file, arcname=sku_file.name)
-            zip_file.write(formula_file, arcname=formula_file.name)
+            for file in exported_files:
+                zip_file.write(file, arcname=file.name)
 
         response = HttpResponse(byte_data.getvalue(), content_type="application/zip")
-        response["Content-Disposition"] = "attachment; filename=skus+formulas.zip"
+        response["Content-Disposition"] = "attachment; filename=archive.zip"
     else:
-        response = HttpResponse(sku_data.read(), content_type="text/csv")
+        response = HttpResponse(exported_files[0].read(), content_type="text/csv")
         response["Content-Disposition"] = "attachment; filename=skus.csv"
 
     return response
 
 
-def export_ingredients(request, ingredients):
+def export_ingredients(ingredients):
     """
     Exports a list of ingredients as a temporary CSV file
-    :param request: an HttpRequest instance to obtain the session key (as namespace
-        for the exported file)
     :param ingredients: the list of ingredients to be exported
     :return: an HttpResponse containing the exported CSV file
     """
-    session_key = request.session.session_key
-    directory = TEMPDIR / session_key
+    directory = TEMPDIR / utils.make_token_with_timestamp("ingredients")
     data = _export_objs(directory, "ingredients", ingredients)
     response = HttpResponse(data.read(), content_type="text/csv")
     response["Content-Disposition"] = "attachment; filename=ingredients.csv"

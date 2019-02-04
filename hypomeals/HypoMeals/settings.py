@@ -28,7 +28,7 @@ SECRET_KEY = "v*hru*y3-fk)j!=*qi50y_da^1v^2&32d0^-91o)67u*57hse-"
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["web", "127.0.0.1", "localhost"]
+ALLOWED_HOSTS = ["web", "127.0.0.1", "localhost", "*"]
 
 AUTH_USER_MODEL = "meals.User"
 LOGIN_URL = "/accounts/login/"

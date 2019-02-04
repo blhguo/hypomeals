@@ -82,9 +82,9 @@ class Ingredient(
             for use in, for example, a ChoiceField in a form.
         """
         return [
-            ("name", "Name"),
             ("number", "Number"),
-            ("vendor", "Vendor"),
+            ("name", "Name"),
+            ("vendor__info", "Vendor"),
             ("size", "Size"),
             ("cost", "Cost"),
         ]
@@ -142,12 +142,12 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
             for use in, for example, a ChoiceField in a form.
         """
         return [
-            ("name", "Name"),
             ("number", "Number"),
-            ("case_upc", "Case UPC"),
-            ("unit_upc", "Unit UPC"),
+            ("name", "Name"),
+            ("case_upc__upc_number", "Case UPC"),
+            ("unit_upc__upc_number", "Unit UPC"),
             ("count", "Count per case"),
-            ("product_line", "Product Line"),
+            ("product_line__name", "Product Line"),
         ]
 
 

@@ -12,7 +12,10 @@ $(function() {
     let submitButton = $("#submitButton");
     let exportButton = $("#exportButton");
     let exportFormulaCheckbox = $("#exportFormulaCheckbox");
+    let exportProductLineCheckbox = $("#exportProductLineCheckbox");
     let skuFilterForm = $("#skuFilterForm");
+
+    $("[data-toggle='tooltip']").tooltip();
 
     function refreshPage() {
         window.location.href = skuUrl;
@@ -66,6 +69,9 @@ $(function() {
         let query = "?export=1";
         if (exportFormulaCheckbox.prop("checked")) {
             query += "&formulas=1";
+        }
+        if (exportProductLineCheckbox.prop("checked")) {
+            query += "&pl=1"
         }
         skuFilterForm.attr("action", original + query)
             .submit()

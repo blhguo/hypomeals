@@ -3,24 +3,20 @@
 {% block body %}
 <div class="container m-auto">
 <div class="row">
-    <div class="col-sm">
-        <div class="alert alert-success my-4">
-            {% if editing %}
-            <h3>Editing INGREDIENT #{{ ingredient_number }}: {{ ingredient_name }}</h3>
-            <p>
-                Modify the INGREDIENT using the form below. Note that you cannot change
-                some of the fields.
-            </p>
-            {% else %}
-            <h3>Add a new INGREDIENT</h3>
-            <p>Enter the information about a new INGREDIENT below. All fields are required.</p>
-            <p>
-                You will have a chance to enter vendor information
-                on the next page.
-            </p>
-            {% endif %}
-        </div>
-    </div>
+<div class="col-sm">
+<div class="alert alert-success my-4">
+    {% if editing %}
+    <h3>Editing Ingr #{{ ingredient_number }}: {{ ingredient_name }}</h3>
+    <p>
+        Modify the Ingredient using the form below. Note that you cannot change
+        some of the fields.
+    </p>
+    {% else %}
+    <h3>Add a new Ingredient</h3>
+    <p>Enter the information about a new Ingredient below. All fields are required.</p>
+    {% endif %}
+</div>
+</div>
 </div>
 <div class="row mb-4">
     <div class="col-sm">
@@ -47,9 +43,12 @@
     <input type="submit" id="editIngredientSubmitButton" style="display: none;">
     </form>
     <div class="btn-group">
-        <a href="#" id="nextButton" class="btn btn-success">Next<br/><small>Enter Vendor</small></a>
-        <a href="{% url 'ingredient' %}" class="btn btn-secondary">Cancel<br/><small>Return to Ingredients</small></a>
-        <a href="#" class="btn btn-primary">Finish<br/><small>without adding vendor</small></a>
+        {% if editing %}
+        <a href="#" id="nextButton" class="btn btn-success">Apply Changes</a>
+        {% else %}
+        <a href="#" id="nextButton" class="btn btn-success">Save</a>
+        {% endif %}
+        <a href="{% url 'ingredient' %}" class="btn btn-secondary">Cancel</a>
     </div>
     </div>
 </div>

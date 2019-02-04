@@ -121,43 +121,56 @@
 </div>
 
 <!-- Export controls -->
-<div>
+<div class="w-100">
 <hr>
 <h3>Export</h3>
-<button class="btn btn-primary" id="exportButton">
+<button class="btn btn-primary mb-2 w-100" id="exportButton">
     <span class="fas fa-download"></span> Export Current Search
 </button>
 </div>
+<button class="btn btn-primary w-100" id="reportButton">
+    <span class="fas fa-file-pdf"></span> Dependency Report
+</button>
 </div>
+
+
+<!-- Table column -->
 <div class="col-sm-10">
-    <table class="table">
-        <thead class="thead-light">
-        <tr>
-            <th><input type="checkbox" id="selectAllCheckbox"> </th>
-            <th>Ingr#</th>
-            <th>Name</th>
-            <th>Vendor</th>
-            <th>Size</th>
-            <th>Cost</th>
-        </tr>
-        </thead>
-        <tbody class="table-striped">
-        {% for ingredient in ingredients %}
-        <tr>
-            <td><input type="checkbox" class="ingredient-checkbox" id="{{ ingredient.number }}"> </td>
-            <td>{{ ingredient.number }}</td>
-            <td><a href="{% url "edit_ingredient" ingredient.number %}">{{ ingredient.name }}</a></td>
-            <td>{{ ingredient.vendor.info }}</td>
-            <td>{{ ingredient.size }}</td>
-            <td>{{ ingredient.cost }}</td>
-        </tr>
-        {%  empty %}
-            <div class="alert alert-danger">
-                No results were found. Please modify your search parameters and try again.
-            </div>
-        {% endfor %}
-        </tbody>
-    </table>
+{% if messages %}
+<div class="alert alert-success" id="messagesDiv">
+{% for message in messages %}
+<p {% if message.tags %}class="{{ message.tags }}{% endif %}">{{ message }}</p>
+{% endfor %}
+</div>
+{% endif %}
+<table class="table">
+    <thead class="thead-light">
+    <tr>
+        <th><input type="checkbox" id="selectAllCheckbox"> </th>
+        <th>Ingr#</th>
+        <th>Name</th>
+        <th>Vendor</th>
+        <th>Size</th>
+        <th>Cost</th>
+    </tr>
+    </thead>
+    <tbody class="table-striped">
+    {% for ingredient in ingredients %}
+    <tr>
+        <td><input type="checkbox" class="ingredient-checkbox" id="{{ ingredient.number }}"> </td>
+        <td>{{ ingredient.number }}</td>
+        <td><a href="{% url "edit_ingredient" ingredient.number %}">{{ ingredient.name }}</a></td>
+        <td>{{ ingredient.vendor.info }}</td>
+        <td>{{ ingredient.size }}</td>
+        <td>{{ ingredient.cost }}</td>
+    </tr>
+    {%  empty %}
+        <div class="alert alert-danger">
+            No results were found. Please modify your search parameters and try again.
+        </div>
+    {% endfor %}
+    </tbody>
+</table>
 <div>
     <p>Found {{ ingredients.paginator.count }} matches in {{ duration }} seconds</p>
 </div>

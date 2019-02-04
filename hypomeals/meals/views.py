@@ -12,6 +12,7 @@ from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.views.generic import UpdateView
 
 from meals.forms import FormulaFormset
 from meals.forms import IngredientFilterForm, EditIngredientForm
@@ -83,7 +84,7 @@ def ingredient(request):
         form.intial["page_num"] = 1
     end = time.time()
     if export:
-        return export_ingredients(request, ingredients.object_list)
+        return export_ingredients(ingredients.object_list)
     return render(
         request,
         template_name="meals/ingredients/ingredient.html",
@@ -158,7 +159,14 @@ def edit_ingredient(request, ingredient_number):
 def sku(request):
     start = time.time()
     export = request.GET.get("export", "0") == "1"
-    export_formula = request.GET.get("formulas", "0") == "1"
+    export_formulas = request.GET.get("formulas", "0") == "1"
+    export_product_lines = request.GET.get("pl", "0") == "1"
+    logger.info(
+        "Exporting [SKU Formulas Product Lines] = [%s %s %s]",
+        export,
+        export_formulas,
+        export_product_lines,
+    )
     if request.method == "POST":
         form = SkuFilterForm(request.POST)
         if form.is_valid():
@@ -176,7 +184,11 @@ def sku(request):
         form.initial["page_num"] = 1
     end = time.time()
     if export:
-        return export_skus(request, skus.object_list, include_formulas=export_formula)
+        return export_skus(
+            skus.object_list,
+            include_formulas=export_formulas,
+            include_product_lines=export_product_lines,
+        )
     return render(
         request,
         template_name="meals/sku/sku.html",
@@ -211,6 +223,22 @@ def edit_sku(request, sku_number):
             "editing": True,
         },
     )
+
+
+class EditSkuView(UpdateView):
+    form_class = EditSkuForm
+    pk_url_kwarg = "sku_number"
+    context_object_name = "sku"
+    template_name = "meals/sku/edit_sku.html"
+    model = Sku
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["editing"] = True
+        context[self.context_object_name] = context["object"]
+        logger.info("Context is %s", context)
+        logger.debug("sku.number=%d", self.object.number)
+        return context
 
 
 @login_required
