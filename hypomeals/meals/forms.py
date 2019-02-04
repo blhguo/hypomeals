@@ -17,9 +17,10 @@ from meals import utils
 from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor
 from meals.models import SkuIngredient
 from meals.utils import BootstrapFormControlMixin, FilenameRegexValidator
-from meals.models import ManufactureDetail, ManufactureGoal, Sku
+from meals.models import ManufactureDetail, ManufactureGoal
 
 logger = logging.getLogger(__name__)
+
 
 class SkuQuantityForm(forms.ModelForm):
     form_name = forms.CharField(required=True)
@@ -28,7 +29,7 @@ class SkuQuantityForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # self.fields["user"] =
         self.fields["form_name"].widget.attrs['class'] = 'form-control'
-        if (len(args) == 0):
+        if (not args):
             self.initial["form_name"] = ""
             self.initial["save_time"] = timezone.now()
             number = 1
@@ -42,22 +43,22 @@ class SkuQuantityForm(forms.ModelForm):
             self.fields[sku_name] = forms.CharField(required=False)
             self.fields[sku_name].widget.attrs['class'] = 'form-control'
             self.fields[sku_name].widget.attrs['placeholder'] = 'Sku'
-            quantity_name = 'quantity_%s' %(i,)
+            quantity_name = 'quantity_%s' % (i,)
             self.fields[quantity_name] = forms.CharField(required=False)
             self.fields[quantity_name].widget.attrs['class'] = 'form-control'
             self.fields[quantity_name].widget.attrs['placeholder'] = 'Quantity'
-            try:
+            if (args):
                 self.initial[sku_name] = form_content[sku_name]
                 self.initial[quantity_name] = form_content[quantity_name]
-            except:
+            else:
                 self.initial[sku_name] = ""
                 self.initial[quantity_name] = ""
 
-            if i == number-1:
-                 self.fields[sku_name].widget.attrs['class'] = 'sku-list-new form-control'
+            if i == number - 1:
+                self.fields[sku_name].widget.attrs[
+                    'class'] = 'sku-list-new form-control'
 
     def clean(self):
-        err_code = 0
         if self.is_valid():
             skus = set()
             quantities = set()
@@ -65,34 +66,35 @@ class SkuQuantityForm(forms.ModelForm):
             i = 0
             sku_name = 'sku_%s' % (i,)
             quantity_name = 'quantity_%s' % (i,)
-            while self.cleaned_data.get(sku_name) or self.cleaned_data.get(quantity_name):
-               sku = self.cleaned_data[sku_name]
-               quantity = self.cleaned_data[quantity_name]
-               print("DEBUG", sku, quantity)
-               if len(Sku.objects.filter(name = sku)) == 0:
-                   err_code = 2
-                   self.add_error(sku_name, 'This SKU %s is not a valid one!' % (sku, ))
+            while self.cleaned_data.get(sku_name) or self.cleaned_data.get(
+                    quantity_name):
+                sku = self.cleaned_data[sku_name]
+                quantity = self.cleaned_data[quantity_name]
+                print("DEBUG", sku, quantity)
+                if len(Sku.objects.filter(name=sku)) == 0:
+                    err_message = 'This SKU %s is not a valid one!' % (sku,)
+                    self.add_error(sku_name, err_message)
 
-               if quantity == "":
-                   self.add_error(quantity_name, 'Quantity is a required field')
+                if quantity == "":
+                    err_message = 'Quantity is a required field'
+                    self.add_error(quantity_name, err_message)
 
-               if sku == "":
-                   self.add_error(quantity_name, 'Sku is a required field')
+                if sku == "":
+                    err_message = 'Sku is a required field'
+                    self.add_error(quantity_name, err_message)
 
-               if sku in skus:
-                   self.add_error(sku_name, 'Duplicate')
-               elif quantity in quantities:
-                   self.add_error(quantity_name, 'Duplicate')
-               else:
-                   skus.add(sku)
-                   quantities.add(quantity)
-                   sku_quantity.append((sku, quantity))
-                   err_code = 1
-               i += 1
-               sku_name = 'sku_%s' % (i,)
-               quantity_name = 'quantity_%s' % (i,)
+                if sku in skus:
+                    self.add_error(sku_name, 'Duplicate')
+                elif quantity in quantities:
+                    self.add_error(quantity_name, 'Duplicate')
+                else:
+                    skus.add(sku)
+                    quantities.add(quantity)
+                    sku_quantity.append((sku, quantity))
+                i += 1
+                sku_name = 'sku_%s' % (i,)
+                quantity_name = 'quantity_%s' % (i,)
             self.cleaned_data["sku_quantity"] = sku_quantity
-
 
     def save(self, request, file):
         if self.is_valid():
@@ -103,11 +105,11 @@ class SkuQuantityForm(forms.ModelForm):
             sq.file.save("temp", file)
             sq.save()
             for sku, quantity in self.cleaned_data["sku_quantity"]:
-               ManufactureDetail.objects.create(
-                   form_name=sq,
-                   sku=sku,
-                   quantity=quantity
-               )
+                ManufactureDetail.objects.create(
+                    form_name=sq,
+                    sku=sku,
+                    quantity=quantity
+                )
         else:
             print(self.errors)
 
@@ -115,7 +117,7 @@ class SkuQuantityForm(forms.ModelForm):
         for sku_name in self.fields:
             if sku_name.startswith('sku_'):
                 sku_index = sku_name.split("_")[1]
-                quantity_name = 'quantity_%s' %(sku_index, )
+                quantity_name = 'quantity_%s' % (sku_index,)
                 yield self[sku_name], self[quantity_name]
 
     def get_entry_number(self, request):
@@ -130,7 +132,6 @@ class SkuQuantityForm(forms.ModelForm):
 
 
 class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
-
     skus = forms.FileField(
         required=False,
         label="SKU",
@@ -138,7 +139,7 @@ class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
             FilenameRegexValidator(
                 regex=r"skus(\S)*\.csv",
                 message="Filename mismatch. Expected: "
-                "skusxxx.csv where xxx is any characters.",
+                        "skusxxx.csv where xxx is any characters.",
             )
         ],
     )
@@ -149,7 +150,7 @@ class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
             FilenameRegexValidator(
                 regex=r"ingredients(\S)*\.csv",
                 message="Filename mismatch. Expected: "
-                "ingredientsxxx.csv where xxx is any characters.",
+                        "ingredientsxxx.csv where xxx is any characters.",
             )
         ],
     )
@@ -160,7 +161,7 @@ class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
             FilenameRegexValidator(
                 regex=r"product_lines(\S)*\.csv",
                 message="Filename mismatch. Expected: "
-                "product_linesxxx.csv where xxx is any characters.",
+                        "product_linesxxx.csv where xxx is any characters.",
             )
         ],
     )
@@ -171,7 +172,7 @@ class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
             FilenameRegexValidator(
                 regex=r"formula(\S)*\.csv",
                 message="Filename mismatch. Expected: "
-                "formulaxxx.csv where xxx is any characters.",
+                        "formulaxxx.csv where xxx is any characters.",
             )
         ],
     )
@@ -198,7 +199,6 @@ class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
 
 
 class ImportZipForm(forms.Form, BootstrapFormControlMixin):
-
     zip = forms.FileField(required=False, label="ZIP File")
 
 
@@ -289,7 +289,6 @@ class IngredientFilterForm(forms.Form):
 
 
 class EditIngredientForm(forms.ModelForm):
-
     custom_vendor = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={"placeholder": "Enter a new vendor..."}),
@@ -297,8 +296,8 @@ class EditIngredientForm(forms.ModelForm):
     )
     vendor = forms.ChoiceField(
         choices=lambda: BLANK_CHOICE_DASH
-        + [("custom", "Custom")]
-        + get_vendor_choices(),
+                        + [("custom", "Custom")]
+                        + get_vendor_choices(),
         required=True,
     )
 
@@ -369,7 +368,6 @@ class EditIngredientForm(forms.ModelForm):
 
 
 class SkuFilterForm(forms.Form, utils.BootstrapFormControlMixin):
-
     NUM_PER_PAGE_CHOICES = [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
 
     page_num = forms.IntegerField(widget=forms.HiddenInput(), initial=1, required=False)
@@ -437,7 +435,6 @@ class UpcField(forms.CharField):
 
 
 class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
-
     case_upc = UpcField(
         label="Case UPC#", widget=forms.NumberInput(attrs={"maxlength": 12})
     )
@@ -451,8 +448,8 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
     )
     product_line = forms.ChoiceField(
         choices=lambda: BLANK_CHOICE_DASH
-        + [("custom", "Custom")]
-        + get_product_line_choices(),
+                        + [("custom", "Custom")]
+                        + get_product_line_choices(),
         required=True,
     )
 
@@ -550,7 +547,6 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
 
 
 class FormulaForm(forms.Form, utils.BootstrapFormControlMixin):
-
     ingredient = forms.CharField(
         required=True, widget=forms.TextInput(attrs={"placeholder": "Start typing..."})
     )

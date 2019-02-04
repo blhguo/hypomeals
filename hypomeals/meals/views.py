@@ -25,7 +25,8 @@ from meals.forms import FormulaFormset
 from meals.forms import IngredientFilterForm, EditIngredientForm
 from meals.forms import SkuFilterForm, EditSkuForm
 from meals.forms import SkuQuantityForm
-from meals.models import Sku, Ingredient, ProductLine, ManufactureGoal, ManufactureDetail
+from meals.models import Sku, Ingredient, ProductLine, ManufactureGoal, \
+    ManufactureDetail
 from meals.models import SkuIngredient
 from .bulk_export import export_skus
 from .forms import ImportCsvForm, ImportZipForm
@@ -45,7 +46,7 @@ def import_page(request):
         csv_file_form = ImportCsvForm(request.POST, request.FILES)
         zip_file_form = ImportZipForm(request.POST, request.FILES)
         if (csv_file_form.has_changed() and csv_file_form.is_valid()) or (
-            zip_file_form.has_changed() and zip_file_form.is_valid()
+                    zip_file_form.has_changed() and zip_file_form.is_valid()
         ):
             return redirect("import_landing")
         return render(
@@ -98,7 +99,7 @@ def find_goal(goal_id, user):
     return request
 
 
-def show_one_goal(request, goal_id = -1):
+def show_one_goal(request, goal_id=-1):
     errors = ""
     message = ""
     if request.method == 'POST':
@@ -128,10 +129,11 @@ def show_one_goal(request, goal_id = -1):
             form = SkuQuantityForm()
     return render(request,
                   template_name="meals/show_one_goal.html",
-                  context = {"form": form,
-                             "errors": errors,
-                             "message": message
-                             })
+                  context={"form": form,
+                           "errors": errors,
+                           "message": message
+                           })
+
 
 def generate_report(request):
     if request.method == "POST":
@@ -157,18 +159,14 @@ def generate_report(request):
                     ingredient_number = sku_ingredient_pair.ingredient_number
                     if ingredient_number not in report:
                         report[ingredient_number] = 0
-                    report[ingredient_number] += float(sku_ingredient_pair.quantity) * float(quantity4sku)
+                    report[ingredient_number] += float(
+                        sku_ingredient_pair.quantity) * float(quantity4sku)
             else:
                 break
             cnt += 1
+        return render(request, template_name="meals/calculation.html",
+                      context={"report": report})
 
-        # with open('test.csv', 'w', newline='') as csvfile:
-        #     writer = csv.writer(csvfile)
-        #     writer.writerow(["Ingredient Name", "Ingredient Quantity"])
-        #     for key, value in report.items():
-        #         writer.writerow([key, value])
-
-        return render(request, template_name="meals/calculation.html", context = {"report": report})
 
 def generate_csv_file(entries):
     cnt = 0
@@ -191,6 +189,7 @@ def generate_csv_file(entries):
     file = File(open(tf, "rb"))
     return file
 
+
 def save_goal(request):
     file = generate_csv_file(request.POST)
     form = SkuQuantityForm(request.POST)
@@ -203,20 +202,23 @@ def save_goal(request):
         context={"form_name": form_name},
     )
 
+
 def download_goal(request):
     save_goal(request)
-    goal = ManufactureGoal.objects.filter(form_name = request.POST["form_name"]).order_by('-save_time',)
+    goal = ManufactureGoal.objects.filter(form_name=request.POST["form_name"]).order_by(
+        '-save_time', )
     response = HttpResponse(goal[0].file)
     response['content_type'] = 'text/csv'
     response['Content-Disposition'] = 'attachment;filename=manufacture_goal.csv'
     return response
+
 
 def download_calculation(request):
     tf = tempfile.mktemp()
     with open(tf, "w", newline='') as f:
         writer = csv.writer(f)
         writer.writerow(["Ingredient Name", "Ingredient Quantity"])
-        for k,v in request.POST.items():
+        for k, v in request.POST.items():
             if (k == "csrfmiddlewaretoken"):
                 continue
             writer.writerow([k, v])
@@ -226,9 +228,10 @@ def download_calculation(request):
     response['Content-Disposition'] = 'attachment;filename=manufacture_goal.csv'
     return response
 
+
 def generate_calculation_pdf(request):
     response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename=calculation_goal.pdf'
+    response['Content-Disposition'] = 'attachment;filename=calculation_goal.pdf'
     doc = SimpleDocTemplate(response, pagesize=letter)
     # container for the 'Flowable' objects
     elements = []
@@ -241,8 +244,9 @@ def generate_calculation_pdf(request):
             continue
         cnt += 1
         data.append([k, v])
-    t=Table(data, 2*[3*inch], n*[0.4*inch])
-    t.setStyle(TableStyle([('BOX', (0,0), (-1,-1), 0.25, colors.black), ('INNERGRID', (0,0), (-1,-1), 0.25, colors.black),]))
+    t = Table(data, 2 * [3 * inch], n * [0.4 * inch])
+    t.setStyle(TableStyle([('BOX', (0, 0), (-1, -1), 0.25, colors.black),
+                           ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.black), ]))
     elements.append(t)
     doc.build(elements)
     return response
@@ -255,6 +259,7 @@ def show_all_goals(request):
         template_name="meals/show_all_goals.html",
         context={"all_goals": all_goals},
     )
+
 
 ########################### Ingredient Views ###########################
 @login_required
@@ -321,7 +326,6 @@ def add_ingredient(request):
 
 @login_required
 def edit_ingredient(request, ingredient_number):
-
     instance = get_object_or_404(Ingredient, number=ingredient_number)
     if request.method == "POST":
         form = EditIngredientForm(request.POST, instance=instance)
