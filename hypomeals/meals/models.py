@@ -58,6 +58,7 @@ class Ingredient(
     excluded_fields = ("number",)
 
     name = models.CharField(max_length=100, unique=True, blank=False)
+    # TODO: Ingredient number is alphanumeric
     number = models.IntegerField(blank=False, primary_key=True)
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE)
     size = models.CharField(max_length=100, blank=False)
@@ -88,6 +89,13 @@ class Ingredient(
             ("size", "Size"),
             ("cost", "Cost"),
         ]
+
+    def save(self, *args, **kwargs):
+        if not self.number:
+            self.number = utils.next_alphanumeric_str(
+                str(Ingredient.objects.latest("number").number)
+            )
+        return super().save(*args, **kwargs)
 
 
 class Sku(models.Model, utils.ModelFieldsCompareMixin):
@@ -153,7 +161,7 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin):
     def save(self, *args, **kwargs):
         if not self.number:
             self.number = Sku.objects.latest("number").number + 1
-        super().save(*args, **kwargs)
+        return super().save(*args, **kwargs)
 
 
 class SkuIngredient(
