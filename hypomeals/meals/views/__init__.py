@@ -1,3 +1,5 @@
+# flake8: noqa
+
 from .admin import *
 from .autocomplete import *
 from .bulk import *
