@@ -1,0 +1,93 @@
+{% extends 'meals/base.html' %}
+{% load staticfiles %}
+
+{% block body %}
+<button type="button" class="btn btn-primary" id="add">Add</button>
+<button type="button" class="btn btn-secondary" id="delete">Delete</button>
+{% if message != "" %}
+  <div class="alert alert-success">
+    <strong>Success!</strong> {{ message }}
+  </div>
+{% endif %}
+<form id = "manufacturer-form" action="/download_goal/" method="post">
+  {% csrf_token %}
+  <div class="form-row">
+    <div class="col">
+      Form Name:
+    </div>
+    <div class="col">
+      {{ form.form_name }}
+    </div>
+  </div>
+  {% for sku_field, quantity_field in form.get_interest_fields %}
+    <div class="form-row">
+      <div class="col">
+        {{ sku_field }}
+      </div>
+      <div class="col">
+        {{ quantity_field }}
+      </div>
+    </div>
+  {% endfor %}
+  <button type="submit" class="btn btn-primary" value = "generate" onclick="javascript: form.action='/generate_report/';">Generate</button>
+  <button type="submit" class="btn btn-primary" value = "save" onclick="javascript: form.action='/show_one_goal/';">Save</button>
+  <button type="submit" class="btn btn-primary" value = "download" id="download">Download</button>
+</form>
+<div>{{ errors }}</div>
+<a href="{% url 'autocomplete_skus' %}" id="acSkusUrl"></a>
+{% endblock %}
+
+{% block scriptend %}
+<script src="{% static 'meals/common.js' %}"></script>
+<script>
+  $('#add').on('click', function() {
+      let $this = $(".sku-list-new")
+      let $clone = $this.clone()
+      let name = $clone.attr('name')
+      let n = parseInt(name.split('_')[1]) + 1
+      const acSkusUrl = $("#acSkusUrl").attr("href");
+
+      sku_name = 'sku_' + n
+      $clone.val('')
+      $clone.attr('name', sku_name)
+      $clone.attr('id', 'id_' + sku_name)
+      registerAutocomplete($clone, acSkusUrl);
+      $clone.appendTo($this.parent())
+
+      n = parseInt(name.split('_')[1])
+      console.log(n)
+      $last_quantity = $("#id_quantity_" + n)
+      n = n + 1
+      let quantity_name = "quantity_" + n
+      let $quantity_clone = $last_quantity.clone()
+      $quantity_clone.val('')
+      $quantity_clone.attr('name', quantity_name)
+      $quantity_clone.attr('id', 'id_' + quantity_name)
+      $quantity_clone.appendTo($last_quantity.parent())
+
+
+      $this.removeClass('sku-list-new')
+  })
+
+  $('#delete').on('click', function() {
+      let $this = $(".sku-list-new")
+      let name = $this.attr('name')
+      let n = parseInt(name.split('_')[1]) - 1
+      let sku_n = '#id_sku_' + n
+      let $last = $(sku_n)
+      $last.addClass('sku-list-new')
+
+      let quantity_n = '#id_quantity_' + (n + 1)
+      $(quantity_n).remove()
+      $this.remove();
+    })
+
+</script>
+<script>
+  $(function() {
+    const acSkusUrl = $("#acSkusUrl").attr("href");
+    registerAutocomplete($("#id_sku_0"), acSkusUrl);
+  })
+</script>
+{% endblock %}
+{% block dashboard_active %} active{% endblock %}

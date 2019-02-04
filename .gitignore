@@ -8,6 +8,8 @@ auto-save-list
 tramp
 .\#*
 
+/**/__MACOSX
+
 # Org-mode
 .org-id-locations
 *_archive
@@ -50,6 +52,7 @@ flycheck_*.el
 # Certificates / keys
 nginx/certs
 certs.tar.gz
+certs.zip
 
 # User-specific stuff:
 .idea/**/workspace.xml
@@ -223,6 +226,7 @@ dmypy.json
 pyvenv.cfg
 .venv
 pip-selfcheck.json
+hypomeal/
 
 # VS Code
 .vscode/*

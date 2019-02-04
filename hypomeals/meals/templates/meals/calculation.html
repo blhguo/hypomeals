@@ -1,0 +1,29 @@
+{% extends 'meals/base.html' %}
+
+{% block body %}
+<table class="table">
+  <thead>
+    <tr>
+      <th scope="cols">Ingredient Number</th>
+      <th scope="cols">Ingredient Quantity</th>
+  </thead>
+  <tbody>
+    {% for key, value in report.items %}
+      <tr>
+        <td>{{ key }}</td>
+        <td>{{ value }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<form action="/download_calculation/" method="post">
+  {% csrf_token %}
+  {% for key, value in report.items %}
+      <input name = "{{ key }}" value = "{{ value }}" type = "hidden">
+  {% endfor %}
+  <button class="btn btn-primary" type="submit">Export to CSV</button>
+  <button class="btn btn-primary" type="submit" onclick="javascript: form.action='/generate_calculation_pdf/';">Export to PDF</button>
+</form>
+{% endblock %}
+
+{% block dashboard_active %} active{% endblock %}
