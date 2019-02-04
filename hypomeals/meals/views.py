@@ -103,6 +103,7 @@ def find_goal(goal_id, user):
     return request
 
 
+@login_required
 def show_one_goal(request, goal_id=-1):
     errors = ""
     message = ""
@@ -130,39 +131,38 @@ def show_one_goal(request, goal_id=-1):
     )
 
 
+@login_required
 def generate_report(request):
-    if request.method == "POST":
-        cnt = 0
-        data = []
-        report = {}
-        while True:
-            sku_index = "sku_" + str(cnt)
-            quantity_index = "quantity_" + str(cnt)
-            if sku_index in request.POST and quantity_index in request.POST:
-                sku_name = request.POST[sku_index]
-                quantity4sku = request.POST[quantity_index]
-                sku = Sku.objects.filter(name=sku_name)
-                if sku:
-                    sku = sku[0]
-                else:
-                    cnt += 1
-                    continue
-                sku_ingredient_pairs = SkuIngredient.objects.filter(
-                    sku_number=sku.number
-                )
-                for sku_ingredient_pair in sku_ingredient_pairs:
-                    ingredient_number = sku_ingredient_pair.ingredient_number
-                    if ingredient_number not in report:
-                        report[ingredient_number] = 0
-                    report[ingredient_number] += float(
-                        sku_ingredient_pair.quantity
-                    ) * float(quantity4sku)
+    report = {}
+    cnt = 0
+    while True:
+        sku_index = "sku_" + str(cnt)
+        quantity_index = "quantity_" + str(cnt)
+        if sku_index in request.POST and quantity_index in request.POST:
+            sku_name = request.POST[sku_index]
+            quantity4sku = request.POST[quantity_index]
+            sku = Sku.objects.filter(name=sku_name)
+            if sku:
+                sku = sku[0]
             else:
-                break
-            cnt += 1
-        return render(
-            request, template_name="meals/calculation.html", context={"report": report}
-        )
+                cnt += 1
+                continue
+            sku_ingredient_pairs = SkuIngredient.objects.filter(
+                sku_number=sku.number
+            )
+            for sku_ingredient_pair in sku_ingredient_pairs:
+                ingredient_number = sku_ingredient_pair.ingredient_number
+                if ingredient_number not in report:
+                    report[ingredient_number] = 0
+                report[ingredient_number] += float(
+                    sku_ingredient_pair.quantity
+                ) * float(quantity4sku)
+        else:
+            break
+        cnt += 1
+    return render(
+        request, template_name="meals/calculation.html", context={"report": report}
+    )
 
 
 def generate_csv_file(entries):
@@ -185,6 +185,7 @@ def generate_csv_file(entries):
     return file
 
 
+@login_required
 def save_goal(request):
     file = generate_csv_file(request.POST)
     form = SkuQuantityForm(request.POST)
@@ -198,6 +199,7 @@ def save_goal(request):
     )
 
 
+@login_required
 def download_goal(request):
     save_goal(request)
     goal = ManufactureGoal.objects.filter(form_name=request.POST["form_name"]).order_by(
@@ -209,6 +211,7 @@ def download_goal(request):
     return response
 
 
+@login_required
 def download_calculation(request):
     tf = tempfile.mktemp()
     with open(tf, "w", newline="") as f:
@@ -225,6 +228,7 @@ def download_calculation(request):
     return response
 
 
+@login_required
 def generate_calculation_pdf(request):
     response = HttpResponse(content_type="application/pdf")
     response["Content-Disposition"] = "attachment;filename=calculation_goal.pdf"
@@ -254,6 +258,7 @@ def generate_calculation_pdf(request):
     return response
 
 
+@login_required
 def show_all_goals(request):
     all_goals = ManufactureGoal.objects.filter(user=request.user)
     return render(
