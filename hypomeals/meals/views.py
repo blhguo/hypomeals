@@ -18,7 +18,7 @@ from meals.forms import IngredientFilterForm, EditIngredientForm
 from meals.forms import SkuFilterForm, EditSkuForm
 from meals.models import Sku, Ingredient, ProductLine
 from meals.models import SkuIngredient
-from .bulk_export import export_skus
+from .bulk_export import export_skus, export_ingredients
 from .forms import ImportCsvForm, ImportZipForm
 
 logger = logging.getLogger(__name__)
@@ -58,14 +58,6 @@ def import_landing(request):
 
 
 @login_required
-def export_test(request):
-    response = render(request, template_name="meals/index.html")
-    if request:
-        response = export_skus(Sku.objects.all())
-    return response
-
-
-@login_required
 def logout_view(request):
     logout(request)
     return redirect("index")
@@ -75,6 +67,7 @@ def logout_view(request):
 @login_required
 def ingredient(request):
     start = time.time()
+    export = request.GET.get("export", "0") == "1"
     if request.method == "POST":
         form = IngredientFilterForm(request.POST)
         if form.is_valid():
@@ -89,6 +82,8 @@ def ingredient(request):
         page = 1
         form.intial["page_num"] = 1
     end = time.time()
+    if export:
+        return export_ingredients(request, ingredients.object_list)
     return render(
         request,
         template_name="meals/ingredients/ingredient.html",
@@ -181,7 +176,7 @@ def sku(request):
         form.initial["page_num"] = 1
     end = time.time()
     if export:
-        return export_skus(skus.object_list, include_formulas=export_formula)
+        return export_skus(request, skus.object_list, include_formulas=export_formula)
     return render(
         request,
         template_name="meals/sku/sku.html",

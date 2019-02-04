@@ -326,3 +326,31 @@ def generate_random_upc() -> str:
     random_number = random.choice(["0", "1", "6", "7", "8", "9"])
     random_number += "".join(random.choices(string.digits, k=10))
     return random_number + str(upc_check_digit(random_number))
+
+
+class AttributeResolutionMixin:
+    """
+    Supports the dot-notation when resolving attributes for an object. This is
+    especially useful in a model with ForeignKeys. For example:
+
+    class X(models.Model):
+        name = models.CharField(...)
+
+    class Y(models.Model, AttributeResolutionMixin):
+        x = models.ForeignKey(X, ...)
+
+    >>> y = Y.objects.create(x=X.objects.create(name="test"))
+    >>> y.x.name
+    'test'
+    >>> getattr(y, "x.name")
+    'test'
+    """
+
+    def __getattribute__(self, item):
+        if "." not in item:
+            return super().__getattribute__(item)
+        parts = item.split(".")
+        obj = super().__getattribute__(parts[0])
+        for part in parts[1:]:
+            obj = getattr(obj, part)
+        return obj

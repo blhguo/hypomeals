@@ -52,7 +52,9 @@ class Vendor(models.Model, utils.ModelFieldsCompareMixin):
         ordering = ["pk"]
 
 
-class Ingredient(models.Model, utils.ModelFieldsCompareMixin):
+class Ingredient(
+    models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutionMixin
+):
     excluded_fields = ("number",)
 
     name = models.CharField(max_length=100, unique=True, blank=False)
@@ -88,7 +90,7 @@ class Ingredient(models.Model, utils.ModelFieldsCompareMixin):
         ]
 
 
-class Sku(models.Model, utils.ModelFieldsCompareMixin):
+class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutionMixin):
     excluded_fields = ("number",)
 
     name = models.CharField(max_length=32, blank=False, unique=True)
@@ -149,7 +151,9 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin):
         ]
 
 
-class SkuIngredient(models.Model, utils.ModelFieldsCompareMixin):
+class SkuIngredient(
+    models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutionMixin
+):
     excluded_fields = ("id",)
 
     sku_number = models.ForeignKey(Sku, blank=False, on_delete=models.CASCADE)

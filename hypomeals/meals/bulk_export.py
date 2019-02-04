@@ -1,7 +1,8 @@
 import csv
+import logging
 import tempfile
 import zipfile
-from io import BytesIO
+from io import BytesIO, StringIO
 from pathlib import Path
 
 from django.http import HttpResponse
@@ -12,25 +13,25 @@ FILE_TYPE_TO_FIELDS = {
     "skus": {
         "number": "SKU#",
         "name": "Name",
-        "case_upc": "Case UPC",
-        "unit_upc": "Unit UPC",
+        "case_upc.upc_number": "Case UPC",
+        "unit_upc.upc_number": "Unit UPC",
         "unit_size": "Unit size",
         "count": "Count per case",
-        "product_line": "Product Line Name",
+        "product_line.name": "Product Line Name",
         "comment": "Comment",
     },
     "ingredients": {
         "number": "Ingr#",
         "name": "Name",
-        "vendor": "Vendor Info",
+        "vendor.info": "Vendor Info",
         "size": "Size",
         "cost": "Cost",
         "comment": "Comment",
     },
     "product_lines": {"name": "Name"},
-    "formula": {
-        "sku_number": "SKU#",
-        "ingredient_number": "Ingr#",
+    "formulas": {
+        "sku_number.number": "SKU#",
+        "ingredient_number.number": "Ingr#",
         "quantity": "Quantity",
     },
 }
@@ -51,87 +52,109 @@ HEADERS = {
     ],
     "ingredients": ["Ingr#", "Name", "Vendor Info", "Size", "Cost", "Comment"],
     "product_lines": ["Name"],
-    "formula": ["SKU#", "Ingr#", "Quantity"],
+    "formulas": ["SKU#", "Ingr#", "Quantity"],
 }
 
 FILE_TYPES = {
     "skus": Sku,
     "ingredients": Ingredient,
     "product_lines": ProductLine,
-    "formula": SkuIngredient,
+    "formulas": SkuIngredient,
 }
 
+FILE_TYPE_TO_FILENAME = {
+    file_type: f"{file_type}.csv"
+    for file_type in FILE_TYPES
+}
 
-def export_formulas(skus):
+FILEIFY_THRESHOLD = 200
+
+TEMPDIR = Path(tempfile.gettempdir())
+
+logger = logging.getLogger(__name__)
+
+
+def _export_objs(stream, file_type, objects):
     """
-    Exports a all the formulas associated with a list of SKUs. Each (SKU, Ingredient,
-    Quantity) triplet is written to its own line.
-    :param skus: List of Sku instances, whose formulas are exported
-    :return: the path to a temporary file that contains the CSV content
+    Exports a particular type of objects to a CSV file / stream
+    :param directory: the directory in which the file will be placed
+    :param file_type: the type of file being exported
+    :param objects: an iterable of objects to be exported
+    :param force_file: if True, a temporary file will always be written. This option
+        is used when generating ZIP files for export.
+    :return: a (stream, filename) tuple where stream is an IO stream instance pointing
+        to the buffer, and filename is a Path to the file written, if one is used, or
+        None, if the content of the file is written entirely to memory.
     """
+    if file_type not in FILE_TYPES:
+        logger.error("Unknown file type '%s'", file_type)
+        raise RuntimeError(f"Unknown file type '{file_type}'")
 
-    tempdir = Path(tempfile.gettempdir())
-    file = tempdir / "formulas.csv"
-    with open(file, "w") as csv_file:
-        writer = csv.DictWriter(csv_file, fieldnames=HEADERS["formula"])
-        writer.writeheader()
-        formulas = SkuIngredient.objects.filter(sku_number__in=skus).order_by(
-            "sku_number__number"
-        )
-        writer.writerows(
-            {
-                "SKU#": formula.sku_number.number,
-                "Ingr#": formula.ingredient_number.number,
-                "Quantity": formula.quantity,
-            }
-            for formula in formulas
-        )
-
-    return file
+    field_dict = FILE_TYPE_TO_FIELDS_REV[file_type]
+    headers = HEADERS[file_type]
+    writer = csv.DictWriter(stream, fieldnames=headers)
+    writer.writeheader()
+    writer.writerows(
+        {
+            header: getattr(obj, field_dict[header])
+            for header in headers
+        }
+        for obj in objects
+    )
+    stream.seek(0)
+    return stream
 
 
-def _export_skus(skus):
+def export_skus(request, skus, include_formulas=False):
     """
-    Exports a list of SKUs to a CSV file. Each SKU is written to its own line.
-    :param skus: List of Sku instances
-    :return: the path to a temporary file that contains the CSV content
-    """
-    tempdir = Path(tempfile.gettempdir())
-    file = tempdir / "skus.csv"
-    field_dict = FILE_TYPE_TO_FIELDS_REV["skus"]
-    with open(file, "w") as csv_file:
-        writer = csv.DictWriter(csv_file, fieldnames=HEADERS["skus"])
-        writer.writeheader()
-        for sku_object in skus:
-            csv_dict = {}
-            for header in HEADERS["skus"]:
-                csv_dict[header] = getattr(sku_object, field_dict[header])
-            writer.writerow(csv_dict)
-    return file
-
-
-def export_skus(skus, include_formulas=False):
-    """
-    This function asks the two helper functions for csv files, then zips
+    Exports a list of SKUs, and optionally ZIP up the formulas if the user requested
+    that, too.
+    :param request: a HttpRequest instance to obtain the session key (as namespace
+        for the exported files)
     :param skus: data to be exported
     :param include_formulas: whether to include the formulas for the SKUs. Note that
         this makes the export a ZIP file rather than a CSV file.
     :return: response containing the exported data, either as a CSV or a ZIP file.
     """
-    sku_data = _export_skus(skus)
+    session_key = request.session.session_key
+    directory = TEMPDIR / session_key
+    directory.mkdir(parents=True, exist_ok=True)
+    sku_file = directory / FILE_TYPE_TO_FILENAME["skus"]
+    sku_data = sku_file.open("r+")
+    _export_objs(sku_data, "skus", skus)
     if include_formulas:
-        formula_data = export_formulas(skus)
+        formulas = SkuIngredient.objects.filter(sku_number__in=skus).order_by(
+            "sku_number__number"
+        )
+        formula_file = directory / FILE_TYPE_TO_FILENAME["formulas"]
+        formula_data = formula_file.open("r+")
+        _export_objs(formula_data, "formulas", formulas)
 
         byte_data = BytesIO()
         with zipfile.ZipFile(byte_data, "w") as zip_file:
-            zip_file.write(sku_data, arcname=sku_data.name)
-            zip_file.write(formula_data, arcname=formula_data.name)
+            zip_file.write(sku_file, arcname=sku_file.name)
+            zip_file.write(formula_file, arcname=formula_file.name)
 
         response = HttpResponse(byte_data.getvalue(), content_type="application/zip")
         response["Content-Disposition"] = "attachment; filename=skus+formulas.zip"
     else:
-        with open(sku_data, "rb") as f:
-            response = HttpResponse(f.read(), content_type="text/csv")
-            response["Content-Disposition"] = "attachment; filename=skus.csv"
+        response = HttpResponse(sku_data.read(), content_type="text/csv")
+        response["Content-Disposition"] = "attachment; filename=skus.csv"
 
+    return response
+
+
+def export_ingredients(request, ingredients):
+    """
+    Exports a list of ingredients as a temporary CSV file
+    :param request: an HttpRequest instance to obtain the session key (as namespace
+        for the exported file)
+    :param ingredients: the list of ingredients to be exported
+    :return: an HttpResponse containing the exported CSV file
+    """
+    session_key = request.session.session_key
+    directory = TEMPDIR / session_key
+    data = _export_objs(directory, "ingredients", ingredients)
+    response = HttpResponse(data.read(), content_type="text/csv")
+    response["Content-Disposition"] = "attachment; filename=ingredients.csv"
     return response

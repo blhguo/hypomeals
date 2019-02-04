@@ -1,11 +1,16 @@
 $(function() {
     let removeButton = $("#removeButton");
     let ingredientCheckboxes = $(".ingredient-checkbox");
+    let selectAllCheckbox = $("#selectAllCheckbox");
+    let resetAllButton = $("#resetAllButton");
+    let submitButton = $("#submitButton");
+    const ingredientFilterForm = $("#ingredientFilterForm");
     const removeIngredientsUrl = $("#removeIngredientsUrl").attr("href");
     const ingredientUrl = $("#ingredientUrl").attr("href");
     const acSkusUrl = $("#acSkusUrl").attr("href");
     const pageNumInputId = $("#pageNumInputId").val();
     const skusInputId = $("#skusInputId").val();
+    const exportButton = $("#exportButton");
 
 
     function refreshPage() {
@@ -19,12 +24,19 @@ $(function() {
             }));
     });
 
-    $("selectAll").on("change", function(ev) {
+    selectAllCheckbox.on("change", function(ev) {
         ingredientCheckboxes.attr("checked",
             $(this).attr("checked"));
     });
 
+    resetAllButton.click(function() {
+        refreshPage();
+        return false;
+    });
 
+    submitButton.click(function() {
+        ingredientFilterForm.submit();
+    });
 
     removeButton.on("click", function(ev) {
         let toRemove = [];
@@ -68,6 +80,15 @@ $(function() {
         let page = $(this).attr("page");
         $(`#${pageNumInputId}`).val(page);
         $("#ingredientFilterForm").submit();
+    });
+
+    exportButton.on("click", function() {
+        const original = ingredientFilterForm.attr("action");
+        ingredientFilterForm.attr("action", original + "?export=1")
+            .submit()
+            .attr("action", original);
+
+        return false;
     });
 
     registerAutocomplete($(`#${skusInputId}`), acSkusUrl);
