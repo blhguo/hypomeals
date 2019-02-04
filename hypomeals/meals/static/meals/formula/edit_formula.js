@@ -105,4 +105,74 @@ $(function() {
     }
 
     tableBody.on("table:changed", handleTableChanged).trigger("table:changed");
+
+    /************* Create Ingredient Modal *************/
+
+    const addIngredientUrl = $("#addIngredientUrl").attr("href");
+    let createIngrButton = $("#createIngrButton");
+    let loadingSpinner = $("#loadingSpinner");
+    let modalDiv = $("#modalDiv");
+    let modalBody = $("#modalBody");
+    let modalSaveButton = $("#modalSaveButton");
+    let modalForm = undefined;
+
+    function showError(data, textStatus) {
+        if (textStatus !== "success" || !("resp" in data)) {
+            alert(
+                `[status=${textStatus}] Cannot get data from server. ` +
+                (data.error !== null) ? "Error: " + data.error : "" +
+                "\nPlease refresh the page and try again."
+            );
+            return false;
+        }
+        return true;
+    }
+
+    function modalSaveButtonClicked() {
+        if (modalForm === undefined) {
+            return;
+        }
+        modalSaveButton.attr("disabled", true);
+        modalForm.ajaxSubmit({
+            success: function(data, textStatus) {
+                if (!showError(data, textStatus)) {
+                    return;
+                }
+                if ("success" in data && data.success === true) {
+                    if ("alert" in data) {
+                        alert(data.alert);
+                    }
+                    modalDiv.modal("hide");
+                }
+                modalBody.trigger("modal:change", [$(data.resp)]);
+            },
+        })
+    }
+
+    modalBody.on("modal:change", modalChanged);
+    function modalChanged(_, newContent) {
+        let container = modalBody.find("div.container");
+        if (container.length > 0) {
+            container.remove();
+        }
+        newContent.appendTo(modalBody);
+        modalForm = newContent.find("form");
+        modalBody.find("#formSubmitBtnGroup").toggle("false");
+        modalSaveButton.attr("disabled", false);
+    }
+
+    function ajaxDone(data, textStatus) {
+        if (!showError(data, textStatus)) {
+            return;
+        }
+        loadingSpinner.toggle(false);
+        modalBody.trigger("modal:change", [$(data.resp)]);
+    }
+
+    createIngrButton.click(function() {
+        $.getJSON(addIngredientUrl, {})
+            .done(ajaxDone)
+    });
+
+    modalSaveButton.click(modalSaveButtonClicked);
 });

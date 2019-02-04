@@ -1,7 +1,5 @@
-{% extends 'meals/base.html' %}
 {% load staticfiles %}
 
-{% block body %}
 <div class="container m-auto">
 <div class="row">
 <div class="col-sm">
@@ -43,7 +41,7 @@
     {% endfor %}
     <input type="submit" id="editIngredientSubmitButton" style="display: none;">
     </form>
-    <div class="btn-group">
+    <div class="btn-group" id="formSubmitBtnGroup">
         {% if editing %}
         <a href="#" id="nextButton" class="btn btn-success">Apply Changes</a>
         {% else %}
@@ -60,10 +58,5 @@
 <input id="customVendorInputId" value="{{ form.custom_vendor.id_for_label }}">
 <input id="vendorInputId" value="{{ form.vendor.id_for_label }}">
 </div>
-{% endblock %}
 
-{% block scriptend %}
 <script src="{% static 'meals/ingredient/edit_ingredient.js' %}"></script>
-{% endblock %}
-
-{% block ingredient_active %}active{% endblock %}

@@ -10,6 +10,7 @@ from django.core.paginator import Paginator
 from django.db import transaction, DatabaseError
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.views.generic import UpdateView
@@ -119,10 +120,25 @@ def add_ingredient(request):
         form = EditIngredientForm(request.POST)
         if form.is_valid():
             instance = form.save()
-            messages.info(request, f"Ingredient '{instance.name}' added successfully")
+            message = f"Ingredient '{instance.name}' added successfully"
+            if request.is_ajax():
+                resp = {"error": None, "resp": None, "success": True, "alert": message}
+                return JsonResponse(resp)
+            messages.info(request, message)
             return redirect("ingredient")
     else:
         form = EditIngredientForm()
+
+    if request.is_ajax():
+        resp = {
+            "error": "Invalid form",
+            "resp": render_to_string(
+                template_name="meals/ingredients/edit_ingredient_form.html",
+                context={"form": form},
+                request=request,
+            ),
+        }
+        return JsonResponse(resp)
     return render(
         request,
         template_name="meals/ingredients/edit_ingredient.html",

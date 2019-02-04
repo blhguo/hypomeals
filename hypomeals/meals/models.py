@@ -150,6 +150,11 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin):
             ("product_line__name", "Product Line"),
         ]
 
+    def save(self, *args, **kwargs):
+        if not self.number:
+            self.number = Sku.objects.latest("number").number + 1
+        super().save(*args, **kwargs)
+
 
 class SkuIngredient(
     models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutionMixin

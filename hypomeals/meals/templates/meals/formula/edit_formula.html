@@ -1,6 +1,8 @@
 {% extends 'meals/base.html' %}
 {% load staticfiles %}
 
+{% block title %}Edit Formula for SKU #{{ sku.number }}{% endblock %}
+
 {% block body %}
 <div class="container m-auto">
 <div class="row">
@@ -33,6 +35,9 @@
         <span class="fa fa-plus"></span> Add row
     </button>
     <button type="button"
+            id="createIngrButton"
+            data-toggle="modal"
+            data-target="#modalDiv"
             class="btn btn-success">
         <span class="fa fa-plus"></span> Create new Ingredient
     </button>
@@ -54,7 +59,6 @@ Please correct the following error(s):
 <table class="table">
 <thead class="thead-light">
 <tr>
-{#    <th><input type="checkbox" id="selectAll"></th>#}
     <th>Ingredient</th>
     <th>Quantity</th>
     <th>Action</th>
@@ -104,6 +108,40 @@ add another ingredient to this SKU.
 </div>
 </div>
 </div>
+</div>
+
+<div class="modal" tabindex="-1" role="dialog" id="modalDiv">
+<div class="modal-dialog modal-lg" role="document">
+<div class="modal-content">
+    <div class="modal-header">
+        <h5 class="modal-title">Create a new Ingredient</h5>
+        <button type="button" class="close" data-dismiss="modal">
+            <span class="fas fa-times"></span>
+        </button>
+    </div>
+    <div class="modal-body" id="modalBody">
+        <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status" id="loadingSpinner">
+            <span class="sr-only">Loading...</span>
+        </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button"
+                class="btn btn-secondary"
+                data-dismiss="modal">Close</button>
+        <button type="button"
+                class="btn btn-success"
+                disabled="disabled"
+                id="modalSaveButton">Save Ingredient</button>
+    </div>
+</div>
+</div>
+</div>
+
+<!-- Hidden div for template data -->
+<div style="display: none;">
+<a href="{% url 'add_ingredient' %}" id="addIngredientUrl"></a>
 </div>
 {% endblock %}
 
