@@ -28,8 +28,8 @@ class SkuQuantityForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # self.fields["user"] =
-        self.fields["form_name"].widget.attrs['class'] = 'form-control'
-        if (not args):
+        self.fields["form_name"].widget.attrs["class"] = "form-control"
+        if not args:
             self.initial["form_name"] = ""
             self.initial["save_time"] = timezone.now()
             number = 1
@@ -39,15 +39,15 @@ class SkuQuantityForm(forms.ModelForm):
             self.initial["save_time"] = timezone.now()
             number = self.get_entry_number(args[0])
         for i in range(number):
-            sku_name = 'sku_%s' % (i,)
+            sku_name = "sku_%s" % (i,)
             self.fields[sku_name] = forms.CharField(required=False)
-            self.fields[sku_name].widget.attrs['class'] = 'form-control'
-            self.fields[sku_name].widget.attrs['placeholder'] = 'Sku'
-            quantity_name = 'quantity_%s' % (i,)
+            self.fields[sku_name].widget.attrs["class"] = "form-control"
+            self.fields[sku_name].widget.attrs["placeholder"] = "Sku"
+            quantity_name = "quantity_%s" % (i,)
             self.fields[quantity_name] = forms.CharField(required=False)
-            self.fields[quantity_name].widget.attrs['class'] = 'form-control'
-            self.fields[quantity_name].widget.attrs['placeholder'] = 'Quantity'
-            if (args):
+            self.fields[quantity_name].widget.attrs["class"] = "form-control"
+            self.fields[quantity_name].widget.attrs["placeholder"] = "Quantity"
+            if args:
                 self.initial[sku_name] = form_content[sku_name]
                 self.initial[quantity_name] = form_content[quantity_name]
             else:
@@ -56,7 +56,8 @@ class SkuQuantityForm(forms.ModelForm):
 
             if i == number - 1:
                 self.fields[sku_name].widget.attrs[
-                    'class'] = 'sku-list-new form-control'
+                    "class"
+                ] = "sku-list-new form-control"
 
     def clean(self):
         if self.is_valid():
@@ -64,39 +65,40 @@ class SkuQuantityForm(forms.ModelForm):
             quantities = set()
             sku_quantity = []
             i = 0
-            sku_name = 'sku_%s' % (i,)
-            quantity_name = 'quantity_%s' % (i,)
+            sku_name = "sku_%s" % (i,)
+            quantity_name = "quantity_%s" % (i,)
             while self.cleaned_data.get(sku_name) or self.cleaned_data.get(
-                    quantity_name):
+                quantity_name
+            ):
                 sku = self.cleaned_data[sku_name]
                 quantity = self.cleaned_data[quantity_name]
                 print("DEBUG", sku, quantity)
                 if not Sku.objects.filter(name=sku):
-                    err_message = 'This SKU %s is not a valid one!' % (sku,)
+                    err_message = "This SKU %s is not a valid one!" % (sku,)
                     self.add_error(sku_name, err_message)
 
                 if quantity == "":
-                    err_message = 'Quantity is a required field'
+                    err_message = "Quantity is a required field"
                     self.add_error(quantity_name, err_message)
 
                 if sku == "":
-                    err_message = 'Sku is a required field'
+                    err_message = "Sku is a required field"
                     self.add_error(quantity_name, err_message)
 
                 if sku in skus:
-                    self.add_error(sku_name, 'Duplicate')
+                    self.add_error(sku_name, "Duplicate")
                 elif quantity in quantities:
-                    self.add_error(quantity_name, 'Duplicate')
+                    self.add_error(quantity_name, "Duplicate")
                 else:
                     skus.add(sku)
                     quantities.add(quantity)
                     sku_quantity.append((sku, quantity))
                 i += 1
-                sku_name = 'sku_%s' % (i,)
-                quantity_name = 'quantity_%s' % (i,)
+                sku_name = "sku_%s" % (i,)
+                quantity_name = "quantity_%s" % (i,)
             self.cleaned_data["sku_quantity"] = sku_quantity
 
-    def save(self, request, file):
+    def save_file(self, request, file):
         if self.is_valid():
             sq = self.instance
             sq.form_name = self.cleaned_data["form_name"]
@@ -106,23 +108,21 @@ class SkuQuantityForm(forms.ModelForm):
             sq.save()
             for sku, quantity in self.cleaned_data["sku_quantity"]:
                 ManufactureDetail.objects.create(
-                    form_name=sq,
-                    sku=sku,
-                    quantity=quantity
+                    form_name=sq, sku=sku, quantity=quantity
                 )
         else:
             print(self.errors)
 
     def get_interest_fields(self):
         for sku_name in self.fields:
-            if sku_name.startswith('sku_'):
+            if sku_name.startswith("sku_"):
                 sku_index = sku_name.split("_")[1]
-                quantity_name = 'quantity_%s' % (sku_index,)
+                quantity_name = "quantity_%s" % (sku_index,)
                 yield self[sku_name], self[quantity_name]
 
     def get_entry_number(self, request):
         cnt = 0
-        while (('sku_' + str(cnt)) in request):
+        while ("sku_" + str(cnt)) in request:
             cnt += 1
         return cnt
 
@@ -139,7 +139,7 @@ class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
             FilenameRegexValidator(
                 regex=r"skus(\S)*\.csv",
                 message="Filename mismatch. Expected: "
-                        "skusxxx.csv where xxx is any characters.",
+                "skusxxx.csv where xxx is any characters.",
             )
         ],
     )
@@ -150,7 +150,7 @@ class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
             FilenameRegexValidator(
                 regex=r"ingredients(\S)*\.csv",
                 message="Filename mismatch. Expected: "
-                        "ingredientsxxx.csv where xxx is any characters.",
+                "ingredientsxxx.csv where xxx is any characters.",
             )
         ],
     )
@@ -161,7 +161,7 @@ class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
             FilenameRegexValidator(
                 regex=r"product_lines(\S)*\.csv",
                 message="Filename mismatch. Expected: "
-                        "product_linesxxx.csv where xxx is any characters.",
+                "product_linesxxx.csv where xxx is any characters.",
             )
         ],
     )
@@ -172,7 +172,7 @@ class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
             FilenameRegexValidator(
                 regex=r"formula(\S)*\.csv",
                 message="Filename mismatch. Expected: "
-                        "formulaxxx.csv where xxx is any characters.",
+                "formulaxxx.csv where xxx is any characters.",
             )
         ],
     )
@@ -296,8 +296,8 @@ class EditIngredientForm(forms.ModelForm):
     )
     vendor = forms.ChoiceField(
         choices=lambda: BLANK_CHOICE_DASH
-                        + [("custom", "Custom")]
-                        + get_vendor_choices(),
+        + [("custom", "Custom")]
+        + get_vendor_choices(),
         required=True,
     )
 
@@ -448,8 +448,8 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
     )
     product_line = forms.ChoiceField(
         choices=lambda: BLANK_CHOICE_DASH
-                        + [("custom", "Custom")]
-                        + get_product_line_choices(),
+        + [("custom", "Custom")]
+        + get_product_line_choices(),
         required=True,
     )
 

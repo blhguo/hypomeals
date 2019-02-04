@@ -24,8 +24,13 @@ from meals.forms import FormulaFormset
 from meals.forms import IngredientFilterForm, EditIngredientForm
 from meals.forms import SkuFilterForm, EditSkuForm
 from meals.forms import SkuQuantityForm
-from meals.models import Sku, Ingredient, ProductLine, ManufactureGoal, \
-    ManufactureDetail
+from meals.models import (
+    Sku,
+    Ingredient,
+    ProductLine,
+    ManufactureGoal,
+    ManufactureDetail,
+)
 from meals.models import SkuIngredient
 from .bulk_export import export_skus
 from .forms import ImportCsvForm, ImportZipForm
@@ -45,7 +50,7 @@ def import_page(request):
         csv_file_form = ImportCsvForm(request.POST, request.FILES)
         zip_file_form = ImportZipForm(request.POST, request.FILES)
         if (csv_file_form.has_changed() and csv_file_form.is_valid()) or (
-                    zip_file_form.has_changed() and zip_file_form.is_valid()
+            zip_file_form.has_changed() and zip_file_form.is_valid()
         ):
             return redirect("import_landing")
         return render(
@@ -101,12 +106,12 @@ def find_goal(goal_id, user):
 def show_one_goal(request, goal_id=-1):
     errors = ""
     message = ""
-    if request.method == 'POST':
+    if request.method == "POST":
         form = SkuQuantityForm(request.POST)
         file = generate_csv_file(request.POST)
         if form.is_valid():
             form.clean()
-            form.save(request, file)
+            form.save_file(request, file)
             form_name = request.POST["form_name"]
             message = "You form has been saved successfully to %s" % (form_name,)
         else:
@@ -118,12 +123,11 @@ def show_one_goal(request, goal_id=-1):
             form = SkuQuantityForm(form_content)
         else:
             form = SkuQuantityForm()
-    return render(request,
-                  template_name="meals/show_one_goal.html",
-                  context={"form": form,
-                           "errors": errors,
-                           "message": message
-                           })
+    return render(
+        request,
+        template_name="meals/show_one_goal.html",
+        context={"form": form, "errors": errors, "message": message},
+    )
 
 
 def generate_report(request):
@@ -138,7 +142,7 @@ def generate_report(request):
                 sku_name = request.POST[sku_index]
                 quantity4sku = request.POST[quantity_index]
                 sku = Sku.objects.filter(name=sku_name)
-                if (sku):
+                if sku:
                     sku = sku[0]
                 else:
                     cnt += 1
@@ -151,18 +155,20 @@ def generate_report(request):
                     if ingredient_number not in report:
                         report[ingredient_number] = 0
                     report[ingredient_number] += float(
-                        sku_ingredient_pair.quantity) * float(quantity4sku)
+                        sku_ingredient_pair.quantity
+                    ) * float(quantity4sku)
             else:
                 break
             cnt += 1
-        return render(request, template_name="meals/calculation.html",
-                      context={"report": report})
+        return render(
+            request, template_name="meals/calculation.html", context={"report": report}
+        )
 
 
 def generate_csv_file(entries):
     cnt = 0
     tf = tempfile.mktemp()
-    with open(tf, "w", newline='') as f:
+    with open(tf, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["SKU Name", "SKU Quantity"])
         while True:
@@ -183,7 +189,7 @@ def save_goal(request):
     file = generate_csv_file(request.POST)
     form = SkuQuantityForm(request.POST)
     # form.clean()
-    form.save(request, file)
+    form.save_file(request, file)
     form_name = request.POST["form_name"]
     return render(
         request,
@@ -195,32 +201,33 @@ def save_goal(request):
 def download_goal(request):
     save_goal(request)
     goal = ManufactureGoal.objects.filter(form_name=request.POST["form_name"]).order_by(
-        '-save_time', )
+        "-save_time"
+    )
     response = HttpResponse(goal[0].file)
-    response['content_type'] = 'text/csv'
-    response['Content-Disposition'] = 'attachment;filename=manufacture_goal.csv'
+    response["content_type"] = "text/csv"
+    response["Content-Disposition"] = "attachment;filename=manufacture_goal.csv"
     return response
 
 
 def download_calculation(request):
     tf = tempfile.mktemp()
-    with open(tf, "w", newline='') as f:
+    with open(tf, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["Ingredient Name", "Ingredient Quantity"])
         for k, v in request.POST.items():
-            if (k == "csrfmiddlewaretoken"):
+            if k == "csrfmiddlewaretoken":
                 continue
             writer.writerow([k, v])
     file = File(open(tf, "rb"))
     response = HttpResponse(file)
-    response['content_type'] = 'text/csv'
-    response['Content-Disposition'] = 'attachment;filename=manufacture_goal.csv'
+    response["content_type"] = "text/csv"
+    response["Content-Disposition"] = "attachment;filename=manufacture_goal.csv"
     return response
 
 
 def generate_calculation_pdf(request):
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment;filename=calculation_goal.pdf'
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = "attachment;filename=calculation_goal.pdf"
     doc = SimpleDocTemplate(response, pagesize=letter)
     # container for the 'Flowable' objects
     elements = []
@@ -229,13 +236,19 @@ def generate_calculation_pdf(request):
     data.append(["Ingredient Name", "Ingredient Quantity"])
     cnt = 0
     for k, v in request.POST.items():
-        if (k == "csrfmiddlewaretoken"):
+        if k == "csrfmiddlewaretoken":
             continue
         cnt += 1
         data.append([k, v])
     t = Table(data, 2 * [3 * inch], n * [0.4 * inch])
-    t.setStyle(TableStyle([('BOX', (0, 0), (-1, -1), 0.25, colors.black),
-                           ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.black), ]))
+    t.setStyle(
+        TableStyle(
+            [
+                ("BOX", (0, 0), (-1, -1), 0.25, colors.black),
+                ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.black),
+            ]
+        )
+    )
     elements.append(t)
     doc.build(elements)
     return response
