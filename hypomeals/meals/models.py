@@ -90,10 +90,10 @@ class Ingredient(
         ]
 
 
-class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutionMixin):
+class Sku(models.Model, utils.ModelFieldsCompareMixin):
     excluded_fields = ("number",)
 
-    name = models.CharField(max_length=32, blank=False, unique=True)
+    name = models.CharField(max_length=32, blank=False)
 
     number = models.IntegerField(
         blank=False, verbose_name="SKU#", unique=True, primary_key=True

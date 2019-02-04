@@ -430,8 +430,6 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
 
     @transaction.atomic
     def save(self, commit=False):
-        if self.instance:
-            logger.info("Saving instance")
         instance = super().save(commit)
         # Manually save the foreign keys, then attach them to the instance
         fks = ["case_upc", "unit_upc", "product_line"]
