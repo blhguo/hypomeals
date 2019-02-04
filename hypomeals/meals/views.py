@@ -11,9 +11,7 @@ from django.db import transaction, DatabaseError
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from django.views.generic import UpdateView
 
 from meals.forms import FormulaFormset
 from meals.forms import IngredientFilterForm, EditIngredientForm
@@ -100,16 +98,15 @@ def ingredient(request):
 
 
 @login_required
-@csrf_exempt
 @require_POST
 def remove_ingredients(request):
     to_remove = jsonpickle.loads(request.POST.get("to_remove", "[]"))
     try:
         with transaction.atomic():
             num_deleted, _ = Ingredient.objects.filter(pk__in=to_remove).delete()
-            return JsonResponse(
-                {"error": None, "resp": f"Removed {num_deleted} Ingredients"}
-            )
+        return JsonResponse(
+            {"error": None, "resp": f"Successfully removed {num_deleted} Ingredients"}
+        )
     except DatabaseError as e:
         return JsonResponse({"error": str(e), "resp": "Not removed"})
 
@@ -129,20 +126,19 @@ def add_ingredient(request):
     else:
         form = EditIngredientForm()
 
+    form_html = render_to_string(
+        template_name="meals/ingredients/edit_ingredient_form.html",
+        context={"form": form},
+        request=request,
+    )
+
     if request.is_ajax():
-        resp = {
-            "error": "Invalid form",
-            "resp": render_to_string(
-                template_name="meals/ingredients/edit_ingredient_form.html",
-                context={"form": form},
-                request=request,
-            ),
-        }
+        resp = {"error": "Invalid form", "resp": form_html}
         return JsonResponse(resp)
     return render(
         request,
         template_name="meals/ingredients/edit_ingredient.html",
-        context={"form": form},
+        context={"form": form, "form_html": form_html},
     )
 
 
@@ -158,15 +154,16 @@ def edit_ingredient(request, ingredient_number):
             return redirect("ingredient")
     else:
         form = EditIngredientForm(instance=instance)
+
+    form_html = render_to_string(
+        template_name="meals/ingredients/edit_ingredient_form.html",
+        context={"form": form, "editing": True, "ingredient": instance},
+        request=request,
+    )
     return render(
         request,
         template_name="meals/ingredients/edit_ingredient.html",
-        context={
-            "form": form,
-            "ingredient_number": ingredient_number,
-            "ingredient_name": str(instance),
-            "editing": True,
-        },
+        context={"form": form, "form_html": form_html, "editing": True},
     )
 
 
@@ -241,22 +238,6 @@ def edit_sku(request, sku_number):
     )
 
 
-class EditSkuView(UpdateView):
-    form_class = EditSkuForm
-    pk_url_kwarg = "sku_number"
-    context_object_name = "sku"
-    template_name = "meals/sku/edit_sku.html"
-    model = Sku
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["editing"] = True
-        context[self.context_object_name] = context["object"]
-        logger.info("Context is %s", context)
-        logger.debug("sku.number=%d", self.object.number)
-        return context
-
-
 @login_required
 def add_sku(request):
     skip = request.GET.get("skip", "0") == "1"
@@ -279,14 +260,15 @@ def add_sku(request):
 
 
 @login_required
-@csrf_exempt
 @require_POST
 def remove_skus(request):
     to_remove = jsonpickle.loads(request.POST.get("to_remove", "[]"))
     try:
         with transaction.atomic():
             num_deleted, _ = Sku.objects.filter(pk__in=to_remove).delete()
-            return JsonResponse({"error": None, "resp": f"Removed {num_deleted} SKUs"})
+        return JsonResponse(
+            {"error": None, "resp": f"Successfully removed {num_deleted} SKUs"}
+        )
     except DatabaseError as e:
         return JsonResponse({"error": str(e), "resp": "Not removed"})
 

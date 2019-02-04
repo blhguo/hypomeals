@@ -19,14 +19,13 @@ $(function() {
 
     ingredientCheckboxes.change(function() {
         removeButton.attr("disabled",
-            !ingredientCheckboxes.some(function (elem) {
-                return elem.checked
-            }));
+            $(".ingredient-checkbox:selected").length > 0);
     });
 
     selectAllCheckbox.on("change", function(ev) {
-        ingredientCheckboxes.attr("checked",
-            $(this).attr("checked"));
+        ingredientCheckboxes.prop("checked",
+            $(this).prop("checked"));
+        ingredientCheckboxes.trigger("change");
     });
 
     resetAllButton.click(function() {
@@ -40,36 +39,29 @@ $(function() {
 
     removeButton.on("click", function(ev) {
         let toRemove = [];
-        ingredientCheckboxes.forEach(function(cb) {
+        ingredientCheckboxes.each(function(_, cb) {
             if (cb.checked) {
                 toRemove.push(cb.id);
             }
         });
-        ingredientCheckboxes.each(function(_, cb) {
-            if (cb.attr("checked")) {
-                toRemove.push(cb.attr("id"));
-            }
-        });
+        let csrf_token = $("input[name=csrfmiddlewaretoken]").val();
         if (confirm(
             `Are you sure you want to remove ${toRemove.length} Ingredient(s)?\n` +
             "This cannot be undone."
         )) {
             $.ajax(removeIngredientsUrl, {
                 type: "POST",
-                data: {to_remove: JSON.stringify(toRemove)},
+                data: {
+                    to_remove: JSON.stringify(toRemove),
+                    csrfmiddlewaretoken: csrf_token,
+                },
                 dataType: "json",
             }).done(function(data, textStatus) {
-                if (textStatus !== "success") {
-                    alert(
-                        `[status=${textStatus}] Error removing` +
-                        `${toRemove.length} Ingredient(s):` +
-                        ("error" in data) ? data.error : "" +
-                        `\nPlease refresh the page and try again later.`
-                    );
-                } else {
-                    if ("resp" in data) {
-                        alert(data.resp);
-                    }
+                if (!showError(data, textStatus)) {
+                    return;
+                }
+                if ("resp" in data) {
+                    alert(data.resp);
                 }
                 refreshPage();
             });

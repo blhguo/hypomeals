@@ -9,6 +9,11 @@ function lastTerm(val) {
     return split(val).pop();
 }
 
+/**
+ * Registers autocompletion on a jQuery object with the given URL.
+ * @param input a jQuery object
+ * @param url the backend URL for autocompletion
+ */
 function registerAutocomplete(input, url) {
     input.on("keydown", function(ev) {
         if (ev.keyCode === $.ui.keyCode.TAB
@@ -41,3 +46,23 @@ $(function() {
         }, 3000);
     }
 });
+
+/**
+ * Displays an error in a JSON response, if there is one. Suitable for use in
+ * the {@code done} handler of a {@code jqXHR} object.
+ * @param data the JSON data returned by the server
+ * @param textStatus the status of the response
+ * @returns {boolean} whether processing should continue: true iff there's an
+ *      error.
+ */
+function showError(data, textStatus) {
+    if (textStatus !== "success" || !("resp" in data)) {
+        alert(
+            `[status=${textStatus}] Cannot get data from server.\n` +
+            (data.error !== null) ? "Error: " + data.error : "" +
+            "\nPlease refresh the page and try again."
+        );
+        return false;
+    }
+    return true;
+}

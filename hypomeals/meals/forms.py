@@ -174,7 +174,7 @@ class IngredientFilterForm(forms.Form):
             query_filter |= Q(sku__name__in=params["skus"])
         query = Ingredient.objects.filter(query_filter)
         if sort_by:
-            query.order_by(sort_by)
+            query = query.order_by(sort_by)
         if num_per_page == -1:
             num_per_page = query.count()
         return Paginator(query.distinct(), num_per_page)
@@ -313,7 +313,7 @@ class SkuFilterForm(forms.Form, utils.BootstrapFormControlMixin):
             query_filter |= Q(product_line__name__in=params["product_lines"])
         query = Sku.objects.filter(query_filter)
         if sort_by:
-            query.order_by(sort_by)
+            query = query.order_by(sort_by)
         if num_per_page == -1:
             num_per_page = query.count()
         return Paginator(query.distinct(), num_per_page)

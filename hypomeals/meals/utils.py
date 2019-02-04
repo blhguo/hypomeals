@@ -374,7 +374,7 @@ def next_alphanumeric_str(s: str) -> str:
     :return: the next alphanumeric string
     """
 
-    if len(s) == 0:
+    if not s:
         raise RuntimeError("Cannot create next string from empty string")
     ascii_codes = [ord(char) for char in s]
     ascii_lower = range(97, 123)

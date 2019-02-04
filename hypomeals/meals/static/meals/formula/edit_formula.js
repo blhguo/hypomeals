@@ -116,18 +116,6 @@ $(function() {
     let modalSaveButton = $("#modalSaveButton");
     let modalForm = undefined;
 
-    function showError(data, textStatus) {
-        if (textStatus !== "success" || !("resp" in data)) {
-            alert(
-                `[status=${textStatus}] Cannot get data from server. ` +
-                (data.error !== null) ? "Error: " + data.error : "" +
-                "\nPlease refresh the page and try again."
-            );
-            return false;
-        }
-        return true;
-    }
-
     function modalSaveButtonClicked() {
         if (modalForm === undefined) {
             return;

@@ -33,35 +33,41 @@ $(function() {
 
     removeButton.on("click", function(ev) {
         let toRemove = [];
-        skuCheckboxes.forEach(function(cb) {
+        skuCheckboxes.each(function(i, cb) {
             if (cb.checked) {
                 toRemove.push(cb.id);
             }
         });
-        if (confirm(
+        console.log(toRemove);
+        if (!confirm(
             `Are you sure you want to remove ${toRemove.length} SKU(s)?\n` +
             "This cannot be undone."
         )) {
-            $.ajax(removeSkuUrl, {
-                type: "POST",
-                data: {to_remove: JSON.stringify(toRemove)},
-                dataType: "json",
-            }).done(function(data, textStatus) {
-                if (textStatus !== "success") {
-                    alert(
-                        `[status=${textStatus}] Error removing` +
-                        `${toRemove.length} SKU(s):` +
-                        ("error" in data) ? data.error : "" +
-                        `\nPlease refresh the page and try again later.`
-                    );
-                } else {
-                    if ("resp" in data) {
-                        alert(data.resp);
-                    }
-                }
-                refreshPage();
-            });
+            return;
         }
+        let csrf_token = $("input[name=csrfmiddlewaretoken]").val();
+        $.ajax(removeSkuUrl, {
+            type: "POST",
+            data: {
+                to_remove: JSON.stringify(toRemove),
+                csrfmiddlewaretoken: csrf_token,
+            },
+            dataType: "json",
+        }).done(function(data, textStatus) {
+            if (textStatus !== "success") {
+                alert(
+                    `[status=${textStatus}] Error removing` +
+                    `${toRemove.length} SKU(s):` +
+                    ("error" in data) ? data.error : "" +
+                    `\nPlease refresh the page and try again later.`
+                );
+            } else {
+                if ("resp" in data) {
+                    alert(data.resp);
+                }
+            }
+            refreshPage();
+        });
     });
 
     exportButton.click(function() {

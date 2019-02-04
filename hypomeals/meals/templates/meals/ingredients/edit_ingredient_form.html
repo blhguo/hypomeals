@@ -5,7 +5,7 @@
 <div class="col-sm">
 <div class="alert alert-success my-4">
     {% if editing %}
-    <h3>Editing Ingr #{{ ingredient_number }}: {{ ingredient_name }}</h3>
+    <h3>Editing Ingr #{{ ingredient.number }}: {{ ingredient.name }}</h3>
     <p>
         Modify the Ingredient using the form below. Note that you cannot change
         some of the fields.
@@ -20,7 +20,7 @@
 <div class="row mb-4">
     <div class="col-sm">
     {% if editing %}
-    <form method="post" action="{% url 'edit_ingredient' ingredient_number %}" id="editIngredientForm">
+    <form method="post" action="{% url 'edit_ingredient' ingredient.number %}" id="editIngredientForm">
     {% else %}
     <form method="post" action="{% url 'add_ingredient' %}" id="editIngredientForm">
     {% endif %}
