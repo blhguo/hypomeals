@@ -20,6 +20,7 @@ from django.utils.deconstruct import deconstructible
 from django.utils.http import int_to_base36
 from six import string_types
 
+
 def exception_to_error(func):
     @wraps(func)
     def wrapper(request, *args, **kwargs):
@@ -282,6 +283,7 @@ class ModelFieldsCompareMixin:
                     return False
         return True
 
+
 def upc_check_digit(number: django_six.text_type) -> int:
     """
     Computes the check digit of a UPC-A standard code.
@@ -354,3 +356,45 @@ class AttributeResolutionMixin:
         for part in parts[1:]:
             obj = getattr(obj, part)
         return obj
+
+
+def _do_carry(code, code_range, carry):
+    code += carry
+    if code > code_range[-1]:
+        code = code_range[0]
+        return code, 1
+    return code, 0
+
+
+def next_alphanumeric_str(s: str) -> str:
+    """
+    Generates the "next" alphanumeric string from s. For example, if s were "abc", then
+    "abd" would be returned. Same goes for numbers: "ab10" will become "ab11".
+    :param s: a string
+    :return: the next alphanumeric string
+    """
+
+    if len(s) == 0:
+        raise RuntimeError("Cannot create next string from empty string")
+    ascii_codes = [ord(char) for char in s]
+    ascii_lower = range(97, 123)
+    ascii_upper = range(65, 91)
+    ascii_numbers = range(48, 58)
+    carry = 1
+    result = []
+    for i, code in enumerate(ascii_codes[::-1]):
+        if carry == 0:
+            result = ascii_codes[0 : len(ascii_codes) - i] + result
+            break
+        is_alphanumeric = False
+        for code_range in [ascii_lower, ascii_upper, ascii_numbers]:
+            if code in code_range:
+                code, carry = _do_carry(code, code_range, carry)
+                is_alphanumeric = True
+                break
+        if not is_alphanumeric:
+            raise RuntimeError(f"character '{chr(code)}' is not alphanumeric.")
+        result.insert(0, code)
+    if carry != 0:
+        result.insert(0, ord("1"))
+    return "".join([chr(char) for char in result])
