@@ -55,6 +55,15 @@
             <li class="nav-item {% block ingredient_active %}{% endblock %}">
                 <a class="nav-link" href="{% url 'ingredient' %}">Ingredients</a>
             </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                Goals
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                <a class="dropdown-item" href="/show_all_goals/">Show All Goals</a>
+                <a class="dropdown-item" href="/show_one_goal">Create New Goal</a>
+              </div>
+            </li>
         </ul>
 
         <ul class="navbar-nav mr-2">

@@ -21,7 +21,7 @@
   {% for key, value in report.items %}
       <input name = "{{ key }}" value = "{{ value }}" type = "hidden">
   {% endfor %}
-  <button class="btn btn-primary" type="submit">Export to CSV</button>
+  <button class="btn btn-primary" type="submit" onclick="javascript: form.action='/download_calculation/';">Export to CSV</button>
   <button class="btn btn-primary" type="submit" onclick="javascript: form.action='/generate_calculation_pdf/';">Export to PDF</button>
 </form>
 {% endblock %}
