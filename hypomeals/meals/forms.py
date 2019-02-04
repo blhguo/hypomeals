@@ -71,7 +71,7 @@ class SkuQuantityForm(forms.ModelForm):
                 sku = self.cleaned_data[sku_name]
                 quantity = self.cleaned_data[quantity_name]
                 print("DEBUG", sku, quantity)
-                if len(Sku.objects.filter(name=sku)) == 0:
+                if not Sku.objects.filter(name=sku):
                     err_message = 'This SKU %s is not a valid one!' % (sku,)
                     self.add_error(sku_name, err_message)
 

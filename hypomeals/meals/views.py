@@ -3,7 +3,6 @@ import logging
 import time
 import csv
 import tempfile
-import io
 from reportlab.lib.pagesizes import letter, inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from reportlab.lib import colors
@@ -19,7 +18,7 @@ from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from django.http import HttpResponse, FileResponse
+from django.http import HttpResponse
 
 from meals.forms import FormulaFormset
 from meals.forms import IngredientFilterForm, EditIngredientForm
@@ -147,7 +146,7 @@ def generate_report(request):
                 sku_name = request.POST[sku_index]
                 quantity4sku = request.POST[quantity_index]
                 sku = Sku.objects.filter(name=sku_name)
-                if (len(sku) > 0):
+                if (sku):
                     sku = sku[0]
                 else:
                     cnt += 1
@@ -170,8 +169,6 @@ def generate_report(request):
 
 def generate_csv_file(entries):
     cnt = 0
-    data = []
-    report = {}
     tf = tempfile.mktemp()
     with open(tf, "w", newline='') as f:
         writer = csv.writer(f)

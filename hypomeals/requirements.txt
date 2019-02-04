@@ -9,3 +9,4 @@ ipython
 django-storages[google]
 prospector
 python-magic
+reportlab
