@@ -109,14 +109,6 @@ def show_one_goal(request, goal_id=-1):
             form.save(request, file)
             form_name = request.POST["form_name"]
             message = "You form has been saved successfully to %s" % (form_name,)
-            return render(
-                request,
-                template_name="meals/show_one_goal.html",
-                context={"form": form,
-                         "errors": errors,
-                         "message": message
-                         },
-            )
         else:
             errors = form.errors
     else:
