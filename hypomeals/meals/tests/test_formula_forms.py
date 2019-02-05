@@ -55,7 +55,11 @@ class FormulaFormsTest(BaseTestCase):
         )
         self.create_ingredient("cocoa")
         form_data = self._get_form_data(["chocolate", "cheese", "cocoa"], [1, 2, 3])
-        self.client.force_login(User.objects.create(username="test_user"))
+        self.client.force_login(
+            User.objects.create_superuser(
+                username="test_user", email="abc@example.com", password="123456"
+            )
+        )
         resp = self.client.post(
             reverse("edit_formula", args=(sku.number,)), data=form_data
         )

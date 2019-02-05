@@ -1,16 +1,17 @@
-import functools
 import logging
 import time
 
 import jsonpickle
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import (
+    login_required,
+    permission_required,
+)
 from django.core.paginator import Paginator
 from django.db import transaction, DatabaseError
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
-from django.urls import reverse_lazy
 from django.views.decorators.http import require_POST
 
 from meals import auth
@@ -19,6 +20,7 @@ from meals.models import Ingredient
 from ..bulk_export import export_ingredients
 
 logger = logging.getLogger(__name__)
+
 
 @login_required
 def ingredient(request):
@@ -54,24 +56,7 @@ def ingredient(request):
 
 
 @login_required
-@require_POST
-def remove_ingredients(request):
-    to_remove = jsonpickle.loads(request.POST.get("to_remove", "[]"))
-    try:
-        with transaction.atomic():
-            num_deleted, _ = Ingredient.objects.filter(pk__in=to_remove).delete()
-        return JsonResponse(
-            {"error": None, "resp": f"Successfully removed {num_deleted} Ingredients"}
-        )
-    except DatabaseError as e:
-        return JsonResponse({"error": str(e), "resp": "Not removed"})
-
-
-@login_required
-@user_passes_test(
-    functools.partial(auth.user_has_perm, perm="meals.add_ingredient"),
-    login_url=reverse_lazy("permission_denied"),
-)
+@permission_required("meals.add_ingredient", raise_exception=True)
 def add_ingredient(request):
     if request.method == "POST":
         form = EditIngredientForm(request.POST)
@@ -103,6 +88,7 @@ def add_ingredient(request):
 
 
 @login_required
+@auth.permission_required_ajax(perm="meals.edit_ingredient")
 def edit_ingredient(request, ingredient_number):
 
     instance = get_object_or_404(Ingredient, number=ingredient_number)
@@ -125,3 +111,18 @@ def edit_ingredient(request, ingredient_number):
         template_name="meals/ingredients/edit_ingredient.html",
         context={"form": form, "form_html": form_html, "editing": True},
     )
+
+
+@login_required
+@require_POST
+@auth.permission_required_ajax(perm="meals.remove_ingredient")
+def remove_ingredients(request):
+    to_remove = jsonpickle.loads(request.POST.get("to_remove", "[]"))
+    try:
+        with transaction.atomic():
+            num_deleted, _ = Ingredient.objects.filter(pk__in=to_remove).delete()
+        return JsonResponse(
+            {"error": None, "resp": f"Successfully removed {num_deleted} Ingredients"}
+        )
+    except DatabaseError as e:
+        return JsonResponse({"error": str(e), "resp": "Not removed"})

@@ -56,11 +56,14 @@
 </div>
 <div class="col-sm-4">
 <div class="btn-group my-4" style="float: right;">
+    {% if perms.meals.change_sku %}
     <a id="addSkuButton"
         href="{% url 'add_sku' %}"
         class="btn btn-primary">
         <span class="fa fa-plus"></span> Add a new SKU
     </a>
+    {% endif %}
+    {% if perms.meals.delete_sku %}
     <button type="button"
             class="btn btn-danger"
             disabled
@@ -70,11 +73,12 @@
             id="removeButton">
         <span class="fa fa-minus"></span> Remove selected
     </button>
+    {% endif %}
 </div>
 </div>
 </div>
 <div class="row">
-<div class="col-sm-2">
+<div class="col-sm-2 my-2">
 <h3>Search</h3>
 {% if form.non_field_errors %}
 <div class="alert alert-danger">
@@ -168,7 +172,7 @@
 
 
 <!-- Table column -->
-<div class="col-sm-10">
+<div class="col-sm-10 my-2">
 {% if messages %}
 <div class="alert alert-success" id="messagesDiv">
 {% for message in messages %}
@@ -179,7 +183,9 @@
 <table class="table">
 <thead class="thead-light">
 <tr>
+    {% if perms.meals.delete_sku %}
     <th><input type="checkbox" id="selectAll"> </th>
+    {% endif %}
     <th>SKU#</th>
     <th>Name</th>
     <th>Case UPC#</th>
@@ -187,21 +193,53 @@
     <th>Unit Size</th>
     <th>Count Per Case</th>
     <th>Product Line</th>
-    <th>Actions</th>
+    <th>Formula</th>
 </tr>
 </thead>
 <tbody class="table-striped">
 {% for sku in skus %}
 <tr>
+    {% if perms.meals.delete_sku %}
     <td><input type="checkbox" class="sku-checkbox" id="{{ sku.number }}"> </td>
+    {% endif %}
     <td>{{ sku.number }}</td>
-    <td><a href="{% url 'edit_sku' sku.number %}">{{ sku.name }}</a></td>
+    <td>
+        <a href="{% url 'edit_sku' sku.number %}"
+           {% if perms.meals.change_sku %}
+           title="Click on the name to edit this SKU."
+           {% else %}
+           title="You don't have permission to edit this SKU."
+           {% endif %}
+           data-toggle="tooltip"
+           data-placement="right">
+            {{ sku.name }}
+        </a>
+    </td>
     <td>{{ sku.case_upc.upc_number }}</td>
     <td>{{ sku.unit_upc.upc_number }}</td>
     <td>{{ sku.unit_size }}</td>
     <td>{{ sku.count }}</td>
     <td>{{ sku.product_line.name }}</td>
-    <td><a href="{% url 'edit_formula' sku.number %}">View Formula</a></td>
+    <td>
+        <div class="btn-group">
+        <a class="btn btn-link viewFormula"
+           href="#"
+           {% if not perms.meals.view_skuingredient %}
+           disabled="disabled"
+           data-toggle="tooltip"
+           data-placement="left"
+           title="You don't have permission to view the formulas."
+           {% endif %}
+           data-toggle="modal"
+           data-target="#modalDiv"
+           id="{{ sku.number }}">
+            View
+        </a>
+        {% if perms.meals.change_skuingredient and perms.meals.add_skuingredient %}
+        <a class="btn btn-link" href="{% url 'edit_formula' sku.number %}">Edit</a>
+        {% endif %}
+        </div>
+    </td>
 </tr>
 {% empty %}
     <div class="alert alert-danger">
@@ -218,6 +256,33 @@
 </div>
 </form>
 </div>
+<!-- Modal -->
+
+<div class="modal" tabindex="-1" role="dialog" id="modalDiv">
+<div class="modal-dialog modal-lg" role="document">
+<div class="modal-content">
+    <div class="modal-header">
+        <h5 class="modal-title"></h5>
+        <button type="button" class="close" data-dismiss="modal">
+            <span class="fas fa-times"></span>
+        </button>
+    </div>
+    <div class="modal-body" id="modalBody">
+        <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status" id="loadingSpinner">
+            <span class="sr-only">Loading...</span>
+        </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button"
+                class="btn btn-secondary"
+                data-dismiss="modal">Close</button>
+    </div>
+</div>
+</div>
+</div>
+
 <!-- Hidden div with template data -->
 <div style="display: none;">
 <a href="{% url 'autocomplete_ingredients' %}" id="acIngredientUrl"></a>
@@ -227,6 +292,7 @@
 <input id="pageNumInputId" value="{{ form.page_num.id_for_label }}">
 <a href="{% url 'sku' %}" id="skuUrl"></a>
 <a href="{% url 'remove_skus' %}" id="removeSkuUrl"></a>
+<a href="{% url 'view_formula' 0 %}" id="viewFormulaUrl"></a>
 </div>
 {% endblock %}
 

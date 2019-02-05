@@ -12,6 +12,7 @@ $(function() {
     const skusInputId = $("#skusInputId").val();
     const exportButton = $("#exportButton");
 
+    $("[data-toggle='tooltip']").tooltip();
 
     function refreshPage() {
         window.location.href = ingredientUrl;
@@ -57,7 +58,7 @@ $(function() {
                 },
                 dataType: "json",
             }).done(function(data, textStatus) {
-                if (!showError(data, textStatus)) {
+                if (!showNetworkError(data, textStatus)) {
                     return;
                 }
                 if ("resp" in data) {

@@ -55,7 +55,7 @@ $(function() {
  * @returns {boolean} whether processing should continue: true iff there's an
  *      error.
  */
-function showError(data, textStatus) {
+function showNetworkError(data, textStatus) {
     if (textStatus !== "success" || !("resp" in data)) {
         alert(
             `[status=${textStatus}] Cannot get data from server.\n` +
