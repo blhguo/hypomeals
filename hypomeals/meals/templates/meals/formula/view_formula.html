@@ -1,0 +1,30 @@
+<div class="container">
+<div class="row">
+<div class="col-sm-12">
+    <table class="table">
+    <thead class="thead-light">
+    <tr>
+        <th>Ingredient</th>
+        <th>Quantity</th>
+    </tr>
+    </thead>
+    <tbody id="formsetTable">
+    {% for formula in formulas %}
+    <tr>
+        <td class="align-middle">
+            {{ formula.ingredient_number.name }}
+        </td>
+        <td class="align-middle">
+            {{ formula.quantity }}
+        </td>
+    </tr>
+    {% empty %}
+        <div class="alert alert-danger" id="emptyAlert">
+        There is no ingredient in this formula.
+        </div>
+    {% endfor %}
+    </tbody>
+    </table>
+</div>
+</div>
+</div>

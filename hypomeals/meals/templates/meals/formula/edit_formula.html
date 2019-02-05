@@ -8,7 +8,11 @@
 <div class="row">
 <div class="col-sm">
     <div class="alert alert-success my-4">
+    {% if perms.meals.change_skuingredient or perms.meals.add_skuingredient %}
     <h3>Edit formula for SKU #{{ sku.number }}: {{ sku.name }}</h3>
+    {% else %}
+    <h3>View formula for SKU #{{ sku.number }}: {{ sku.name }}</h3>
+    {% endif %}
     {% if messages %}
     {% for message in messages %}
     <p>{{ message }}</p>
@@ -29,11 +33,14 @@
 <div class="row">
 <div class="col-sm mb-4">
     <div class="btn-group float-right" role="group">
+    {% if perms.meals.add_skuingredient %}
     <button type="button"
             id="addRowButton"
             class="btn btn-primary">
         <span class="fa fa-plus"></span> Add row
     </button>
+    {% endif %}
+    {% if perms.meals.add_ingredient %}
     <button type="button"
             id="createIngrButton"
             data-toggle="modal"
@@ -41,6 +48,7 @@
             class="btn btn-success">
         <span class="fa fa-plus"></span> Create new Ingredient
     </button>
+    {% endif %}
     </div>
 </div>
 </div>
@@ -110,6 +118,7 @@ add another ingredient to this SKU.
 </div>
 </div>
 
+<!-- Modal -->
 <div class="modal" tabindex="-1" role="dialog" id="modalDiv">
 <div class="modal-dialog modal-lg" role="document">
 <div class="modal-content">
@@ -142,6 +151,11 @@ add another ingredient to this SKU.
 <!-- Hidden div for template data -->
 <div style="display: none;">
 <a href="{% url 'add_ingredient' %}" id="addIngredientUrl"></a>
+{% if perms.meals.change_skuingredient %}
+<input id="hasChangePerm" type="checkbox" checked="checked">
+{% else %}
+<input id="hasChangePerm" type="checkbox">
+{% endif %}
 </div>
 {% endblock %}
 
