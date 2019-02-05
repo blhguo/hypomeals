@@ -3,6 +3,7 @@ import logging
 import re
 from collections import OrderedDict
 
+from django.utils import timezone
 from django import forms
 from django.core.exceptions import FieldDoesNotExist
 from django.core.exceptions import ValidationError
@@ -16,12 +17,121 @@ from meals import utils
 from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor
 from meals.models import SkuIngredient
 from meals.utils import BootstrapFormControlMixin, FilenameRegexValidator
+from meals.models import ManufactureDetail, ManufactureGoal
 
 logger = logging.getLogger(__name__)
 
 
-class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
+class SkuQuantityForm(forms.ModelForm):
+    form_name = forms.CharField(required=True)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # self.fields["user"] =
+        self.fields["form_name"].widget.attrs["class"] = "form-control"
+        if not args:
+            self.initial["form_name"] = ""
+            self.initial["save_time"] = timezone.now()
+            number = 1
+        else:
+            form_content = args[0]
+            self.initial["form_name"] = form_content["form_name"]
+            self.initial["save_time"] = timezone.now()
+            number = self.get_entry_number(args[0])
+        for i in range(number):
+            sku_name = "sku_%s" % (i,)
+            self.fields[sku_name] = forms.CharField(required=False)
+            self.fields[sku_name].widget.attrs["class"] = "form-control"
+            self.fields[sku_name].widget.attrs["placeholder"] = "Sku"
+            quantity_name = "quantity_%s" % (i,)
+            self.fields[quantity_name] = forms.CharField(required=False)
+            self.fields[quantity_name].widget.attrs["class"] = "form-control"
+            self.fields[quantity_name].widget.attrs["placeholder"] = "Quantity"
+            if args:
+                self.initial[sku_name] = form_content[sku_name]
+                self.initial[quantity_name] = form_content[quantity_name]
+            else:
+                self.initial[sku_name] = ""
+                self.initial[quantity_name] = ""
+
+            if i == number - 1:
+                self.fields[sku_name].widget.attrs[
+                    "class"
+                ] = "sku-list-new form-control"
+
+    def clean(self):
+        if self.is_valid():
+            skus = set()
+            quantities = set()
+            sku_quantity = []
+            i = 0
+            sku_name = "sku_%s" % (i,)
+            quantity_name = "quantity_%s" % (i,)
+            while self.cleaned_data.get(sku_name) or self.cleaned_data.get(
+                quantity_name
+            ):
+                sku = self.cleaned_data[sku_name]
+                quantity = self.cleaned_data[quantity_name]
+                print("DEBUG", sku, quantity)
+                if not Sku.objects.filter(name=sku):
+                    err_message = "This SKU %s is not a valid one!" % (sku,)
+                    self.add_error(sku_name, err_message)
+
+                if quantity == "":
+                    err_message = "Quantity is a required field"
+                    self.add_error(quantity_name, err_message)
+
+                if sku == "":
+                    err_message = "Sku is a required field"
+                    self.add_error(quantity_name, err_message)
+
+                if sku in skus:
+                    self.add_error(sku_name, "Duplicate")
+                elif quantity in quantities:
+                    self.add_error(quantity_name, "Duplicate")
+                else:
+                    skus.add(sku)
+                    quantities.add(quantity)
+                    sku_quantity.append((sku, quantity))
+                i += 1
+                sku_name = "sku_%s" % (i,)
+                quantity_name = "quantity_%s" % (i,)
+            self.cleaned_data["sku_quantity"] = sku_quantity
+
+    def save_file(self, request, file):
+        if self.is_valid():
+            sq = self.instance
+            sq.form_name = self.cleaned_data["form_name"]
+            print(sq.form_name)
+            sq.user = request.user
+            sq.file.save("temp", file)
+            sq.save()
+            for sku, quantity in self.cleaned_data["sku_quantity"]:
+                ManufactureDetail.objects.create(
+                    form_name=sq, sku=sku, quantity=quantity
+                )
+        else:
+            print(self.errors)
+
+    def get_interest_fields(self):
+        for sku_name in self.fields:
+            if sku_name.startswith("sku_"):
+                sku_index = sku_name.split("_")[1]
+                quantity_name = "quantity_%s" % (sku_index,)
+                yield sku_index, self[sku_name], self[quantity_name]
+
+    def get_entry_number(self, request):
+        cnt = 0
+        while ("sku_" + str(cnt)) in request:
+            cnt += 1
+        return cnt
+
+    class Meta:
+        model = ManufactureGoal
+        fields = ["form_name"]
+
+
+class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
     skus = forms.FileField(
         required=False,
         label="SKU",
@@ -89,7 +199,6 @@ class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
 
 
 class ImportZipForm(forms.Form, BootstrapFormControlMixin):
-
     zip = forms.FileField(required=False, label="ZIP File")
 
 
@@ -181,7 +290,6 @@ class IngredientFilterForm(forms.Form):
 
 
 class EditIngredientForm(forms.ModelForm):
-
     custom_vendor = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={"placeholder": "Enter a new vendor..."}),
@@ -267,7 +375,6 @@ class EditIngredientForm(forms.ModelForm):
 
 
 class SkuFilterForm(forms.Form, utils.BootstrapFormControlMixin):
-
     NUM_PER_PAGE_CHOICES = [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
 
     page_num = forms.IntegerField(widget=forms.HiddenInput(), initial=1, required=False)
@@ -335,7 +442,6 @@ class UpcField(forms.CharField):
 
 
 class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
-
     case_upc = UpcField(
         label="Case UPC#", widget=forms.NumberInput(attrs={"maxlength": 12})
     )
@@ -455,7 +561,6 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
 
 
 class FormulaForm(forms.Form, utils.BootstrapFormControlMixin):
-
     ingredient = forms.CharField(
         required=True, widget=forms.TextInput(attrs={"placeholder": "Start typing..."})
     )

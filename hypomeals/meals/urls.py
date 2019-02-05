@@ -1,4 +1,5 @@
 from django.contrib.auth import views as auth_views
+from django.contrib.auth.decorators import login_required
 from django.urls import path
 
 from . import views
@@ -35,6 +36,26 @@ urlpatterns = [
     # Import/export views
     path("import-page/", views.import_page, name="import_page"),
     path("import_landing/", views.import_landing, name="import_landing"),
+    # Manufacturer Goal views
+    path("show_one_goal/", login_required(views.show_one_goal), name="show_one_goal"),
+    path(
+        "show_one_goal/<int:goal_id>",
+        login_required(views.show_one_goal),
+        name="show_one_goal",
+    ),
+    path("generate_report/", views.generate_report, name="result"),
+    path(
+        "download_calculation/", views.download_calculation, name="download_calculation"
+    ),
+    path("save_goal/", login_required(views.save_goal), name="save_goal"),
+    path("show_all_goals/", views.show_all_goals, name="show_all_goals"),
+    path("download_goal/", views.download_goal, name="download_goal"),
+    path(
+        "generate_calculation_pdf/",
+        views.generate_calculation_pdf,
+        name="generate_calculation_pdf",
+    ),
+    path("find_product_line/", views.find_product_line, name="find_product_line"),
     # Account management views
     path("accounts/login/", auth_views.LoginView.as_view(), name="login"),
     path("accounts/logout/", views.logout_view, name="logout"),
