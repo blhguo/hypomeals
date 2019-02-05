@@ -124,3 +124,20 @@ def remove_skus(request):
         )
     except DatabaseError as e:
         return JsonResponse({"error": str(e), "resp": "Not removed"})
+
+
+def generate_sku_csv(ingredients):
+    tf = tempfile.mktemp()
+    with open(tf, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["Ingredient Name", "Sku Name"])
+        for ingredient in ingredients:
+            ingredient_number = Ingredient.objects.get(name = ingredient).number
+            skus = SkuIngredient.object.filter(ingredient = ingredient_number)
+            for sku in skus:
+                writer.writerow([sku.name, ingredient])
+    file = File(open(tf, "rb"))
+    response = HttpResponse(file)
+    response["content_type"] = "text/csv"
+    response["Content-Disposition"] = "attachment;filename=manufacture_goal.csv"
+    return response
