@@ -43,3 +43,22 @@ class UtilsTest(BaseTestCase):
         for test_case in test_cases:
             self.logger.info("Trying UPC %s", test_case)
             self.assertFalse(utils.is_valid_upc(test_case))
+
+    def test_next_alphanumeric_str(self):
+        test_cases = {
+            "123": "124",
+            "abc": "abd",
+            "ABC": "ABD",
+            "zzz": "1aaa",
+            "xyz": "xza",
+            "0000": "0001",
+            "helloworld": "helloworle",
+        }
+
+        for test_case, expected in test_cases.items():
+            next_str = utils.next_alphanumeric_str(test_case)
+            self.assertEqual(next_str, expected)
+
+    def test_next_alphanumeric_str_raises_on_nonalphanumeric_characters(self):
+        with self.assertRaisesRegex(RuntimeError, r"'!' is not alphanumeric"):
+            utils.next_alphanumeric_str("HelloWorld!")

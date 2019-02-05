@@ -1,5 +1,9 @@
 {% extends 'meals/base.html' %}
 
+{% block title %}
+    {% if editing %}Edit SKU #{{ sku_number }}{% else %}Add SKU{% endif %}
+{% endblock %}
+
 {% block body %}
 <div class="container m-auto">
 <div class="row">

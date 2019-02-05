@@ -19,13 +19,18 @@
       {{ form.form_name }}
     </div>
   </div>
-  {% for sku_field, quantity_field in form.get_interest_fields %}
+  {% for index, sku_field, quantity_field in form.get_interest_fields %}
     <div class="form-row">
       <div class="col">
         {{ sku_field }}
       </div>
-      <div class="col">
+      <div class="form-group col-md-3">
         {{ quantity_field }}
+      </div>
+      <div class="form-group col-md-3">
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal" id="{{ index }}">
+          Product Line Filter
+        </button>
       </div>
     </div>
   {% endfor %}
@@ -34,12 +39,69 @@
   <button type="submit" class="btn btn-primary" value = "download" id="download">Download</button>
 </form>
 <div>{{ errors }}</div>
+<!-- Modal -->
+<div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <select class="form-control" id="product_line_selector">
+          {% for product_line in product_lines %}
+            <option value="{{ product_line }}">{{ product_line }}</option>
+          {% endfor %}
+        </select>
+        <div class="list-group" id="SKU"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>
 <a href="{% url 'autocomplete_skus' %}" id="acSkusUrl"></a>
 {% endblock %}
 
 {% block scriptend %}
 <script src="{% static 'meals/common.js' %}"></script>
 <script>
+  let $this = $(".sku-list-new")
+  let $clone = $this.clone()
+  let name = $clone.attr('name')
+  let n = parseInt(name.split('_')[1]) + 1
+  var buttonClicked = -1
+  for (var i = 0; i < n; i++) {
+    $("#"+i).on('click', function() {
+      buttonClicked = $(this).attr("id")
+    })
+  }
+
+  $('#product_line_selector').on('change', function() {
+      const $pd_selected = $("#product_line_selector").val()
+      $.ajax({url: "/find_product_line/", data: {'product_line': $pd_selected}, dataType: 'json', success: function(result) {
+        console.log(result.ingredients)
+        const ingredients = result.ingredients
+        var ingredient_length = ingredients.length;
+        for (var i = 0; i < ingredient_length; i++) {
+          let $newIngr = $("<button>").attr("type", "button")
+                                      .attr("class", "list-group-item list-group-item-action")
+                                      .html(ingredients[i])
+                                      // .attr("data-dismiss", "modal")
+          $newIngr.on('click', function() {
+            $("#id_sku_"+buttonClicked).val($(this).prop("innerHTML"))
+            $('#exampleModal').modal("hide")
+          })
+          $("#SKU").html("")
+          $("#SKU").append($newIngr)
+        }
+      }})
+  })
+
   $('#add').on('click', function() {
       let $this = $(".sku-list-new")
       let $clone = $this.clone()
@@ -55,7 +117,6 @@
       $clone.appendTo($this.parent())
 
       n = parseInt(name.split('_')[1])
-      console.log(n)
       $last_quantity = $("#id_quantity_" + n)
       n = n + 1
       let quantity_name = "quantity_" + n
@@ -64,7 +125,16 @@
       $quantity_clone.attr('name', quantity_name)
       $quantity_clone.attr('id', 'id_' + quantity_name)
       $quantity_clone.appendTo($last_quantity.parent())
-
+      let newButton = $("<button>").attr("type", "button")
+                                   .attr("class", "btn btn-primary")
+                                   .attr("data-toggle", "modal")
+                                   .attr("data-target", "#exampleModal")
+                                   .attr("id", n)
+                                   .html("Product Line Filter")
+                                   .on('click', function() {
+                                     buttonClicked = $(this).attr("id")
+                                   })
+      newButton.appendTo($("#"+(n-1)).parent())
 
       $this.removeClass('sku-list-new')
   })
@@ -80,6 +150,7 @@
       let quantity_n = '#id_quantity_' + (n + 1)
       $(quantity_n).remove()
       $this.remove();
+      $("#"+(n + 1)).remove()
     })
 
 </script>

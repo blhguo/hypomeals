@@ -57,8 +57,6 @@
 <div class="col-sm-4">
 <div class="btn-group my-4" style="float: right;">
     <a id="addSkuButton"
-{#     data-toggle="modal"#}
-{#     data-target="#editModal"#}
         href="{% url 'add_sku' %}"
         class="btn btn-primary">
         <span class="fa fa-plus"></span> Add a new SKU
@@ -129,26 +127,50 @@
 </button>
 </div>
 <div>
+
+
 <!-- Export buttons -->
 <hr>
 <h3>Export</h3>
-<div class="form-check mb-2">
+<div class="form-check mb-2 w-100">
     <input class="form-check-input"
            type="checkbox"
            id="exportFormulaCheckbox">
     <label class="form-check-label"
            for="exportFormulaCheckbox">
-        Also export formulas
+        Include formulas
+        <span class="badge badge-pill badge-info"
+              data-toggle="tooltip"
+              data-placement="right"
+              data-html="true"
+              title="Selecting this option will generate a ZIP file containing a <pre>formulas.csv</pre>">i</span>
     </label>
 </div>
-<button class="btn btn-primary" id="exportButton">
+<div class="form-check mb-2 w-100">
+    <input class="form-check-input"
+           type="checkbox"
+           id="exportProductLineCheckbox">
+    <label class="form-check-label"
+           for="exportProductLineCheckbox">
+        Include separate Product Lines file
+        <span class="badge badge-pill badge-info"
+              data-toggle="tooltip"
+              data-placement="right"
+              data-html="true"
+              title="Selecting this option will generate a ZIP file containing a <pre>product_lines.csv</pre>">i</span>
+    </label>
+</div>
+<button class="btn btn-primary w-100" id="exportButton">
     <span class="fas fa-download"></span> Export Current Search
 </button>
 </div>
 </div>
+
+
+<!-- Table column -->
 <div class="col-sm-10">
 {% if messages %}
-<div class="alert alert-success">
+<div class="alert alert-success" id="messagesDiv">
 {% for message in messages %}
 <p {% if message.tags %}class="{{ message.tags }}{% endif %}">{{ message }}</p>
 {% endfor %}

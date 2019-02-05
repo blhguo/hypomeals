@@ -8,11 +8,14 @@ $(function() {
     const pageNumInputId = $("#pageNumInputId").val();
     const skuUrl = $("#skuUrl").attr("href");
     const removeSkuUrl = $("#removeSkuUrl").attr("href");
-    let selectAllButton = $("#selectAll");
+    let selectAllCheckbox = $("#selectAll");
     let submitButton = $("#submitButton");
     let exportButton = $("#exportButton");
     let exportFormulaCheckbox = $("#exportFormulaCheckbox");
+    let exportProductLineCheckbox = $("#exportProductLineCheckbox");
     let skuFilterForm = $("#skuFilterForm");
+
+    $("[data-toggle='tooltip']").tooltip();
 
     function refreshPage() {
         window.location.href = skuUrl;
@@ -23,51 +26,64 @@ $(function() {
             $(".sku-checkbox:checked").length === 0);
     });
 
-    selectAllButton.change(function() {
+    selectAllCheckbox.change(function() {
         skuCheckboxes.prop("checked", $(this).prop("checked"));
         skuCheckboxes.trigger("change");
     });
 
     removeButton.on("click", function(ev) {
         let toRemove = [];
-        skuCheckboxes.forEach(function(cb) {
+        skuCheckboxes.each(function(i, cb) {
             if (cb.checked) {
                 toRemove.push(cb.id);
             }
         });
-        if (confirm(
+        console.log(toRemove);
+        if (!confirm(
             `Are you sure you want to remove ${toRemove.length} SKU(s)?\n` +
             "This cannot be undone."
         )) {
-            $.ajax(removeSkuUrl, {
-                type: "POST",
-                data: {to_remove: JSON.stringify(toRemove)},
-                dataType: "json",
-            }).done(function(data, textStatus) {
-                if (textStatus !== "success") {
-                    alert(
-                        `[status=${textStatus}] Error removing` +
-                        `${toRemove.length} SKU(s):` +
-                        ("error" in data) ? data.error : "" +
-                        `\nPlease refresh the page and try again later.`
-                    );
-                } else {
-                    if ("resp" in data) {
-                        alert(data.resp);
-                    }
-                }
-                refreshPage();
-            });
+            return;
         }
+        let csrf_token = $("input[name=csrfmiddlewaretoken]").val();
+        $.ajax(removeSkuUrl, {
+            type: "POST",
+            data: {
+                to_remove: JSON.stringify(toRemove),
+                csrfmiddlewaretoken: csrf_token,
+            },
+            dataType: "json",
+        }).done(function(data, textStatus) {
+            if (textStatus !== "success") {
+                alert(
+                    `[status=${textStatus}] Error removing` +
+                    `${toRemove.length} SKU(s):` +
+                    ("error" in data) ? data.error : "" +
+                    `\nPlease refresh the page and try again later.`
+                );
+            } else {
+                if ("resp" in data) {
+                    alert(data.resp);
+                }
+            }
+            refreshPage();
+        });
     });
 
     exportButton.click(function() {
+        const original = skuFilterForm.attr("action");
         let query = "?export=1";
         if (exportFormulaCheckbox.prop("checked")) {
             query += "&formulas=1";
         }
-        skuFilterForm.attr("action", skuFilterForm.attr("action") + query)
-            .submit();
+        if (exportProductLineCheckbox.prop("checked")) {
+            query += "&pl=1"
+        }
+        skuFilterForm.attr("action", original + query)
+            .submit()
+            // Reset the form action so the user can submit another filter
+            // request after downloading the exported file.
+            .attr("action", original);
         return false;
     });
 

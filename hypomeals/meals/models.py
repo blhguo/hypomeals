@@ -1,3 +1,4 @@
+#pylint: disable-msg=arguments-differ
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
@@ -52,10 +53,13 @@ class Vendor(models.Model, utils.ModelFieldsCompareMixin):
         ordering = ["pk"]
 
 
-class Ingredient(models.Model, utils.ModelFieldsCompareMixin):
+class Ingredient(
+    models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutionMixin
+):
     excluded_fields = ("number",)
 
     name = models.CharField(max_length=100, unique=True, blank=False)
+    # TODO: Ingredient number is alphanumeric
     number = models.IntegerField(blank=False, primary_key=True)
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE)
     size = models.CharField(max_length=100, blank=False)
@@ -80,18 +84,25 @@ class Ingredient(models.Model, utils.ModelFieldsCompareMixin):
             for use in, for example, a ChoiceField in a form.
         """
         return [
-            ("name", "Name"),
             ("number", "Number"),
-            ("vendor", "Vendor"),
+            ("name", "Name"),
+            ("vendor__info", "Vendor"),
             ("size", "Size"),
             ("cost", "Cost"),
         ]
+
+    def save(self, *args, **kwargs):
+        if not self.number:
+            self.number = utils.next_alphanumeric_str(
+                str(Ingredient.objects.latest("number").number)
+            )
+        return super().save(*args, **kwargs)
 
 
 class Sku(models.Model, utils.ModelFieldsCompareMixin):
     excluded_fields = ("number",)
 
-    name = models.CharField(max_length=32, blank=False, unique=True)
+    name = models.CharField(max_length=32, blank=False)
 
     number = models.IntegerField(
         blank=False, verbose_name="SKU#", unique=True, primary_key=True
@@ -140,16 +151,23 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin):
             for use in, for example, a ChoiceField in a form.
         """
         return [
-            ("name", "Name"),
             ("number", "Number"),
-            ("case_upc", "Case UPC"),
-            ("unit_upc", "Unit UPC"),
+            ("name", "Name"),
+            ("case_upc__upc_number", "Case UPC"),
+            ("unit_upc__upc_number", "Unit UPC"),
             ("count", "Count per case"),
-            ("product_line", "Product Line"),
+            ("product_line__name", "Product Line"),
         ]
 
+    def save(self, *args, **kwargs):
+        if not self.number:
+            self.number = Sku.objects.latest("number").number + 1
+        return super().save(*args, **kwargs)
 
-class SkuIngredient(models.Model, utils.ModelFieldsCompareMixin):
+
+class SkuIngredient(
+    models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutionMixin
+):
     excluded_fields = ("id",)
 
     sku_number = models.ForeignKey(Sku, blank=False, on_delete=models.CASCADE)

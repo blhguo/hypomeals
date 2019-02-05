@@ -1,93 +1,10 @@
 {% extends 'meals/base.html' %}
+{% load staticfiles %}
 
 {% block body %}
-<div class="container m-auto">
-<div class="row">
-    <div class="col-sm">
-        <div class="alert alert-success my-4">
-            {% if editing %}
-            <h3>Editing INGREDIENT #{{ ingredient_number }}: {{ ingredient_name }}</h3>
-            <p>
-                Modify the INGREDIENT using the form below. Note that you cannot change
-                some of the fields.
-            </p>
-            {% else %}
-            <h3>Add a new INGREDIENT</h3>
-            <p>Enter the information about a new INGREDIENT below. All fields are required.</p>
-            <p>
-                You will have a chance to enter vendor information
-                on the next page.
-            </p>
-            {% endif %}
-        </div>
-    </div>
-</div>
-<div class="row mb-4">
-    <div class="col-sm">
-    {% if editing %}
-    <form method="post" action="{% url 'edit_ingredient' ingredient_number %}" id="editIngredientForm">
-    {% else %}
-    <form method="post" action="{% url 'add_ingredient' %}" id="editIngredientForm">
-    {% endif %}
-    {% csrf_token %}
-    {% if form.non_field_errors %}
-    <div class="alert alert-danger">
-    <h5 style="color: red">Please correct the following errors before proceeding:</h5>
-    {{ form.non_field_errors }}
-    </div>
-    {% endif %}
-    {% for field in form %}
-        <div class="form-group">
-        {{ field.label_tag }}
-        {{ field }}
-        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
-        {% if field.errors %}{{ field.errors }}{% endif %}
-        </div>
-    {% endfor %}
-    <input type="submit" id="editIngredientSubmitButton" style="display: none;">
-    </form>
-    <div class="btn-group">
-        <a href="#" id="nextButton" class="btn btn-success">Next<br/><small>Enter Vendor</small></a>
-        <a href="{% url 'ingredient' %}" class="btn btn-secondary">Cancel<br/><small>Return to Ingredients</small></a>
-        <a href="#" class="btn btn-primary">Finish<br/><small>without adding vendor</small></a>
-    </div>
-    </div>
-</div>
-</div>
-{% endblock %}
-
-{% block scriptend %}
-<script lang="javascript">
-$(function() {
-    let form = $("#editIngredientForm");
-    $("#nextButton").click(function() {
-        form.submit();
-    });
-
-    let customVDiv = $("#{{ form.custom_vendor.id_for_label }}").parent("div");
-    let VendorSelect = $("#{{ form.vendor.id_for_label }}");
-
-    customVDiv.find("label").remove();
-    customVDiv.prop("style", "display: none;");
-
-    function showCustomVendor() {
-        let selected = VendorSelect
-            .find("option:selected")
-            .prop("value")
-            .toLowerCase();
-        if (selected === "custom") {
-            customVDiv.prop("style", "");
-        } else {
-            customVDiv.prop("style", "display: none;");
-        }
-    }
-
-    showCustomVendor();  // Initializes page if form is already filled
-    $("#{{ form.vendor.id_for_label }}").change(function() {
-        showCustomVendor();
-    })
-});
-</script>
+{% autoescape off %}
+    {{ form_html }}
+{% endautoescape %}
 {% endblock %}
 
 {% block ingredient_active %}active{% endblock %}

@@ -1,0 +1,62 @@
+{% load staticfiles %}
+
+<div class="container m-auto">
+<div class="row">
+<div class="col-sm">
+<div class="alert alert-success my-4">
+    {% if editing %}
+    <h3>Editing Ingr #{{ ingredient.number }}: {{ ingredient.name }}</h3>
+    <p>
+        Modify the Ingredient using the form below. Note that you cannot change
+        some of the fields.
+    </p>
+    {% else %}
+    <h3>Add a new Ingredient</h3>
+    <p>Enter the information about a new Ingredient below. All fields are required.</p>
+    {% endif %}
+</div>
+</div>
+</div>
+<div class="row mb-4">
+    <div class="col-sm">
+    {% if editing %}
+    <form method="post" action="{% url 'edit_ingredient' ingredient.number %}" id="editIngredientForm">
+    {% else %}
+    <form method="post" action="{% url 'add_ingredient' %}" id="editIngredientForm">
+    {% endif %}
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger">
+    <h5 style="color: red">Please correct the following errors before proceeding:</h5>
+    {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+    {% for field in form %}
+        <div class="form-group">
+        {{ field.label_tag }}
+        {{ field }}
+        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+        {% if field.errors %}{{ field.errors }}{% endif %}
+        </div>
+    {% endfor %}
+    <input type="submit" id="editIngredientSubmitButton" style="display: none;">
+    </form>
+    <div class="btn-group" id="formSubmitBtnGroup">
+        {% if editing %}
+        <a href="#" id="nextButton" class="btn btn-success">Apply Changes</a>
+        {% else %}
+        <a href="#" id="nextButton" class="btn btn-success">Save</a>
+        {% endif %}
+        <a href="{% url 'ingredient' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+    </div>
+</div>
+</div>
+
+<!-- Hidden div with template data -->
+<div style="display: none;">
+<input id="customVendorInputId" value="{{ form.custom_vendor.id_for_label }}">
+<input id="vendorInputId" value="{{ form.vendor.id_for_label }}">
+</div>
+
+<script src="{% static 'meals/ingredient/edit_ingredient.js' %}"></script>

@@ -2,147 +2,175 @@
 {% load staticfiles %}
 
 {% block ingredient_active %}active{% endblock %}
+{% block title %}Ingredients{% endblock %}
 
 {% block body %}
 <div class="container-fluid m-auto">
-<form method="post" id="ingredientFilterForm">
-    {%  csrf_token %}
-    <div class="row">
-    <div class="col-sm-8">
-    <nav>
-        <ul class="pagination my-4" id="pageList">
-        {% if ingredients.has_previous %}
-            <li class="page-item">
-                <a class="page-link" page="{{  ingredients.previous_page_number }}" href="#">
-                    <span>&laquo;</span>
-                </a>
-            </li>
-        {% else %}
-            <li class="page-item disabled">
-                <a class="page-link" href="#">
-                    <span>&laquo;</span>
-                </a>
-            </li>
-        {% endif %}
-
-        {% for page in pages %}
-            {%  if current_page == forloop.counter %}
-                <li class="page-item active">
-            {% else %}
-                <li class="page-item">
-            {% endif %}
-                <a class="page-link" page="{{ forloop.counter }}" href="#">
-                {{ forloop.counter }}
-                </a>
-            </li>
-        {% endfor %}
-
-        {% if ingredients.has_next %}
-            <li class="page-item">
-            <a class="page-link" page="{{ ingredients.next_page_number }}" href="#">
-                <span>&raquo;</span>
-            </a>
-            </li>
-        {% else %}
-            <li class="page-item disabled">
-            <a class="page-link" href="#">
-                <span>&raquo;</span>
-            </a>
-            </li>
-        {% endif %}
-        </ul>
-    </nav>
-    </div>
-    <div class="col-sm-4">
-        <div class="btn-group my-4" style="float:right;">
-            <a id="addIngredientButton"
-               href="{%  url 'add_ingredient' %}"
-               class="btn btn-primary">
-                <span class="fa fa-plus"></span> Add a new Ingredient
-            </a>
-            <button type="button"
-                    class="btn btn-danger"
-                    disabled
-                    data-toggle="tooltip"
-                    data-placement="top"
-                    title="Select Ingredients below to remove them."
-                    id="removeButton">
-                <span class="fa fa-minus"></span> Remove Selected
-            </button>
-        </div>
-    </div>
-    </div>
+<form method="post" action="{% url 'ingredient' %}" id="ingredientFilterForm">
+{%  csrf_token %}
 <div class="row">
-    <div class="col-sm-2">
-        {%  if form.non_field_errors %}
-        <div class="alert alert-danger">
-            <p>Please correct the following error</p>
-            {{  form.non_field_errors }}
-        </div>
-        {% endif %}
-    {{ form.page_num }}
-    <div class="form-group">
-        <label for="{{ form.num_per_page.id_for_label }}">Number per page:</label>
-        {{ form.num_per_page }}
-        {% if form.num_per_page.errors %}
-        <small>{{ form.num_per_page.errors }}</small>
-        {% endif %}
+<div class="col-sm-8">
+<nav>
+<ul class="pagination my-4" id="pageList">
+{% if ingredients.has_previous %}
+    <li class="page-item">
+        <a class="page-link" page="{{  ingredients.previous_page_number }}" href="#">
+            <span>&laquo;</span>
+        </a>
+    </li>
+{% else %}
+    <li class="page-item disabled">
+        <a class="page-link" href="#">
+            <span>&laquo;</span>
+        </a>
+    </li>
+{% endif %}
+
+{% for page in pages %}
+    {%  if current_page == forloop.counter %}
+        <li class="page-item active">
+    {% else %}
+        <li class="page-item">
+    {% endif %}
+        <a class="page-link" page="{{ forloop.counter }}" href="#">
+        {{ forloop.counter }}
+        </a>
+    </li>
+{% endfor %}
+
+{% if ingredients.has_next %}
+    <li class="page-item">
+    <a class="page-link" page="{{ ingredients.next_page_number }}" href="#">
+        <span>&raquo;</span>
+    </a>
+    </li>
+{% else %}
+    <li class="page-item disabled">
+    <a class="page-link" href="#">
+        <span>&raquo;</span>
+    </a>
+    </li>
+{% endif %}
+</ul>
+</nav>
+</div>
+<div class="col-sm-4">
+    <div class="btn-group my-4" style="float:right;">
+        <a id="addIngredientButton"
+           href="{%  url 'add_ingredient' %}"
+           class="btn btn-primary">
+            <span class="fa fa-plus"></span> Add a new Ingredient
+        </a>
+        <button type="button"
+                class="btn btn-danger"
+                disabled
+                data-toggle="tooltip"
+                data-placement="top"
+                title="Select Ingredients below to remove them."
+                id="removeButton">
+            <span class="fa fa-minus"></span> Remove Selected
+        </button>
     </div>
-    <div class="form-group">
-        <label for="{{ form.sort_by.id_for_label }}">Sort by:</label>
-        {{ form.sort_by }}
-        {% if form.sort_by.errors %}
-        <small>{{ form.sort_by.errors }}</small>
-        {% endif %}
-    </div>
-    <div class="form-group">
-        <label for="{{ form.keyword.id_for_label }}">Search:</label>
-        {{ form.keyword }}
-        {% if form.keyword.errors %}
-        <small>{{ form.keyword.errors }}</small>
-        {% endif %}
-    </div>
-     <div class="form-group">
-        <label for="{{ form.skus.id_for_label }}">SKUs that use this ingredient:</label>
-        {{ form.skus }}
-        {% if form.skus.errors %}
-        <small>{{ form.skus.errors }}</small>
-        {% endif %}
-    </div>
-    <div class="btn-group w-100" role="group">
-        <input type="submit" class="btn btn-success w-100" value="Filter">
-        <a href="#" id="reserAllButton" class="btn btn-danger w-100">Reset</a>
-    </div>
-    </div>
+</div>
+</div>
+<div class="row">
+<div class="col-sm-2">
+<h3>Search</h3>
+{%  if form.non_field_errors %}
+<div class="alert alert-danger">
+    <p>Please correct the following error</p>
+    {{  form.non_field_errors }}
+</div>
+{% endif %}
+{{ form.page_num }}
+<div class="form-group">
+    <label for="{{ form.num_per_page.id_for_label }}">Number per page:</label>
+    {{ form.num_per_page }}
+    {% if form.num_per_page.errors %}
+    <small>{{ form.num_per_page.errors }}</small>
+    {% endif %}
+</div>
+<div class="form-group">
+    <label for="{{ form.sort_by.id_for_label }}">Sort by:</label>
+    {{ form.sort_by }}
+    {% if form.sort_by.errors %}
+    <small>{{ form.sort_by.errors }}</small>
+    {% endif %}
+</div>
+<div class="form-group">
+    <label for="{{ form.keyword.id_for_label }}">Search:</label>
+    {{ form.keyword }}
+    {% if form.keyword.errors %}
+    <small>{{ form.keyword.errors }}</small>
+    {% endif %}
+</div>
+ <div class="form-group">
+    <label for="{{ form.skus.id_for_label }}">SKUs that use this ingredient:</label>
+    {{ form.skus }}
+    {% if form.skus.errors %}
+    <small>{{ form.skus.errors }}</small>
+    {% endif %}
+</div>
+<div class="btn-group w-100" role="group">
+<button id="submitButton" class="btn btn-success w-100">
+    <span class="fas fa-filter"></span> Filter
+</button>
+<button id="resetAllButton" class="btn btn-danger w-100">
+    <span class="fas fa-trash-alt"></span> Reset
+</button>
+</div>
+
+<!-- Export controls -->
+<div class="w-100">
+<hr>
+<h3>Export</h3>
+<button class="btn btn-primary mb-2 w-100" id="exportButton">
+    <span class="fas fa-download"></span> Export Current Search
+</button>
+</div>
+<button class="btn btn-primary w-100" id="reportButton">
+    <span class="fas fa-file-pdf"></span> Dependency Report
+</button>
+</div>
+
+
+<!-- Table column -->
 <div class="col-sm-10">
-    <table class="table">
-        <thead class="thead-light">
-        <tr>
-            <th><input type="checkbox" id="selectAll"> </th>
-            <th>Ingr#</th>
-            <th>Name</th>
-            <th>Vendor</th>
-            <th>Size</th>
-            <th>Cost</th>
-        </tr>
-        </thead>
-        <tbody class="table-striped">
-        {% for ingredient in ingredients %}
-        <tr>
-            <td><input type="checkbox" class="ingredient-checkbox" id="{{ ingredient.number }}"> </td>
-            <td>{{ ingredient.number }}</td>
-            <td><a href="{% url "edit_ingredient" ingredient.number %}">{{ ingredient.name }}</a></td>
-            <td>{{ ingredient.vendor.info }}</td>
-            <td>{{ ingredient.size }}</td>
-            <td>{{ ingredient.cost }}</td>
-        </tr>
-        {%  empty %}
-            <div class="alert alert-danger">
-                No results were found. Please modify your search parameters and try again.
-            </div>
-        {% endfor %}
-        </tbody>
-    </table>
+{% if messages %}
+<div class="alert alert-success" id="messagesDiv">
+{% for message in messages %}
+<p {% if message.tags %}class="{{ message.tags }}{% endif %}">{{ message }}</p>
+{% endfor %}
+</div>
+{% endif %}
+<table class="table">
+    <thead class="thead-light">
+    <tr>
+        <th><input type="checkbox" id="selectAllCheckbox"> </th>
+        <th>Ingr#</th>
+        <th>Name</th>
+        <th>Vendor</th>
+        <th>Size</th>
+        <th>Cost</th>
+    </tr>
+    </thead>
+    <tbody class="table-striped">
+    {% for ingredient in ingredients %}
+    <tr>
+        <td><input type="checkbox" class="ingredient-checkbox" id="{{ ingredient.number }}"> </td>
+        <td>{{ ingredient.number }}</td>
+        <td><a href="{% url "edit_ingredient" ingredient.number %}">{{ ingredient.name }}</a></td>
+        <td>{{ ingredient.vendor.info }}</td>
+        <td>{{ ingredient.size }}</td>
+        <td>{{ ingredient.cost }}</td>
+    </tr>
+    {%  empty %}
+        <div class="alert alert-danger">
+            No results were found. Please modify your search parameters and try again.
+        </div>
+    {% endfor %}
+    </tbody>
+</table>
 <div>
     <p>Found {{ ingredients.paginator.count }} matches in {{ duration }} seconds</p>
 </div>
