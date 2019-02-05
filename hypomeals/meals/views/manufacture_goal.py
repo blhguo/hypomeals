@@ -13,7 +13,6 @@ from django.http import HttpResponse, JsonResponse
 from meals.forms import SkuQuantityForm
 from meals.models import (
     Sku,
-    Ingredient,
     ProductLine,
     ManufactureGoal,
     ManufactureDetail,
@@ -213,7 +212,7 @@ def show_all_goals(request):
 @login_required
 def find_product_line(request):
     pd = request.GET.get("product_line", None)
-    ingredients = Sku.objects.filter(product_line__name=pd)
+    skus = Sku.objects.filter(product_line__name=pd)
     result = {}
-    result["ingredients"] = [ingredient.name for ingredient in ingredients]
+    result["skus"] = [sku.name for sku in skus]
     return JsonResponse(result)

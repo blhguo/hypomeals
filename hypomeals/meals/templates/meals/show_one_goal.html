@@ -51,6 +51,7 @@
       </div>
       <div class="modal-body">
         <select class="form-control" id="product_line_selector">
+          <option> None </option>
           {% for product_line in product_lines %}
             <option value="{{ product_line }}">{{ product_line }}</option>
           {% endfor %}
@@ -84,13 +85,12 @@
   $('#product_line_selector').on('change', function() {
       const $pd_selected = $("#product_line_selector").val()
       $.ajax({url: "/find_product_line/", data: {'product_line': $pd_selected}, dataType: 'json', success: function(result) {
-        console.log(result.ingredients)
-        const ingredients = result.ingredients
-        var ingredient_length = ingredients.length;
-        for (var i = 0; i < ingredient_length; i++) {
+        const skus = result.skus
+        var sku_length = skus.length;
+        for (var i = 0; i < sku_length; i++) {
           let $newIngr = $("<button>").attr("type", "button")
                                       .attr("class", "list-group-item list-group-item-action")
-                                      .html(ingredients[i])
+                                      .html(skus[i])
                                       // .attr("data-dismiss", "modal")
           $newIngr.on('click', function() {
             $("#id_sku_"+buttonClicked).val($(this).prop("innerHTML"))
