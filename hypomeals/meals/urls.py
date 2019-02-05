@@ -1,4 +1,3 @@
-from django.conf.urls import url
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.urls import path
@@ -33,12 +32,11 @@ urlpatterns = [
     ),
     path("ac-sku", views.autocomplete_skus, name="autocomplete_skus"),
     path("edit-formula/<int:sku_number>", views.edit_formula, name="edit_formula"),
+    path("view-formula/<int:sku_number>", views.view_formula, name="view_formula"),
     # Import/export views
     path("import-page/", views.import_page, name="import_page"),
     path("import_landing/", views.import_landing, name="import_landing"),
-    # Account management views
-    url(r"^login/$", auth_views.LoginView.as_view(), name="login"),
-    path("logout/", views.logout_view, name="logout"),
+    # Manufacturer Goal views
     path("show_one_goal/", login_required(views.show_one_goal), name="show_one_goal"),
     path(
         "show_one_goal/<int:goal_id>",
@@ -58,4 +56,7 @@ urlpatterns = [
         name="generate_calculation_pdf",
     ),
     path("find_product_line/", views.find_product_line, name="find_product_line"),
+    # Account management views
+    path("accounts/login/", auth_views.LoginView.as_view(), name="login"),
+    path("accounts/logout/", views.logout_view, name="logout"),
 ]

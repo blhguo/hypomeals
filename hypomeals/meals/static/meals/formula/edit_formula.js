@@ -8,6 +8,11 @@ $(function() {
     const addRowButton = $("#addRowButton");
     const emptyAlert = $("#emptyAlert");
     let totalFormCount = $("input[name=form-TOTAL_FORMS]");
+    let hasChangePerm = $("input#hasChangePerm").attr("checked");
+
+    if (!hasChangePerm) {
+        $("input").attr("disabled", true);
+    }
 
     let tableBody = $("#formsetTable");
     let currentRow = tableBody.find("tr").length - 1;
@@ -123,7 +128,7 @@ $(function() {
         modalSaveButton.attr("disabled", true);
         modalForm.ajaxSubmit({
             success: function(data, textStatus) {
-                if (!showError(data, textStatus)) {
+                if (!showNetworkError(data, textStatus)) {
                     return;
                 }
                 if ("success" in data && data.success === true) {
@@ -150,7 +155,7 @@ $(function() {
     }
 
     function ajaxDone(data, textStatus) {
-        if (!showError(data, textStatus)) {
+        if (!showNetworkError(data, textStatus)) {
             return;
         }
         loadingSpinner.toggle(false);
@@ -160,6 +165,10 @@ $(function() {
     createIngrButton.click(function() {
         $.getJSON(addIngredientUrl, {})
             .done(ajaxDone)
+            .fail(function(_, __, errorThrown) {
+                alert(`Error loading content: ${errorThrown}`);
+                modalDiv.modal("hide");
+            })
     });
 
     modalSaveButton.click(modalSaveButtonClicked);

@@ -54,17 +54,11 @@ $(function() {
             },
             dataType: "json",
         }).done(function(data, textStatus) {
-            if (textStatus !== "success") {
-                alert(
-                    `[status=${textStatus}] Error removing` +
-                    `${toRemove.length} SKU(s):` +
-                    ("error" in data) ? data.error : "" +
-                    `\nPlease refresh the page and try again later.`
-                );
-            } else {
-                if ("resp" in data) {
-                    alert(data.resp);
-                }
+            if (!showNetworkError(data, textStatus)) {
+                return;
+            }
+            if ("resp" in data) {
+                alert(data.resp);
             }
             refreshPage();
         });
@@ -90,6 +84,37 @@ $(function() {
     submitButton.click(function() {
         skuFilterForm.submit();
     });
+
+    /************* View Formula ***********/
+
+    let viewFormulaButtons = $(".viewFormula");
+    let viewFormulaUrl = $("#viewFormulaUrl").attr("href");
+    let loadingSpinner = $("#loadingSpinner");
+    let modalBody = $("#modalBody");
+    let modalDiv = $("#modalDiv");
+
+    function viewFormula() {
+        let skuNumber = $(this).attr("id");
+        let url = viewFormulaUrl.replace("0", String(skuNumber));
+        let removed = modalBody.find("div.container").remove();
+        if (removed.length > 0) {
+            loadingSpinner.toggle("on");
+        }
+        $.getJSON(url, {})
+            .done(function(data, textStatus) {
+                if (!showNetworkError(data, textStatus)) {
+                    return;
+                }
+                if ("error" in data && data.error != null) {
+                    alert(data.error);
+                    modalDiv.modal("hide");
+                    return;
+                }
+                loadingSpinner.toggle("off");
+                $(data.resp).appendTo(modalBody);
+            })
+    }
+    viewFormulaButtons.click(viewFormula);
 
     /************** Pagination ****************/
     $("#pageList").find("a").on("click", function() {

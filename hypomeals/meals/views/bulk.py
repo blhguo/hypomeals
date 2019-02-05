@@ -1,13 +1,24 @@
 import logging
 
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.shortcuts import render, redirect
 
 from ..forms import ImportCsvForm, ImportZipForm
 
+IMPORT_PERMISSIONS = (
+    "meals.add_sku",
+    "meals.change_sku",
+    "meals.add_ingredient",
+    "meals.change_ingredient",
+    "meals.add_skuingredient",
+    "meals.change_skuingredient",
+)
+
 logger = logging.getLogger(__name__)
 
+
 @login_required
+@permission_required(IMPORT_PERMISSIONS, raise_exception=True)
 def import_page(request):
     template = "meals/import/import.html"
 

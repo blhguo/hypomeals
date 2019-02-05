@@ -3,18 +3,20 @@ import time
 
 import jsonpickle
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
 from django.db import transaction, DatabaseError
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
 
+from meals import auth
 from meals.forms import SkuFilterForm, EditSkuForm
 from meals.models import Sku
 from ..bulk_export import export_skus
 
 logger = logging.getLogger(__name__)
+
 
 @login_required
 def sku(request):
@@ -64,6 +66,7 @@ def sku(request):
 
 
 @login_required
+@permission_required("meals.change_sku", raise_exception=True)
 def edit_sku(request, sku_number):
     instance = get_object_or_404(Sku, number=sku_number)
     if request.method == "POST":
@@ -87,6 +90,7 @@ def edit_sku(request, sku_number):
 
 
 @login_required
+@permission_required("meals.add_sku", raise_exception=True)
 def add_sku(request):
     skip = request.GET.get("skip", "0") == "1"
 
@@ -109,6 +113,7 @@ def add_sku(request):
 
 @login_required
 @require_POST
+@auth.permission_required_ajax(perm="meals.delete_sku")
 def remove_skus(request):
     to_remove = jsonpickle.loads(request.POST.get("to_remove", "[]"))
     try:
