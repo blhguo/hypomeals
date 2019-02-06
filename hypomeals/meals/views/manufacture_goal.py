@@ -46,9 +46,8 @@ def show_one_goal(request, goal_id=-1):
     message = ""
     if request.method == "POST":
         form = SkuQuantityForm(request.POST)
-        file = generate_csv_file(request.POST)
         if form.is_valid():
-            form.clean()
+            file = generate_csv_file(request.POST)
             form.save_file(request, file)
             form_name = request.POST["form_name"]
             message = "You form has been saved successfully to %s" % (form_name,)
@@ -84,13 +83,11 @@ def generate_report(request):
         if sku_index in request.POST and quantity_index in request.POST:
             sku_name = request.POST[sku_index]
             quantity4sku = request.POST[quantity_index]
-            sku = Sku.objects.filter(name=sku_name)
-            if sku:
-                sku = sku[0]
-            else:
+            sku = Sku.from_name(sku_name)
+            if sku is None:
                 cnt += 1
                 continue
-            sku_ingredient_pairs = SkuIngredient.objects.filter(sku_number=sku.number)
+            sku_ingredient_pairs = SkuIngredient.objects.filter(sku_number=sku)
             for sku_ingredient_pair in sku_ingredient_pairs:
                 ingredient_number = sku_ingredient_pair.ingredient_number
                 if ingredient_number not in report:
@@ -117,7 +114,7 @@ def generate_csv_file(entries):
             quantity_index = "quantity_" + str(cnt)
             if sku_index in entries and quantity_index in entries:
                 sku_name = entries[sku_index]
-                sku = Sku.objects.filter(name=sku_name)[0]
+                sku = Sku.from_name(name=sku_name)
                 quantity4sku = entries[quantity_index]
                 writer.writerow([sku.number, sku_name, quantity4sku])
             else:
@@ -131,7 +128,7 @@ def generate_csv_file(entries):
 def save_goal(request):
     file = generate_csv_file(request.POST)
     form = SkuQuantityForm(request.POST)
-    # form.clean()
+    form.clean()
     form.save_file(request, file)
     form_name = request.POST["form_name"]
     return render(
@@ -219,6 +216,5 @@ def show_all_goals(request):
 def find_product_line(request):
     pd = request.GET.get("product_line", None)
     skus = Sku.objects.filter(product_line__name=pd)
-    result = {}
-    result["skus"] = [sku.name for sku in skus]
+    result = {"skus": [str(sku) for sku in skus]}
     return JsonResponse(result)

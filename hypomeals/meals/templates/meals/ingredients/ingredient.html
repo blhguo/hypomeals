@@ -158,6 +158,7 @@
         <th>Vendor</th>
         <th>Size</th>
         <th>Cost</th>
+        <th>Comment</th>
     </tr>
     </thead>
     <tbody class="table-striped">
@@ -182,6 +183,7 @@
         <td>{{ ingredient.vendor.info }}</td>
         <td>{{ ingredient.size }}</td>
         <td>{{ ingredient.cost }}</td>
+        <td>{{ ingredient.comment|truncatewords:20 }}</td>
     </tr>
     {%  empty %}
         <div class="alert alert-danger">

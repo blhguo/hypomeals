@@ -193,6 +193,7 @@
     <th>Unit Size</th>
     <th>Count Per Case</th>
     <th>Product Line</th>
+    <th>Comment</th>
     <th>Formula</th>
 </tr>
 </thead>
@@ -220,6 +221,7 @@
     <td>{{ sku.unit_size }}</td>
     <td>{{ sku.count }}</td>
     <td>{{ sku.product_line.name }}</td>
+    <td>{{ sku.comment|truncatewords:20 }}</td>
     <td>
         <div class="btn-group">
         <a class="btn btn-link viewFormula"

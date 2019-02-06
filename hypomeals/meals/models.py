@@ -1,10 +1,16 @@
 # pylint: disable-msg=arguments-differ
+import re
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 from django.utils.text import Truncator
 
 from meals import utils
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class User(AbstractUser):
@@ -104,6 +110,7 @@ class Ingredient(
 
 class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutionMixin):
     excluded_fields = ("number",)
+    NAME_REGEX = re.compile(r"(?P<name>.+):\s*(?P<size>.+)\s*\*\s*(?P<count>\d+)")
 
     name = models.CharField(max_length=32, verbose_name="Name", blank=False)
 
@@ -135,6 +142,22 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
         Ingredient, verbose_name="Ingredients", through="SkuIngredient"
     )
     comment = models.CharField(max_length=200, verbose_name="Comment", blank=True)
+
+    @classmethod
+    def from_name(cls, name):
+        match = cls.NAME_REGEX.search(name)
+        if match:
+            name = match["name"].strip()
+            size = match["size"].strip()
+            try:
+                count = int(match["count"].strip())
+            except ValueError:
+                logger.exception("Cannot parse %s as integer", match["count"])
+                return None
+            qs = cls.objects.filter(name=name, unit_size=size, count=count)
+            if qs.exists():
+                return qs[0]
+        return None
 
     def __str__(self):
         return f"{self.name}: {self.unit_size} * {self.count}"

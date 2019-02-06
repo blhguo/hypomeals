@@ -14,7 +14,14 @@ def autocomplete(request, manager, key="name"):
     return JsonResponse(items, safe=False)
 
 
-autocomplete_skus = login_required(functools.partial(autocomplete, manager=Sku.objects))
+@login_required
+def autocomplete_skus(request):
+    # SKU names are weird...
+    term = request.GET.get("term", "")
+    items = [str(sku) for sku in Sku.objects.filter(name__istartswith=term).distinct()]
+    return JsonResponse(items, safe=False)
+
+
 autocomplete_ingredients = login_required(
     functools.partial(autocomplete, manager=Ingredient.objects)
 )

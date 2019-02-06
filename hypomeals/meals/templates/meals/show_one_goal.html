@@ -174,14 +174,19 @@
       $(quantity_n).remove()
       $this.remove();
       $("#"+(n + 1)).remove()
-    })
+  })
 
 </script>
 <script>
-  $(function() {
-    const acSkusUrl = $("#acSkusUrl").attr("href");
-    registerAutocomplete($("#id_sku_0"), acSkusUrl);
-  })
+    $(function() {
+        const acSkusUrl = $("#acSkusUrl").attr("href");
+        let $this = $(".sku-list-new")
+        let name = $this.attr('name')
+        let n = parseInt(name.split('_')[1]) - 1
+        for (var i =0; i < n; i++) {
+            registerAutocomplete($("#id_sku_"+String(i)), acSkusUrl);
+        }
+    })
 </script>
 {% endblock %}
 {% block dashboard_active %} active{% endblock %}

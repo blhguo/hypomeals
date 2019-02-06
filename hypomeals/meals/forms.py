@@ -23,6 +23,9 @@ from meals.utils import BootstrapFormControlMixin, FilenameRegexValidator
 logger = logging.getLogger(__name__)
 
 
+COMMA_SPLIT_REGEX = re.compile(r",\s*")
+
+
 class SkuQuantityForm(forms.ModelForm):
     form_name = forms.CharField(required=True)
 
@@ -73,7 +76,7 @@ class SkuQuantityForm(forms.ModelForm):
                 sku = self.cleaned_data[sku_name]
                 quantity = self.cleaned_data[quantity_name]
                 print("DEBUG", sku, quantity)
-                if not Sku.objects.filter(name=sku):
+                if Sku.from_name(sku) is None:
                     err_message = "This SKU %s is not a valid one!" % (sku,)
                     self.add_error(sku_name, err_message)
 
@@ -83,7 +86,7 @@ class SkuQuantityForm(forms.ModelForm):
 
                 if sku == "":
                     err_message = "Sku is a required field"
-                    self.add_error(quantity_name, err_message)
+                    self.add_error(sku_name, err_message)
 
                 if sku in skus:
                     self.add_error(sku_name, "Duplicate")
@@ -226,7 +229,6 @@ def get_vendor_choices():
 
 
 class CsvModelAttributeField(forms.CharField):
-    COMMA_SPLIT_REGEX = re.compile(r",\s*")
 
     attr = "pk"
 
@@ -243,7 +245,7 @@ class CsvModelAttributeField(forms.CharField):
 
     def clean(self, value):
         # Get rid of any empty values
-        items = {item.strip() for item in self.COMMA_SPLIT_REGEX.split(value)} - {""}
+        items = {item.strip() for item in COMMA_SPLIT_REGEX.split(value)} - {""}
         if not items:
             return items
         query = Q(**{f"{self.attr}__in": items})
@@ -268,10 +270,8 @@ class IngredientFilterForm(forms.Form):
     num_per_page = forms.ChoiceField(choices=NUM_PER_PAGE_CHOICES, required=True)
     sort_by = forms.ChoiceField(choices=Ingredient.get_sortable_fields, required=True)
     keyword = forms.CharField(required=False, max_length=100)
-    skus = CsvModelAttributeField(
-        model=Sku,
+    skus = forms.CharField(
         required=False,
-        attr="name",
         widget=forms.TextInput(attrs={"placeholder": "Start typing..."}),
         help_text="Enter ingredients separated by commas",
     )
@@ -282,6 +282,30 @@ class IngredientFilterForm(forms.Form):
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control mb-2"
 
+    def clean_skus(self):
+        value = self.cleaned_data["skus"]
+        items = {item.strip() for item in COMMA_SPLIT_REGEX.split(value)} - {""}
+        if not items:
+            return items
+        found = set()
+        not_found = []
+        for item in items:
+            sku = Sku.from_name(item)
+            if sku is None:
+                not_found.append(item)
+            else:
+                found.add(sku)
+        if not_found:
+            errors = []
+            for item in not_found:
+                errors.append(
+                    ValidationError(
+                        "'%(item)s' cannot be found.", params={"item": item}
+                    )
+                )
+            raise ValidationError(errors)
+        return found
+
     def query(self) -> Paginator:
         params = self.cleaned_data
         logger.info("Querying ingredients with parameters %s", params)
@@ -291,7 +315,7 @@ class IngredientFilterForm(forms.Form):
         if params["keyword"]:
             query_filter &= Q(name__icontains=params["keyword"])
         if params["skus"]:
-            query_filter |= Q(sku__name__in=params["skus"])
+            query_filter |= Q(sku__in=params["skus"])
         query = Ingredient.objects.filter(query_filter)
         if sort_by:
             query = query.order_by(sort_by)
@@ -366,10 +390,9 @@ class EditIngredientForm(forms.ModelForm):
                         "from an existing Vendor."
                     )
                 data["vendor"] = data["custom_vendor"]
-            try:
-                data["vendor"] = Vendor.objects.get(info=data["vendor"])
-            except Vendor.DoesNotExist:
-                data["vendor"] = Vendor(info=data["vendor"])
+            qs = Vendor.objects.filter(info=data["vendor"])
+            data["vendor"] = qs[0] if qs.exists() else Vendor(info=data["vendor"])
+
         return data
 
     @transaction.atomic

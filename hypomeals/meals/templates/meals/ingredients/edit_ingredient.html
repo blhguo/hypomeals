@@ -7,4 +7,9 @@
 {% endautoescape %}
 {% endblock %}
 
+{% block scriptend %}
+<script src="{% static 'meals/common.js' %}"></script>
+<script src="{% static 'meals/ingredient/edit_ingredient.js' %}"></script>
+{% endblock %}
+
 {% block ingredient_active %}active{% endblock %}
