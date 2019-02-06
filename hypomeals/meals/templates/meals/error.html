@@ -1,0 +1,21 @@
+{% extends 'meals/base.html' %}
+
+{% block title %}Error{% endblock %}
+
+{% block body %}
+<div class="container m-auto">
+<div class="row">
+<div class="col-sm-12 my-4">
+    <div class="alert alert-danger">
+        {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+            <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+</div>
+</div>
+</div>
+{% endblock %}

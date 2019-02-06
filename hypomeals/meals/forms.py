@@ -3,7 +3,6 @@ import logging
 import re
 from collections import OrderedDict
 
-from django.utils import timezone
 from django import forms
 from django.core.exceptions import FieldDoesNotExist
 from django.core.exceptions import ValidationError
@@ -11,13 +10,15 @@ from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, BLANK_CHOICE_DASH
 from django.forms import formset_factory
+from django.utils import timezone
 
 from meals import bulk_import
 from meals import utils
+from meals.exceptions import CollisionOccurredException
+from meals.models import ManufactureDetail, ManufactureGoal
 from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor
 from meals.models import SkuIngredient
 from meals.utils import BootstrapFormControlMixin, FilenameRegexValidator
-from meals.models import ManufactureDetail, ManufactureGoal
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +141,7 @@ class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
                 regex=r"skus(\S)*\.csv",
                 message="Filename mismatch. Expected: "
                 "skusxxx.csv where xxx is any characters.",
+                code="filename-mismatch",
             )
         ],
     )
@@ -151,6 +153,7 @@ class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
                 regex=r"ingredients(\S)*\.csv",
                 message="Filename mismatch. Expected: "
                 "ingredientsxxx.csv where xxx is any characters.",
+                code="filename-mismatch",
             )
         ],
     )
@@ -162,36 +165,47 @@ class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
                 regex=r"product_lines(\S)*\.csv",
                 message="Filename mismatch. Expected: "
                 "product_linesxxx.csv where xxx is any characters.",
+                code="filename-mismatch",
             )
         ],
     )
-    formula = forms.FileField(
+    formulas = forms.FileField(
         required=False,
         label="Formulas",
         validators=[
             FilenameRegexValidator(
-                regex=r"formula(\S)*\.csv",
+                regex=r"formulas(\S)*\.csv",
                 message="Filename mismatch. Expected: "
                 "formulaxxx.csv where xxx is any characters.",
+                code="filename-mismatch",
             )
         ],
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, session_key, **kwargs):
         self._imported = False
+        self.session_key = session_key
         super().__init__(*args, **kwargs)
 
     def clean(self):
         if not any(self.cleaned_data.values()):
-            raise ValidationError("You must upload at least one CSV file.")
+            raise ValidationError(
+                "You must upload at least one CSV file. "
+                "Make sure the filenames are correct."
+            )
 
         try:
-            if bulk_import.process_csv_files(self.cleaned_data):
+            inserted = bulk_import.process_csv_files(
+                self.cleaned_data, self.session_key
+            )
+            if inserted:
                 self._imported = True
+        except CollisionOccurredException:
+            raise
         except Exception as e:
             raise ValidationError(str(e))
 
-        return self.cleaned_data
+        return inserted
 
     @property
     def imported(self):
@@ -200,6 +214,7 @@ class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
 
 class ImportZipForm(forms.Form, BootstrapFormControlMixin):
     zip = forms.FileField(required=False, label="ZIP File")
+
 
 
 def get_ingredient_choices():

@@ -1,7 +1,8 @@
-#pylint: disable-msg=arguments-differ
+# pylint: disable-msg=arguments-differ
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
+from django.utils.text import Truncator
 
 from meals import utils
 
@@ -28,7 +29,7 @@ class Upc(models.Model, utils.ModelFieldsCompareMixin):
 class ProductLine(models.Model, utils.ModelFieldsCompareMixin):
     excluded_fields = ("id",)
 
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100, unique=True, verbose_name="Name")
 
     def __str__(self):
         return self.name
@@ -42,10 +43,10 @@ class ProductLine(models.Model, utils.ModelFieldsCompareMixin):
 class Vendor(models.Model, utils.ModelFieldsCompareMixin):
     excluded_fields = ("id",)
 
-    info = models.CharField(max_length=200)
+    info = models.CharField(max_length=200, verbose_name="Info")
 
     def __str__(self):
-        return f"Vendor #{self.pk}"
+        return Truncator(self.info).words(3)
 
     __repr__ = __str__
 
@@ -58,13 +59,15 @@ class Ingredient(
 ):
     excluded_fields = ("number",)
 
-    name = models.CharField(max_length=100, unique=True, blank=False)
+    name = models.CharField(
+        max_length=100, verbose_name="Name", unique=True, blank=False
+    )
     # TODO: Ingredient number is alphanumeric
-    number = models.IntegerField(blank=False, primary_key=True)
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE)
-    size = models.CharField(max_length=100, blank=False)
-    cost = models.FloatField(blank=False)
-    comment = models.CharField(max_length=200, blank=True)
+    number = models.IntegerField(blank=False, verbose_name="Ingr#", primary_key=True)
+    vendor = models.ForeignKey(Vendor, verbose_name="Vendor", on_delete=models.CASCADE)
+    size = models.CharField(max_length=100, verbose_name="Size", blank=False)
+    cost = models.FloatField(blank=False, verbose_name="Cost")
+    comment = models.CharField(max_length=200, blank=True, verbose_name="Comment")
 
     def __str__(self):
         return self.name
@@ -99,10 +102,10 @@ class Ingredient(
         return super().save(*args, **kwargs)
 
 
-class Sku(models.Model, utils.ModelFieldsCompareMixin):
+class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutionMixin):
     excluded_fields = ("number",)
 
-    name = models.CharField(max_length=32, blank=False)
+    name = models.CharField(max_length=32, verbose_name="Name", blank=False)
 
     number = models.IntegerField(
         blank=False, verbose_name="SKU#", unique=True, primary_key=True
@@ -121,7 +124,7 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin):
         on_delete=models.CASCADE,
         related_name="+",
     )
-    unit_size = models.CharField(max_length=100, blank=False)
+    unit_size = models.CharField(max_length=100, verbose_name="Unit size", blank=False)
     count = models.IntegerField(
         verbose_name="Count per case", blank=False, help_text="Number of units per case"
     )
@@ -131,9 +134,13 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin):
     ingredients = models.ManyToManyField(
         Ingredient, verbose_name="Ingredients", through="SkuIngredient"
     )
-    comment = models.CharField(max_length=200, blank=True)
+    comment = models.CharField(max_length=200, verbose_name="Comment", blank=True)
 
     def __str__(self):
+        return f"{self.name}: {self.unit_size} * {self.count}"
+
+    @property
+    def proper_name(self):
         return f"{self.name}: {self.unit_size} * {self.count}"
 
     __repr__ = __str__
@@ -170,9 +177,11 @@ class SkuIngredient(
 ):
     excluded_fields = ("id",)
 
-    sku_number = models.ForeignKey(Sku, blank=False, on_delete=models.CASCADE)
+    sku_number = models.ForeignKey(
+        Sku, blank=False, on_delete=models.CASCADE, verbose_name="SKU#"
+    )
     ingredient_number = models.ForeignKey(
-        Ingredient, blank=False, on_delete=models.CASCADE
+        Ingredient, blank=False, on_delete=models.CASCADE, verbose_name="Ingr#"
     )
     quantity = models.FloatField(blank=False)
 

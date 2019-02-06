@@ -169,7 +169,7 @@
         <td>{{ ingredient.number }}</td>
         <td>
             <a href="{% url "edit_ingredient" ingredient.number %}"
-               {% if meals.perms.change_ingredient %}
+               {% if perms.meals.change_ingredient %}
                title="Click on the name to edit this ingredient."
                {% else %}
                title="You don't have permission to edit this ingredient."

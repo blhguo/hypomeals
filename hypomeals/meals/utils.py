@@ -272,12 +272,8 @@ class ModelFieldsCompareMixin:
             value1 = getattr(i1, field.name)
             value2 = getattr(i2, field.name)
             if isinstance(field, ForeignKey):
-                deep_compare_fn = getattr(
-                    field.related_model, "compare_instances", None
-                )
-                if deep_compare_fn:
-                    if not deep_compare_fn(field.related_model, value1, value2):
-                        return False
+                if hasattr(field.related_model, "compare_instances"):
+                    return field.related_model.compare_instances(value1, value2)
             else:
                 if value1 != value2:
                     return False

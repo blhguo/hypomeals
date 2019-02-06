@@ -1,12 +1,14 @@
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.urls import path
+from django.views.generic import TemplateView
 
 from . import views
 
 urlpatterns = [
     # Normal views
     path("", views.index, name="index"),
+    path("error", TemplateView.as_view(template_name="meals/error.html"), name="error"),
     # SKU views
     path("sku", views.sku, name="sku"),
     path("remove-skus", views.remove_skus, name="remove_skus"),
@@ -34,10 +36,11 @@ urlpatterns = [
     path("edit-formula/<int:sku_number>", views.edit_formula, name="edit_formula"),
     path("view-formula/<int:sku_number>", views.view_formula, name="view_formula"),
     # Import/export views
-    path("import-page/", views.import_page, name="import_page"),
-    path("import_landing/", views.import_landing, name="import_landing"),
+    path("import/", views.import_page, name="import"),
+    path("import/success/", views.import_success, name="import_success"),
+    path("import/collision/", views.collision, name="collision"),
     # Manufacturer Goal views
-    path("show_one_goal/", login_required(views.show_one_goal), name="show_one_goal"),
+    path("show_one_goal/", views.show_one_goal, name="show_one_goal"),
     path(
         "show_one_goal/<int:goal_id>",
         login_required(views.show_one_goal),

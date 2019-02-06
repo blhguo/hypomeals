@@ -48,19 +48,20 @@
             {{ csv_form.non_field_errors | linebreaks }}
             </div>
             {% endif %}
-            <table class="table">
-            <tbody>
             {% for field in csv_form %}
-            <tr>
-                <td>{{ field.label_tag }}</td>
-                <td>
-                    {{ field }}
-                    {% if field.errors %}<small>{{ field.errors }}</small>{% endif %}
-                </td>
-            </tr>
+            <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text">{{ field.label }}</span>
+            </div>
+            <div class="custom-file">
+                {{ field }}
+                <label for="{{ field.id_for_label }}" class="custom-file-label">{{ field.label }}</label>
+                {% if field.errors %}
+                <small>{{ field.errors }}</small>
+                {% endif %}
+            </div>
+            </div>
             {% endfor %}
-            </tbody>
-            </table>
             <input type="submit" class="btn btn-primary" value="Submit CSV Files">
         </form>
         </div>
@@ -70,13 +71,18 @@
             <table class="table">
             <tbody>
             {% for field in zip_form %}
-            <tr>
-                <td>{{ field.label_tag }}</td>
-                <td>
-                    {{ field }}
-                    {% if field.errors %}<small>{{ field.errors }}</small>{% endif %}
-                </td>
-            </tr>
+            <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text">{{ field.label }}</span>
+            </div>
+            <div class="custom-file">
+                {{ field }}
+                <label for="{{ field.id_for_label }}" class="custom-file-label">{{ field.label }}</label>
+                {% if field.errors %}
+                <small>{{ field.errors }}</small>
+                {% endif %}
+            </div>
+            </div>
             {% endfor %}
             </tbody>
             </table>
@@ -88,13 +94,14 @@
 {% endblock %}
 
 {% block scriptend %}
-<script lang="javascript">
+<script src="https://cdn.jsdelivr.net/npm/bs-custom-file-input/dist/bs-custom-file-input.js"></script>
+<script type="text/javascript">
 $(function() {
-
+    bsCustomFileInput.init();
 });
 </script>
 {% endblock %}
 
-{% block sku_active %}active{% endblock %}
+{% block import_active %}active{% endblock %}
 
 {% block title %}Import Files{% endblock %}

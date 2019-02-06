@@ -1,0 +1,106 @@
+{% extends 'meals/base.html' %}
+{% load staticfiles %}
+
+{% block title %}Collision Detected{% endblock %}
+{% block import_active %}active{% endblock %}
+
+{% block style %}
+ul {
+    list-style: inside;
+    padding-left: 0;
+    margin-bottom: 0;
+}
+td.text-center {
+    padding-bottom: 0;
+}
+{% endblock %}
+
+{% block body %}
+<div class="container m-auto">
+<div class="row">
+<div class="col-sm-12 my-4">
+    <div class="alert alert-warning">
+        <h3>Collisions Detected</h3>
+        <p>The following collisions with existing database records are detected.</p>
+        <p>
+            The table below shows the data in conflict. Only the conflicting attributes are shown.
+            Review the records carefully.
+        </p>
+        <p>
+            If you would like to update these records to their new values, click
+            the "Confirm" button below. Otherwise, click the "Abort" button to
+            cancel this import.
+        </p>
+        <p>
+            If you cancel the import, all changes will be rolled back and nothing
+            will be imported.
+        </p>
+    </div>
+</div>
+</div>
+
+<!-- Collisions Table -->
+<div class="row">
+<div class="col-sm-12">
+<table class="table table-bordered">
+<thead class="thead-light">
+<tr>
+    <th>#</th>
+    <th>Primary Key</th>
+    <th>Old Record</th>
+    <th>New Record</th>
+</tr>
+</thead>
+
+<tbody>
+{% for filename, collisions in transaction %}
+<tr>
+    <td class="text-center" colspan="4"><pre><b>{{ filename }}</b></pre></td>
+</tr>
+    {% for collision in collisions %}
+    <tr>
+        <td>{{ forloop.counter }}</td>
+        {% autoescape off %}
+        {{ collision }}
+        {% endautoescape %}
+    </tr>
+    {% endfor %}
+{% endfor %}
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- Confirmation -->
+<div class="row">
+<div class="col-sm-12">
+<div class="form-check">
+    <input class="form-check-input"
+           type="checkbox"
+           id="confirmOverwrite">
+    <label class="form-check-label"
+           for="confirmOverwrite">
+        By checking this box, I understand that I am about to overwrite
+        {{ collisions|length }} conflict{{ total_conflicts|pluralize }}
+        above and that this action cannot be undone.
+    </label>
+</div>
+
+<div class="btn-group mt-2">
+    <a href="{% url 'collision' %}?force=1"
+       class="btn btn-danger"
+       id="confirmOverwriteButton">
+        <span class="fas fas-exclamation"></span> Confirm Overwrite
+    </a>
+    <a class="btn btn-secondary" href="{% url 'import' %}">Abort</a>
+</div>
+</div>
+</div>
+
+</div>
+
+{% endblock %}
+
+{% block scriptend %}
+<script src="{% static 'meals/import/collision.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends 'meals/base.html' %}
+{% if messages %}
+    {%  for message in messages %}
+        <div>
+            <strong>{{ message|safe }}</strong>
+        </div>
+    {%  endfor %}
+{%  else %}
+{%  endif %}
+
+{% block body %}
+<div class="container m-auto">
+<div class="row">
+<div class="col-sm-12 mt-4 mb-2">
+    <div class="alert alert-success">
+    <h3>Import Successful</h3>
+    <p>Your file(s) have been successfully imported. The number of records inserted
+    updated are shown below.</p>
+    <a href="{% url 'index' %}" class="btn btn-link">Return to Dashboard</a>
+    </div>
+</div>
+</div>
+
+<!-- Import Statistics -->
+<div class="row">
+<div class="col-sm-12 my-2">
+{% if inserted %}
+<h3>Inserted</h3>
+<table class="table">
+<thead class="thead-light">
+<tr>
+    <th>Type</th>
+    <th># Inserted</th>
+</tr>
+{% for model_name, num in inserted %}
+<tr>
+    <td><b>{{ model_name|capfirst }}</b></td>
+    <td>{{ num }}</td>
+</tr>
+{% endfor %}
+</thead>
+</table>
+{% endif %}
+
+{% if updated %}
+<h3>Updated</h3>
+<table class="table">
+<thead class="thead-light">
+<tr>
+    <th>Type</th>
+    <th># Updated</th>
+</tr>
+{% for model_name, num in updated %}
+<tr>
+    <td><b>{{ model_name|capfirst }}</b></td>
+    <td>{{ num }}</td>
+</tr>
+{% endfor %}
+{% endif %}
+</thead>
+</table>
+</div>
+</div>
+</div>
+{% endblock %}
+
+{% block import_active %}active{% endblock %}

@@ -1,5 +1,4 @@
 # pylint: disable-msg=too-many-arguments
-#import sys
 import traceback
 
 from django.conf import settings
@@ -63,6 +62,7 @@ class IntegrityException(Exception):
     def __init__(
         self,
         message,
+        line_num=None,
         referring_name=None,
         referred_name=None,
         fk_name=None,
@@ -77,6 +77,7 @@ class IntegrityException(Exception):
         For example,
         raise IntegrityException(
             f"Cannot insert SKU #{sku_number}.",
+            line_num=line_num,
             referring_cls=Sku,
             referred_cls=ProductLine,
             fk_name="Product Line",
@@ -92,6 +93,7 @@ class IntegrityException(Exception):
             include the raw IntegrityError as well.
         """
         self.message = message
+        self.line_num = line_num
         self.referring_name = referring_name
         self.referred_name = referred_name
         self.fk_name = fk_name
@@ -100,7 +102,10 @@ class IntegrityException(Exception):
 
     @utils.method_memoize_forever
     def __str__(self):
-        result = self.message
+        result = ""
+        if self.line_num:
+            result += f"Line {self.line_num}: "
+        result += self.message
         if (
             self.referring_name is not None
             and self.referred_name is not None
@@ -123,10 +128,41 @@ class IntegrityException(Exception):
 
 
 class CollisionException(Exception):
+    def __init__(self, old_record, new_record):
+        self.old_record = old_record
+        self.new_record = new_record
+
+    def __str__(self):
+        return (
+            f"'({self.old_record.pk}) {self.old_record}' => "
+            f"'({self.new_record.pk}) {self.new_record}'"
+        )
+
+
+class CollisionOccurredException(Exception):
+    """An intentional exception to abort a transaction"""
     pass
 
-class QueryException(Exception):
 
+class AmbiguousRecordException(Exception):
+    def __init__(self, message, instance, matches):
+        self.message = message
+        self.instance = instance
+        self.matches = matches
+        self.model = instance.__class__
+
+    def __str__(self):
+        result = self.message
+        result += (
+            f"\nRecord '{self.instance}' "
+            f"matched {len(self.matches)} existing record(s):"
+        )
+        for i, (attr, match) in enumerate(self.matches.items(), start=1):
+            result += f"\n\tMatch {i}: (#{match.pk}) '{match}' on attribute '{attr}'"
+        return result
+
+
+class QueryException(Exception):
     def __init__(self, *args, msg="A query exception has occurred", ex=None, code=None):
         """
         Initializes a new `QueryException` instance with the parameters
