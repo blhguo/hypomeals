@@ -4,9 +4,10 @@ from meals.models import User
 from django.contrib.auth.models import Group, Permission
 
 
-User.objects.create_superuser(
-    username="ece458", email="xc77@duke.edu", password="Hyp0Mea1s!"
-)
+if not User.objects.filter(username="ece458").exists():
+    User.objects.create_superuser(
+        username="ece458", email="xc77@duke.edu", password="Hyp0Mea1s!"
+    )
 view_only_user = User.objects.get_or_create(
     username="viewonly",
     first_name="ViewOnly",
