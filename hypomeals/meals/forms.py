@@ -44,7 +44,7 @@ class SkuQuantityForm(forms.ModelForm):
         for i in range(number):
             sku_name = "sku_%s" % (i,)
             self.fields[sku_name] = forms.CharField(required=False)
-            self.fields[sku_name].widget.attrs["class"] = "form-control"
+            self.fields[sku_name].widget.attrs["class"] = "form-control autocomplete"
             self.fields[sku_name].widget.attrs["placeholder"] = "Sku"
             quantity_name = "quantity_%s" % (i,)
             self.fields[quantity_name] = forms.CharField(required=False)
@@ -60,7 +60,7 @@ class SkuQuantityForm(forms.ModelForm):
             if i == number - 1:
                 self.fields[sku_name].widget.attrs[
                     "class"
-                ] = "sku-list-new form-control"
+                ] = "sku-list-new form-control autocomplete"
 
     def clean(self):
         if self.is_valid():

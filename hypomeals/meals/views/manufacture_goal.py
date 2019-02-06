@@ -92,9 +92,12 @@ def generate_report(request):
                 ingredient_number = sku_ingredient_pair.ingredient_number
                 if ingredient_number not in report:
                     report[ingredient_number] = 0
-                report[ingredient_number] += float(
-                    sku_ingredient_pair.quantity
-                ) * float(quantity4sku)
+                try:
+                    report[ingredient_number] += float(
+                        sku_ingredient_pair.quantity
+                    ) * float(quantity4sku)
+                except ValueError:
+                    pass
         else:
             break
         cnt += 1
