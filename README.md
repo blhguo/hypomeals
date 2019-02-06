@@ -91,6 +91,24 @@ This file defines some utility functions / decorators related to authentication 
 
 We heavily configured the various loggers used by Django to maximize the information provided for debugging purposes. **The use of `print` statements are therefore discouraged**. Check out `hypomeals/HypoMeals/settings.py` to see how the logs are configured. 
 
+### Code Style
+
+Several languages are used throughout the project. To facilitate understandability, coding styles should be followed. **Reviewers should check whether a commit is properly formatted before approving!**
+
+- Python: we use the [PEP 8](https://www.python.org/dev/peps/pep-0008/) style, with line width set to 88 characters.
+- JavaScript: use of JavaScript should be sparing and with caution. We use the [Google JavaScript Style Guide](https://google.github.io/styleguide/javascriptguide.xml)
+- HTML: you can do whatever you want as long as you can explain it 3 days later.
+
+Regardless of the language you are working on, **good documentation is always encouraged**. If you think you won't understand it if you look at it a year later, put a line or two explaining what's going on.
+
+#### Workflow and Review
+
+When starting a new feature, branch off from `master` with a concise but descriptive name, e.g., `templates`. If the branch name contains more than 1 word, it should be delimited by hyphens (`-`), for example, `sku-model`. You are free to develop, commit, and push to new branches whenever you need to.
+
+When you think a feature is completed, submit a Merge Request to the `master` branch on GitLab. (Usually, after pushing to the repo, GitLab will print the link for submitting a Merge Ruquest directly. You can also visit the repo on your browser to submit a new Merge Request.) A Merge Request must be approved by **at least one other person**, before it can be merged into master. When submitting the request, describe your changes in a clear manner, e.g. with a bullet list.
+
+**Reviewers:** if you approve something, you're also responsible for it. So be cool, and don't be afraid to reject a merge request if you see something wrong.
+
 ## Getting Started
 
 To get started, first clone the repository onto your computer
@@ -166,21 +184,3 @@ sudo docker-compose up
 **Note:** `sudo` may not be required on Windows or macOS computers.
 
 Once the containers are all set up, visit `https://127.0.0.1` on your host computer. Due to restrictions on Docker containers, it is not possible to set up automatic protocol upgrade to SSL. You must therefore enter `https:` as the protocol name explicitly.
-
-### Code Style
-
-Several languages are used throughout the project. To facilitate understandability, coding styles should be followed. **Reviewers should check whether a commit is properly formatted before approving!**
-
-* Python: we use the [PEP 8](https://www.python.org/dev/peps/pep-0008/) style, with line width set to 88 characters.
-* JavaScript: use of JavaScript should be sparing and with caution. We use the [Google JavaScript Style Guide](https://google.github.io/styleguide/javascriptguide.xml)
-* HTML: you can do whatever you want as long as you can explain it 3 days later.
-
-Regardless of the language you are working on, **good documentation is always encouraged**. If you think you won't understand it if you look at it a year later, put a line or two explaining what's going on.
-
-#### Workflow and Review
-
-When starting a new feature, branch off from `master` with a concise but descriptive name, e.g., `templates`. If the branch name contains more than 1 word, it should be delimited by hyphens (`-`), for example, `sku-model`. You are free to develop, commit, and push to new branches whenever you need to.
-
-When you think a feature is completed, submit a Merge Request to the `master` branch on GitLab. (Usually, after pushing to the repo, GitLab will print the link for submitting a Merge Ruquest directly. You can also visit the repo on your browser to submit a new Merge Request.) A Merge Request must be approved by **at least one other person**, before it can be merged into master. When submitting the request, describe your changes in a clear manner, e.g. with a bullet list.
-
-**Reviewers:** if you approve something, you're also responsible for it. So be cool, and don't be afraid to reject a merge request if you see something wrong.
