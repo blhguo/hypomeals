@@ -116,6 +116,7 @@
   })
 
   $('#add').on('click', function() {
+      const acSkusUrl = $("#acSkusUrl").attr("href");
       let $new_row = $("<div>").attr("class", "form-row")
       let $col1 = $("<div>").attr("class", "col")
       let $col2 = $("<div>").attr("class", "col-md-3")
@@ -125,7 +126,6 @@
       let $clone = $this.clone()
       let name = $clone.attr('name')
       let n = parseInt(name.split('_')[1]) + 1
-      const acSkusUrl = $("#acSkusUrl").attr("href");
 
       sku_name = 'sku_' + n
       $clone.val('')
@@ -180,12 +180,7 @@
 <script>
     $(function() {
         const acSkusUrl = $("#acSkusUrl").attr("href");
-        let $this = $(".sku-list-new")
-        let name = $this.attr('name')
-        let n = parseInt(name.split('_')[1]) - 1
-        for (var i =0; i < n; i++) {
-            registerAutocomplete($("#id_sku_"+String(i)), acSkusUrl);
-        }
+        registerAutocomplete($(".autocomplete"), acSkusUrl);
     })
 </script>
 {% endblock %}
