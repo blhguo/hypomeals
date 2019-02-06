@@ -28,7 +28,7 @@ SECRET_KEY = "v*hru*y3-fk)j!=*qi50y_da^1v^2&32d0^-91o)67u*57hse-"  # noqa
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["web", "127.0.0.1", "localhost", "*"]
+ALLOWED_HOSTS = ["web", "127.0.0.1", "localhost"]
 
 AUTH_USER_MODEL = "meals.User"
 LOGIN_URL = "/accounts/login/"
@@ -51,6 +51,8 @@ GS_DEFAULT_ACL = "publicRead"
 
 # Database
 USE_LOCAL_DB = os.getenv("DJANGO_USE_LOCAL_DB", "0") == "1"
+DB_HOST = os.getenv("DJANGO_DB_HOST", "vcm-4081.vm.duke.edu")
+DB_PORT = os.getenv("DJANGO_DB_PORT", "5432")
 
 # Application definition
 
@@ -104,8 +106,8 @@ DATABASES = {
         "NAME": "postgres",
         "USER": "postgres",
         "PASSWORD": "Hyp0Mea1sR0cks!",
-        "HOST": "127.0.0.1" if USE_LOCAL_DB else "vcm-4081.vm.duke.edu",
-        "PORT": "5432",
+        "HOST": "127.0.0.1" if USE_LOCAL_DB else DB_HOST,
+        "PORT": DB_PORT,
     }
 }
 
