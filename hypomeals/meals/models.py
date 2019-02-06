@@ -99,7 +99,7 @@ class Ingredient(
         return super().save(*args, **kwargs)
 
 
-class Sku(models.Model, utils.ModelFieldsCompareMixin):
+class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutionMixin):
     excluded_fields = ("number",)
 
     name = models.CharField(max_length=32, blank=False)
