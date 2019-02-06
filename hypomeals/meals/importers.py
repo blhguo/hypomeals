@@ -236,7 +236,11 @@ class IngredientImporter(Importer):
     }
 
     def _process_row(self, row, line_num=None):
-        row["Vendor Info"] = Vendor.objects.get_or_create(info=row["Vendor Info"])[0]
+        vendor = Vendor.objects.filter(info=row["Vendor Info"])
+        if vendor.exists():
+            row["Vendor Info"] = vendor[0]
+        else:
+            row["Vendor Info"] = Vendor.objects.create(info=row["Vendor Info"])
         if row["Comment"] is None:
             row["Comment"] = ""
         return row

@@ -1,8 +1,5 @@
-#pylint: disable-msg=protected-access
+# pylint: disable-msg=protected-access
 import logging
-import re
-import zipfile
-from pathlib import Path
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
@@ -18,7 +15,7 @@ from meals.bulk_import import (
     force_save,
 )
 from meals.exceptions import CollisionOccurredException
-from ..forms import ImportCsvForm, ImportZipForm
+from ..forms import ImportForm
 
 IMPORT_PERMISSIONS = (
     "meals.add_sku",
@@ -73,65 +70,30 @@ def _render_collision(collision):
 def import_page(request):
 
     if request.method == "POST":
-        csv_file_form = ImportCsvForm(
+        file_form = ImportForm(
             request.POST, request.FILES, session_key=request.session.session_key
         )
-        zip_file_form = ImportZipForm(request.POST, request.FILES)
-        if csv_file_form.has_changed() and zip_file_form.has_changed():
-            messages.error(
-                request, "You can only upload CSV file(s) or a ZIP file, but not both."
-            )
-            return render(
-                request,
-                template_name="meals/import/import.html",
-                context={
-                    "csv_form": ImportCsvForm(session_key=request.session.session_key),
-                    "zip_form": ImportZipForm(),
-                },
-            )
-        if zip_file_form.has_changed():
-            csv_files = {}
-            if zip_file_form.is_valid():
-                zip_file = zipfile.ZipFile(zip_file_form.cleaned_data["zip"])
-                names = zip_file.namelist()
-
-                for path in names:
-                    name = Path(path).name
-                    if re.match(r"skus(\S)*\.csv", name):
-                        csv_files["skus"] = zip_file.open(path)
-                    elif re.match(r"ingredients(\S)*\.csv", name):
-                        csv_files["ingredients"] = zip_file.open(path)
-                    elif re.match(r"product_lines(\S)*\.csv", name):
-                        csv_files["product_lines"] = zip_file.open(path)
-                    elif re.match(r"formula(\S)*\.csv", name):
-                        csv_files["formulas"] = zip_file.open(path)
-                    else:
-                        logger.warning("Ignored unrecognized path: %s", path)
-                csv_file_form = ImportCsvForm(
-                    request.POST, csv_files, session_key=request.session.session_key
-                )
-        if csv_file_form.has_changed():
+        if file_form.has_changed():
             try:
-                if not csv_file_form.is_valid():
+                if not file_form.is_valid():
                     return render(
                         request,
                         template_name="meals/import/import.html",
-                        context={"csv_form": csv_file_form, "zip_form": zip_file_form},
+                        context={"file_form": file_form},
                     )
             except CollisionOccurredException:
                 redirect("collision")
-            if csv_file_form.imported:
-                return import_success(request, inserted=csv_file_form.cleaned_data)
+            if file_form.imported:
+                return import_success(request, inserted=file_form.cleaned_data)
             return redirect("collision")
 
     clear_transaction(request.session.session_key)
     logger.info("Cleared transaction cache")
-    csv_file_form = ImportCsvForm(session_key=request.session.session_key)
-    zip_file_form = ImportZipForm()
+    file_form = ImportForm(session_key=request.session.session_key)
     return render(
         request,
         template_name="meals/import/import.html",
-        context={"csv_form": csv_file_form, "zip_form": zip_file_form},
+        context={"file_form": file_form},
     )
 
 

@@ -10,87 +10,73 @@
 {%  endif %}
 
 {% block body %}
-    <div class="container m-auto">
-        <div class="alert alert-success my-4">
-            <h3>Import your files below</h3>
-            <p>Select individual CSV files, or a ZIP file containing the CSV files below.</p>
-            <p>Click on the buttons to view examples of each type of file.</p>
-            <div class="w-100 btn-group" role="group">
-                <button class="btn btn-primary w-100 show-example"
-                        data-toggle="collapse"
-                        data-target="#SKU">Example SKU Layout
-                </button>
-                <button class="btn btn-primary w-100 show-example"
-                        data-toggle="collapse"
-                        data-target="#Ingredients">Example Ingredients Layout
-                </button>
-                <button class="btn btn-primary w-100 show-example"
-                        data-toggle="collapse"
-                        data-target="#ProductLines">Example Product Lines Layout
-                </button>
-                <button class="btn btn-primary w-100 show-example"
-                        data-toggle="collapse"
-                        data-target="#Formulas">Example Formula Layout
-                </button>
-            </div>
-        </div>
-
-        <div id="example-tables">
-            {% include 'meals/import/example_tables.html' %}
-        </div>
-        <div class="row">
-        <div class="col-sm-6">
-        <form action="" method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            {% if csv_form.non_field_errors %}
-            <div class="alert alert-danger">
-            <p>Please correct the following errors:</p>
-            {{ csv_form.non_field_errors | linebreaks }}
-            </div>
-            {% endif %}
-            {% for field in csv_form %}
-            <div class="input-group mb-3">
-            <div class="input-group-prepend">
-                <span class="input-group-text">{{ field.label }}</span>
-            </div>
-            <div class="custom-file">
-                {{ field }}
-                <label for="{{ field.id_for_label }}" class="custom-file-label">{{ field.label }}</label>
-                {% if field.errors %}
-                <small>{{ field.errors }}</small>
-                {% endif %}
-            </div>
-            </div>
-            {% endfor %}
-            <input type="submit" class="btn btn-primary" value="Submit CSV Files">
-        </form>
-        </div>
-        <div class="col-sm-6 align-middle h-100">
-        <form action="" method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <table class="table">
-            <tbody>
-            {% for field in zip_form %}
-            <div class="input-group mb-3">
-            <div class="input-group-prepend">
-                <span class="input-group-text">{{ field.label }}</span>
-            </div>
-            <div class="custom-file">
-                {{ field }}
-                <label for="{{ field.id_for_label }}" class="custom-file-label">{{ field.label }}</label>
-                {% if field.errors %}
-                <small>{{ field.errors }}</small>
-                {% endif %}
-            </div>
-            </div>
-            {% endfor %}
-            </tbody>
-            </table>
-            <input type="submit" class="btn btn-primary" value="Submit ZIP File">
-        </form>
-        </div>
+<div class="container m-auto">
+    <div class="alert alert-success my-4">
+        <h3>Import Files</h3>
+        <p>This system uses the 'Batched Mode' for import. You may select
+            individual CSV files, or a ZIP file containing the CSV files below.</p>
+        <p>The CSV filenames must match the prefixes.</p>
+        <p>You file(s) will be validated prior to being imported. If errors
+            are detected, the system will automatically roll back to the state
+            before any import has happened.</p>
+        <p>If there are conflicting entries as those in the database, you will
+            be given a chance to approve or abort the import, on a separate page.
+            If the import succeeds, a count of all imported data will be displayed.</p>
+        <p>Click on the buttons to view examples of each type of file.</p>
+        <div class="w-100 btn-group" role="group">
+            <button class="btn btn-primary w-100 show-example"
+                    data-toggle="collapse"
+                    data-target="#SKU">Example SKU Layout
+            </button>
+            <button class="btn btn-primary w-100 show-example"
+                    data-toggle="collapse"
+                    data-target="#Ingredients">Example Ingredients Layout
+            </button>
+            <button class="btn btn-primary w-100 show-example"
+                    data-toggle="collapse"
+                    data-target="#ProductLines">Example Product Lines Layout
+            </button>
+            <button class="btn btn-primary w-100 show-example"
+                    data-toggle="collapse"
+                    data-target="#Formulas">Example Formula Layout
+            </button>
         </div>
     </div>
+
+    <div id="example-tables">
+        {% include 'meals/import/example_tables.html' %}
+    </div>
+    <div class="row">
+    <div class="col-sm-12 mb-4">
+    <form action="" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {% if file_form.non_field_errors %}
+        <div class="alert alert-danger">
+        <p>Please correct the following errors and re-upload your file(s):</p>
+        {{ file_form.non_field_errors | linebreaks }}
+        </div>
+        {% endif %}
+        {% for field in file_form %}
+        <div class="input-group mb-3">
+        <div class="input-group-prepend">
+            <span class="input-group-text">{{ field.label }}</span>
+        </div>
+        <div class="custom-file">
+            {{ field }}
+            <label for="{{ field.id_for_label }}" class="custom-file-label">{{ field.label }}</label>
+        </div>
+        <div class="input-group">
+        {% if field.errors %}
+        <br/><small>{{ field.errors }}</small>
+        {% endif %}
+        </div>
+        </div>
+        {% endfor %}
+    <input type="submit" class="btn btn-primary" value="Submit Files">
+    </form>
+    </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scriptend %}

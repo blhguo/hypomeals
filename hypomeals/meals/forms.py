@@ -1,11 +1,14 @@
 # pylint: disable-msg=protected-access
 import logging
 import re
+import zipfile
 from collections import OrderedDict
+from pathlib import Path
 
 from django import forms
 from django.core.exceptions import FieldDoesNotExist
 from django.core.exceptions import ValidationError
+from django.core.files import File
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, BLANK_CHOICE_DASH
@@ -131,13 +134,13 @@ class SkuQuantityForm(forms.ModelForm):
         fields = ["form_name"]
 
 
-class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
+class ImportForm(forms.Form, BootstrapFormControlMixin):
     skus = forms.FileField(
         required=False,
         label="SKU",
         validators=[
             FilenameRegexValidator(
-                regex=r"skus(\S)*\.csv",
+                regex=r".*skus(\S)*\.csv",
                 message="Filename mismatch. Expected: "
                 "skusxxx.csv where xxx is any characters.",
                 code="filename-mismatch",
@@ -149,7 +152,7 @@ class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
         label="Ingredients",
         validators=[
             FilenameRegexValidator(
-                regex=r"ingredients(\S)*\.csv",
+                regex=r".*ingredients(\S)*\.csv",
                 message="Filename mismatch. Expected: "
                 "ingredientsxxx.csv where xxx is any characters.",
                 code="filename-mismatch",
@@ -161,7 +164,7 @@ class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
         label="Product Lines",
         validators=[
             FilenameRegexValidator(
-                regex=r"product_lines(\S)*\.csv",
+                regex=r".*product_lines(\S)*\.csv",
                 message="Filename mismatch. Expected: "
                 "product_linesxxx.csv where xxx is any characters.",
                 code="filename-mismatch",
@@ -173,7 +176,7 @@ class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
         label="Formulas",
         validators=[
             FilenameRegexValidator(
-                regex=r"formulas(\S)*\.csv",
+                regex=r".*formulas(\S)*\.csv",
                 message="Filename mismatch. Expected: "
                 "formulaxxx.csv where xxx is any characters.",
                 code="filename-mismatch",
@@ -181,21 +184,60 @@ class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
         ],
     )
 
+    zip = forms.FileField(required=False, label="ZIP File")
+
     def __init__(self, *args, session_key, **kwargs):
         self._imported = False
         self.session_key = session_key
         super().__init__(*args, **kwargs)
 
+    def _unzip(self):
+        zip_file = zipfile.ZipFile(self.cleaned_data["zip"])
+        names = zip_file.namelist()
+        csv_files = {}
+        for path in names:
+            name = Path(path).name
+            if re.match(r"skus(\S)*\.csv", name):
+                file = File(file=zip_file.open(path), name=name)
+                csv_files["skus"] = file
+                logger.info("Matched file %s for skus", path)
+            elif re.match(r"ingredients(\S)*\.csv", name):
+                file = File(file=zip_file.open(path), name=name)
+                csv_files["ingredients"] = file
+                logger.info("Matched file %s for ingredients", path)
+            elif re.match(r"product_lines(\S)*\.csv", name):
+                file = File(file=zip_file.open(path), name=name)
+                csv_files["product_lines"] = file
+                logger.info("Matched file %s for product_lines", path)
+            elif re.match(r"formula(\S)*\.csv", name):
+                file = File(file=zip_file.open(path), name=name)
+                csv_files["formulas"] = file
+                logger.info("Matched file %s for formulas", path)
+            else:
+                logger.warning("Ignored unrecognized path: %s", path)
+        return csv_files
+
     def clean(self):
         if not any(self.cleaned_data.values()):
             raise ValidationError(
-                "You must upload at least one CSV file. "
+                "You must upload at least one CSV file or a ZIP file. "
                 "Make sure the filenames are correct."
             )
+        csv_files = {}
+        for file_type, file in self.cleaned_data.items():
+            if file_type != "zip":
+                csv_files[file_type] = file
+        if self.cleaned_data["zip"]:
+            if any(csv_files.values()):
+                raise ValidationError(
+                    "You can either submit individual CSV files, or a single ZIP file, "
+                    "but not both."
+                )
 
+            csv_files = self._unzip()
         try:
             inserted = bulk_import.process_csv_files(
-                self.cleaned_data, self.session_key
+                csv_files, self.session_key
             )
             if inserted:
                 self._imported = True
@@ -209,11 +251,6 @@ class ImportCsvForm(forms.Form, BootstrapFormControlMixin):
     @property
     def imported(self):
         return self._imported
-
-
-class ImportZipForm(forms.Form, BootstrapFormControlMixin):
-    zip = forms.FileField(required=False, label="ZIP File")
-
 
 
 def get_ingredient_choices():

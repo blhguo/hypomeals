@@ -38,12 +38,12 @@ TOPOLOGICAL_ORDER = ["product_lines", "ingredients", "skus", "formulas"]
 TRANSACTION_CACHE = TTLCache(maxsize=10, ttl=1800)
 
 
-def _get_reader(file, file_type):
+def _get_reader(stream, file_type):
     header_format = HEADERS[file_type]
-    lines = file.read().decode("UTF-8").splitlines()
+    lines = stream.read().decode("UTF-8").splitlines()
     if lines[0] == header_format:
         return csv.DictReader(lines)
-    logger.error(f"File {file.name} of type {file_type} does not have a valid header")
+    logger.error(f"File {stream.name} of type {file_type} does not have a valid header")
     raise RuntimeError("Header format mismatch")
 
 
@@ -53,24 +53,23 @@ def process_csv_files(files, session_key):
     inserted = defaultdict(lambda: 0)
     for file_type in TOPOLOGICAL_ORDER:
         if file_type in files:
-
-            file = files[file_type]
-            if not file:
+            stream = files[file_type]
+            if not stream:
                 continue
             importer = IMPORTERS[file_type]()
-            logger.info("Processing %s: %s", file_type, file)
+            logger.info("Processing %s: %s", file_type, stream)
             try:
-                reader = _get_reader(file, file_type)
+                reader = _get_reader(stream, file_type)
             except Exception:
                 raise ValidationError(
-                    "Cannot parse file %(filename)s.", params={"filename": file.name}
+                    "Cannot parse file %(filename)s.", params={"filename": stream.name}
                 )
-            instances, collisions = importer.do_import(reader, filename=file.name)
+            instances, collisions = importer.do_import(reader, filename=stream.name)
             inserted[file_type] = len(instances)
             if collisions:
                 if session_key not in TRANSACTION_CACHE:
                     TRANSACTION_CACHE[session_key] = {}
-                TRANSACTION_CACHE[session_key][file.name] = (instances, collisions)
+                TRANSACTION_CACHE[session_key][stream.name] = (instances, collisions)
                 raise CollisionOccurredException
 
     return inserted
