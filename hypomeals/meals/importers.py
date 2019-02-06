@@ -116,9 +116,6 @@ class Importer(ABC):
         """
         primary_key_value = getattr(instance, self.primary_key.name)
         model = instance.__class__
-        primary_match = model.objects.filter(
-            **{self.primary_key.name: primary_key_value}
-        )
         matches = {}
         for field_name, field in self.fields.items():
             if field.primary_key:
@@ -136,7 +133,13 @@ class Importer(ABC):
             raise AmbiguousRecordException(
                 f"{filename}:{line_num}: Ambiguous record detected.", instance, matches
             )
-        actual_match = primary_match[0] if primary_match.exists() else None
+        if primary_key_value:
+            primary_match = model.objects.filter(
+                **{self.primary_key.name: primary_key_value}
+            )
+            actual_match = primary_match[0] if primary_match.exists() else None
+        else:
+            actual_match = None
         if len(matches) == 1:
             if not actual_match:
                 raise AmbiguousRecordException(

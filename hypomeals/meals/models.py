@@ -3,6 +3,7 @@ import re
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db.models import Max
 from django.utils import timezone
 from django.utils.text import Truncator
 
@@ -103,7 +104,7 @@ class Ingredient(
     def save(self, *args, **kwargs):
         if not self.number:
             self.number = utils.next_alphanumeric_str(
-                str(Ingredient.objects.latest("number").number)
+                str(Ingredient.objects.aggregate(Max("number"))["number__max"])
             )
         return super().save(*args, **kwargs)
 
@@ -191,7 +192,7 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
 
     def save(self, *args, **kwargs):
         if not self.number:
-            self.number = Sku.objects.latest("number").number + 1
+            self.number = Sku.objects.aggregate(Max("number"))["number__max"] + 1
         return super().save(*args, **kwargs)
 
 
