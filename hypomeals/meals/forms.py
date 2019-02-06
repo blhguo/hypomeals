@@ -27,7 +27,6 @@ class SkuQuantityForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # self.fields["user"] =
         self.fields["form_name"].widget.attrs["class"] = "form-control"
         if not args:
             self.initial["form_name"] = ""
@@ -87,8 +86,6 @@ class SkuQuantityForm(forms.ModelForm):
 
                 if sku in skus:
                     self.add_error(sku_name, "Duplicate")
-                elif quantity in quantities:
-                    self.add_error(quantity_name, "Duplicate")
                 else:
                     skus.add(sku)
                     quantities.add(quantity)
@@ -102,7 +99,6 @@ class SkuQuantityForm(forms.ModelForm):
         if self.is_valid():
             sq = self.instance
             sq.form_name = self.cleaned_data["form_name"]
-            print(sq.form_name)
             sq.user = request.user
             sq.file.save("temp", file)
             sq.save()
