@@ -17,7 +17,7 @@ from django.views.decorators.http import require_POST
 from meals import auth
 from meals.forms import IngredientFilterForm, EditIngredientForm
 from meals.models import Ingredient
-from ..bulk_export import export_ingredients
+from ..bulk_export import export_ingredients, generate_ingredient_dependency_report
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 def ingredient(request):
     start = time.time()
     export = request.GET.get("export", "0") == "1"
+    report = request.GET.get("report", "0") == "1"
     if request.method == "POST":
         form = IngredientFilterForm(request.POST)
         if form.is_valid():
@@ -42,6 +43,8 @@ def ingredient(request):
     end = time.time()
     if export:
         return export_ingredients(ingredients.object_list)
+    if report:
+        return generate_ingredient_dependency_report(ingredients.object_list)
     return render(
         request,
         template_name="meals/ingredients/ingredient.html",

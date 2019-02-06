@@ -16,7 +16,7 @@ from meals.models import (
     ProductLine,
     ManufactureGoal,
     ManufactureDetail,
-)
+    Ingredient)
 from meals.models import SkuIngredient
 
 logger = logging.getLogger(__name__)
@@ -111,14 +111,15 @@ def generate_csv_file(entries):
     tf = tempfile.mktemp()
     with open(tf, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["SKU Name", "SKU Quantity"])
+        writer.writerow(["SKU#", "SKU Name", "SKU Quantity"])
         while True:
             sku_index = "sku_" + str(cnt)
             quantity_index = "quantity_" + str(cnt)
             if sku_index in entries and quantity_index in entries:
                 sku_name = entries[sku_index]
+                sku = Sku.objects.filter(name=sku_name)[0]
                 quantity4sku = entries[quantity_index]
-                writer.writerow([sku_name, quantity4sku])
+                writer.writerow([sku.number, sku_name, quantity4sku])
             else:
                 break
             cnt += 1
@@ -160,11 +161,12 @@ def download_calculation(request):
     tf = tempfile.mktemp()
     with open(tf, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["Ingredient Name", "Ingredient Quantity"])
+        writer.writerow(["Ingr#", "Ingredient Name", "Ingredient Quantity"])
         for k, v in request.POST.items():
             if k == "csrfmiddlewaretoken":
                 continue
-            writer.writerow([k, v])
+            ingr = Ingredient.objects.get(name=k)
+            writer.writerow([ingr.number, k, v])
     file = File(open(tf, "rb"))
     response = HttpResponse(file)
     response["content_type"] = "text/csv"
@@ -181,14 +183,15 @@ def generate_calculation_pdf(request):
     elements = []
     n = len(request.POST)
     data = []
-    data.append(["Ingredient Name", "Ingredient Quantity"])
+    data.append(["Ingr#", "Ingredient Name", "Ingredient Quantity"])
     cnt = 0
     for k, v in request.POST.items():
         if k == "csrfmiddlewaretoken":
             continue
+        ingr = Ingredient.objects.get(name=k)
         cnt += 1
-        data.append([k, v])
-    t = Table(data, 2 * [3 * inch], n * [0.4 * inch])
+        data.append([ingr.number, k, v])
+    t = Table(data, 3 * [2 * inch], n * [0.4 * inch])
     t.setStyle(
         TableStyle(
             [

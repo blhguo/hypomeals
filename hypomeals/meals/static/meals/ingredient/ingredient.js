@@ -11,6 +11,7 @@ $(function() {
     const pageNumInputId = $("#pageNumInputId").val();
     const skusInputId = $("#skusInputId").val();
     const exportButton = $("#exportButton");
+    const reportButton = $("#reportButton");
 
     $("[data-toggle='tooltip']").tooltip();
 
@@ -78,6 +79,15 @@ $(function() {
     exportButton.on("click", function() {
         const original = ingredientFilterForm.attr("action");
         ingredientFilterForm.attr("action", original + "?export=1")
+            .submit()
+            .attr("action", original);
+
+        return false;
+    });
+
+    reportButton.click(function() {
+        const original = ingredientFilterForm.attr("action");
+        ingredientFilterForm.attr("action", original + "?report=1")
             .submit()
             .attr("action", original);
 

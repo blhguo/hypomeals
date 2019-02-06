@@ -165,7 +165,41 @@ def export_ingredients(ingredients):
     :return: an HttpResponse containing the exported CSV file
     """
     directory = TEMPDIR / utils.make_token_with_timestamp("ingredients")
-    data = _export_objs(directory, "ingredients", ingredients)
+    directory.mkdir(parents=True, exist_ok=True)
+    logger.info("Will use directory %s", directory)
+    file = directory / FILE_TYPE_TO_FILENAME["ingredients"]
+    file.touch(exist_ok=True)
+    logger.info("Will export ingredients to %s", file)
+    data = _export_objs(file.open("r+"), "ingredients", ingredients)
     response = HttpResponse(data.read(), content_type="text/csv")
     response["Content-Disposition"] = "attachment; filename=ingredients.csv"
+    return response
+
+
+def generate_ingredient_dependency_report(ingredients):
+    directory = TEMPDIR / utils.make_token_with_timestamp("report")
+    directory.mkdir(parents=True, exist_ok=True)
+    logger.info("Will use directory %s", directory)
+    file = directory / "report.csv"
+    file.touch(exist_ok=True)
+    logger.info("Will write to file %s", file)
+    stream = file.open("r+", newline="")
+    writer = csv.writer(stream)
+    writer.writerow(["Ingr#", "Ingredient Name", "SKU#", "SKU Name"])
+    for ingredient in ingredients:
+        formulas = SkuIngredient.objects.filter(ingredient_number=ingredient)
+        for formula in formulas:
+            writer.writerow(
+                [
+                    ingredient.number,
+                    ingredient.name,
+                    formula.sku_number.number,
+                    formula.sku_number.name,
+                ]
+            )
+
+    stream.seek(0)
+    response = HttpResponse(stream.read())
+    response["content_type"] = "text/csv"
+    response["Content-Disposition"] = "attachment;filename=report.csv"
     return response
