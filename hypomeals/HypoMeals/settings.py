@@ -36,7 +36,7 @@ LOGIN_REDIRECT_URL = "/"
 
 # File Storage on Google Cloud
 
-GOOGLE_APPLICATION_CREDENTIALS = os.path.join(BASE_DIR, "hypomeals-a5a72f65b399.json")
+GOOGLE_APPLICATION_CREDENTIALS = os.path.join(BASE_DIR, "hypomeals-2f7acfcfe59c.json")
 DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
 GS_BUCKET_NAME = "hypomeals"
 if os.path.exists(GOOGLE_APPLICATION_CREDENTIALS):
