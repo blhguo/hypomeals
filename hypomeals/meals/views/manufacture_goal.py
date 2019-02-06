@@ -146,7 +146,10 @@ def download_goal(request):
     goal = ManufactureGoal.objects.filter(form_name=request.POST["form_name"]).order_by(
         "-save_time"
     )
-    response = HttpResponse(goal[0].file)
+    if goal:
+        response = HttpResponse(goal[0].file)
+    else:
+        response = HttpResponse()
     response["content_type"] = "text/csv"
     response["Content-Disposition"] = "attachment;filename=manufacture_goal.csv"
     return response
@@ -201,7 +204,7 @@ def generate_calculation_pdf(request):
 
 @login_required
 def show_all_goals(request):
-    all_goals = ManufactureGoal.objects.filter(user=request.user)
+    all_goals = ManufactureGoal.objects.filter(user=request.user).order_by("-save_time")
     return render(
         request,
         template_name="meals/show_all_goals.html",
