@@ -7,12 +7,14 @@ services:
     #     environment:
     #         POSTGRES_PASSWORD: "Hyp0Mea1sR0cks!"
     #     volumes:
-    #         - ./data:/var/lib/postgresql/data
+    #         - ./data/db:/var/lib/postgresql/data
     web-init:
         build: ./hypomeals
         command: /code/initserver.sh
         user: nobody
         environment:
+            - "DJANGO_SETTINGS_MODULE=HypoMeals.settings_prod"
+            # - "DJANGO_DB_HOST=db"
             - "DJANGO_DB_PORT=5432"
         volumes:
             - ./hypomeals:/code
@@ -21,6 +23,8 @@ services:
         build: ./hypomeals
         user: nobody
         environment:
+            - "DJANGO_SETTINGS_MODULE=HypoMeals.settings_prod"
+            # - "DJANGO_DB_HOST=db"
             - "DJANGO_DB_PORT=5432"
         command: /code/runserver.sh
         volumes:
@@ -30,7 +34,6 @@ services:
             - "8000"
         depends_on:
             - web-init
-            - db
     nginx:
         image: nginx:latest
         ports:
