@@ -19,9 +19,11 @@ else:
     superuser.save()
 view_only_user = User.objects.get_or_create(
     username="viewonly",
-    first_name="ViewOnly",
-    last_name="Perm",
-    email="abc@example.com",
+    defaults={
+        "first_name": "ViewOnly",
+        "last_name": "Perm",
+        "email": "abc@example.com",
+    },
 )[0]
 view_only_user.set_password(user_password)
 
