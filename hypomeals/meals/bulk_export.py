@@ -152,7 +152,9 @@ def export_skus(skus, include_formulas=False, include_product_lines=False):
         response = HttpResponse(byte_data.getvalue(), content_type="application/zip")
         response["Content-Disposition"] = "attachment; filename=archive.zip"
     else:
-        response = HttpResponse(exported_files[0].read(), content_type="text/csv")
+        response = HttpResponse(
+            exported_files[0].open("r").read(), content_type="text/csv"
+        )
         response["Content-Disposition"] = "attachment; filename=skus.csv"
 
     return response

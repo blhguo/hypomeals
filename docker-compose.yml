@@ -1,30 +1,31 @@
 version: '3'
 
 services:
-    db:
-        image: postgres
-        environment:
-            POSTGRES_PASSWORD: "Hyp0Mea1sR0cks!"
-        volumes:
-            - ./data:/var/lib/postgresql/data
+    # We are using a remote DB
+    # db:
+    #     image: postgres
+    #     environment:
+    #         POSTGRES_PASSWORD: "Hyp0Mea1sR0cks!"
+    #     volumes:
+    #         - ./data:/var/lib/postgresql/data
     web-init:
         build: ./hypomeals
         command: /code/initserver.sh
         user: nobody
         environment:
-            - "DJANGO_DB_HOST=db"
             - "DJANGO_DB_PORT=5432"
         volumes:
             - ./hypomeals:/code
+            - ./static:/srv/static
     web:
         build: ./hypomeals
         user: nobody
         environment:
-            - "DJANGO_DB_HOST=db"
             - "DJANGO_DB_PORT=5432"
         command: /code/runserver.sh
         volumes:
             - ./hypomeals:/code
+            - ./static:/srv/static
         expose:
             - "8000"
         depends_on:
@@ -37,5 +38,7 @@ services:
         volumes:
             - ./nginx/config:/etc/nginx/conf.d
             - ./nginx/certs:/etc/nginx/certs
+            - ./static:/srv/static/
+            - ./hypomeals/logs/:/var/log/nginx/
         depends_on:
             - web

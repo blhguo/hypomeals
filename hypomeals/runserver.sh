@@ -4,6 +4,6 @@ sleep 5
 
 while [ "1"=="1" ]
 do    
-    python3 manage.py runserver 0.0.0.0:8000
+    gunicorn -b="0:8000" --forwarded-allow-ips="*" HypoMeals.wsgi
     sleep 1
 done

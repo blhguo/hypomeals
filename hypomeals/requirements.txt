@@ -11,3 +11,4 @@ prospector
 python-magic
 reportlab
 cachetools
+gunicorn
