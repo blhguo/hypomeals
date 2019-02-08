@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 
 function init {
     python3 manage.py makemigrations --no-input
