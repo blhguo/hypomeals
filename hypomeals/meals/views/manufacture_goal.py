@@ -14,20 +14,20 @@ from meals.forms import SkuQuantityForm
 from meals.models import (
     Sku,
     ProductLine,
-    ManufactureGoal,
-    ManufactureDetail,
+    Goal,
+    GoalItem,
     Ingredient)
-from meals.models import SkuIngredient
+from meals.models import FormulaIngredient
 
 logger = logging.getLogger(__name__)
 
 
 def find_goal(goal_id, user):
-    goal = ManufactureGoal.objects.filter(pk=goal_id)
+    goal = Goal.objects.filter(pk=goal_id)
     goal = goal[0]
-    sku_quantities = ManufactureDetail.objects.filter(form_name=goal)
+    sku_quantities = GoalItem.objects.filter(name=goal)
     request = {}
-    request["form_name"] = goal.form_name
+    request["name"] = goal.name
     skus = set()
     for index, sku_quantity in enumerate(sku_quantities):
         sku_name = "sku_" + str(index)
@@ -49,8 +49,8 @@ def show_one_goal(request, goal_id=-1):
         if form.is_valid():
             file = generate_csv_file(request.POST)
             form.save_file(request, file)
-            form_name = request.POST["form_name"]
-            message = "You form has been saved successfully to %s" % (form_name,)
+            name = request.POST["name"]
+            message = "You form has been saved successfully to %s" % (name,)
         else:
             errors = form.errors
     else:
@@ -87,7 +87,7 @@ def generate_report(request):
             if sku is None:
                 cnt += 1
                 continue
-            sku_ingredient_pairs = SkuIngredient.objects.filter(sku_number=sku)
+            sku_ingredient_pairs = FormulaIngredient.objects.filter(sku_number=sku)
             for sku_ingredient_pair in sku_ingredient_pairs:
                 ingredient_number = sku_ingredient_pair.ingredient_number
                 if ingredient_number not in report:
@@ -133,18 +133,18 @@ def save_goal(request):
     form = SkuQuantityForm(request.POST)
     form.clean()
     form.save_file(request, file)
-    form_name = request.POST["form_name"]
+    name = request.POST["name"]
     return render(
         request,
         template_name="meals/save_succeed.html",
-        context={"form_name": form_name},
+        context={"name": name},
     )
 
 
 @login_required
 def download_goal(request):
     save_goal(request)
-    goal = ManufactureGoal.objects.filter(form_name=request.POST["form_name"]).order_by(
+    goal = Goal.objects.filter(name=request.POST["name"]).order_by(
         "-save_time"
     )
     if goal:
@@ -207,7 +207,7 @@ def generate_calculation_pdf(request):
 
 @login_required
 def show_all_goals(request):
-    all_goals = ManufactureGoal.objects.filter(user=request.user).order_by("-save_time")
+    all_goals = Goal.objects.filter(user=request.user).order_by("-save_time")
     return render(
         request,
         template_name="meals/show_all_goals.html",

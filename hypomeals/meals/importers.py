@@ -14,7 +14,7 @@ from meals.exceptions import (
     CollisionException,
     DuplicateException,
 )
-from meals.models import Sku, ProductLine, Upc, Vendor, Ingredient, SkuIngredient
+from meals.models import Sku, ProductLine, Upc, Vendor, Ingredient, FormulaIngredient
 
 logger = logging.getLogger(__name__)
 
@@ -255,7 +255,7 @@ class FormulaImporter(Importer):
         "ingredient_number": "Ingr#",
         "quantity": "Quantity",
     }
-    model = SkuIngredient
+    model = FormulaIngredient
     model_name = "Formula"
 
     def _process_row(self, row, line_num=None):
@@ -289,7 +289,7 @@ class FormulaImporter(Importer):
 
     def _post_process(self):
         sku_numbers = {formula.sku_number.number for formula in self.instances}
-        SkuIngredient.objects.filter(sku_number__in=sku_numbers).delete()
+        FormulaIngredient.objects.filter(sku_number__in=sku_numbers).delete()
         for instance in self.instances:
             instance.save()
 

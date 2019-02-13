@@ -7,10 +7,10 @@ from .models import (
     Vendor,
     Ingredient,
     Sku,
-    SkuIngredient,
-    ManufactureGoal,
-    ManufactureDetail,
-)
+    FormulaIngredient,
+    Goal,
+    GoalItem,
+    Formula, SkuManufacturingLine, ManufacturingLine, Unit)
 
 # Register your models here.
 admin.site.register(User)
@@ -19,6 +19,10 @@ admin.site.register(ProductLine)
 admin.site.register(Vendor)
 admin.site.register(Ingredient)
 admin.site.register(Sku)
-admin.site.register(SkuIngredient)
-admin.site.register(ManufactureGoal)
-admin.site.register(ManufactureDetail)
+admin.site.register(FormulaIngredient)
+admin.site.register(Goal)
+admin.site.register(GoalItem)
+admin.site.register(Formula)
+admin.site.register(SkuManufacturingLine)
+admin.site.register(ManufacturingLine)
+admin.site.register(Unit)

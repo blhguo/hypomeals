@@ -11,13 +11,13 @@ from django.views.decorators.http import require_GET
 from meals import auth
 from meals.forms import FormulaFormset
 from meals.models import Sku
-from meals.models import SkuIngredient
+from meals.models import FormulaIngredient
 
 logger = logging.getLogger(__name__)
 
 
 @login_required
-@permission_required("meals.view_skuingredient", raise_exception=True)
+@permission_required("meals.view_formulaingredient", raise_exception=True)
 def edit_formula(request, sku_number):
     sku = get_object_or_404(Sku, pk=sku_number)
     in_flow = request.GET.get("in_flow", "0") == "1"
@@ -28,17 +28,17 @@ def edit_formula(request, sku_number):
             logger.info("Cleaned data: %s", formset.cleaned_data)
             saved = []
             with transaction.atomic():
-                SkuIngredient.objects.filter(sku_number=sku).delete()
+                FormulaIngredient.objects.filter(sku_number=sku).delete()
                 for form, data in zip(formset.forms, formset.cleaned_data):
                     if "DELETE" not in data or data["DELETE"]:
                         continue
                     saved.append(form.save(commit=False))
                 if saved:
-                    SkuIngredient.objects.bulk_create(saved)
+                    FormulaIngredient.objects.bulk_create(saved)
             messages.info(request, f"Successfully inserted {len(saved)} ingredients.")
             return redirect("sku")
     else:
-        formulas = SkuIngredient.objects.filter(sku_number=sku_number)
+        formulas = FormulaIngredient.objects.filter(sku_number=sku_number)
         initial_data = [
             {"ingredient": formula.ingredient_number.name, "quantity": formula.quantity}
             for formula in formulas
@@ -53,12 +53,12 @@ def edit_formula(request, sku_number):
 
 @login_required
 @require_GET
-@auth.permission_required_ajax(perm="meals.view_skuingredient")
+@auth.permission_required_ajax(perm="meals.view_formulaingredient")
 def view_formula(request, sku_number):
     queryset = Sku.objects.filter(pk=sku_number)
     if queryset.exists():
         sku = queryset[0]
-        formulas = SkuIngredient.objects.filter(sku_number=sku)
+        formulas = FormulaIngredient.objects.filter(sku_number=sku)
         resp = render_to_string(
             template_name="meals/formula/view_formula.html",
             context={"formulas": formulas},

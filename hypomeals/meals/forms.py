@@ -18,9 +18,9 @@ from django.utils import timezone
 from meals import bulk_import
 from meals import utils
 from meals.exceptions import CollisionOccurredException
-from meals.models import ManufactureDetail, ManufactureGoal
+from meals.models import GoalItem, Goal
 from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor
-from meals.models import SkuIngredient
+from meals.models import FormulaIngredient
 from meals.utils import BootstrapFormControlMixin, FilenameRegexValidator
 
 logger = logging.getLogger(__name__)
@@ -30,18 +30,18 @@ COMMA_SPLIT_REGEX = re.compile(r",\s*")
 
 
 class SkuQuantityForm(forms.ModelForm):
-    form_name = forms.CharField(required=True)
+    name = forms.CharField(required=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["form_name"].widget.attrs["class"] = "form-control"
+        self.fields["name"].widget.attrs["class"] = "form-control"
         if not args:
-            self.initial["form_name"] = ""
+            self.initial["name"] = ""
             self.initial["save_time"] = timezone.now()
             number = 1
         else:
             form_content = args[0]
-            self.initial["form_name"] = form_content["form_name"]
+            self.initial["name"] = form_content["name"]
             self.initial["save_time"] = timezone.now()
             number = self.get_entry_number(args[0])
         for i in range(number):
@@ -105,14 +105,12 @@ class SkuQuantityForm(forms.ModelForm):
     def save_file(self, request, file):
         if self.is_valid():
             sq = self.instance
-            sq.form_name = self.cleaned_data["form_name"]
+            sq.name = self.cleaned_data["name"]
             sq.user = request.user
             sq.file.save("temp", file)
             sq.save()
             for sku, quantity in self.cleaned_data["sku_quantity"]:
-                ManufactureDetail.objects.create(
-                    form_name=sq, sku=sku, quantity=quantity
-                )
+                GoalItem.objects.create(name=sq, sku=sku, quantity=quantity)
         else:
             print(self.errors)
 
@@ -130,8 +128,8 @@ class SkuQuantityForm(forms.ModelForm):
         return cnt
 
     class Meta:
-        model = ManufactureGoal
-        fields = ["form_name"]
+        model = Goal
+        fields = ["name"]
 
 
 class ImportForm(forms.Form, BootstrapFormControlMixin):
@@ -236,9 +234,7 @@ class ImportForm(forms.Form, BootstrapFormControlMixin):
 
             csv_files = self._unzip()
         try:
-            inserted = bulk_import.process_csv_files(
-                csv_files, self.session_key
-            )
+            inserted = bulk_import.process_csv_files(csv_files, self.session_key)
             if inserted:
                 self._imported = True
         except CollisionOccurredException:
@@ -303,7 +299,9 @@ class CsvModelAttributeField(forms.CharField):
 class IngredientFilterForm(forms.Form):
     NUM_PER_PAGE_CHOICES = [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
 
-    page_num = forms.IntegerField(widget=forms.HiddenInput(), initial=1, required=False)
+    page_num = forms.IntegerField(
+        widget=forms.HiddenInput(), initial=1, min_value=1, required=False
+    )
     num_per_page = forms.ChoiceField(choices=NUM_PER_PAGE_CHOICES, required=True)
     sort_by = forms.ChoiceField(choices=Ingredient.get_sortable_fields, required=True)
     keyword = forms.CharField(required=False, max_length=100)
@@ -448,7 +446,9 @@ class EditIngredientForm(forms.ModelForm):
 class SkuFilterForm(forms.Form, utils.BootstrapFormControlMixin):
     NUM_PER_PAGE_CHOICES = [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
 
-    page_num = forms.IntegerField(widget=forms.HiddenInput(), initial=1, required=False)
+    page_num = forms.IntegerField(
+        widget=forms.HiddenInput(), initial=1, min_value=1, required=False
+    )
     num_per_page = forms.ChoiceField(choices=NUM_PER_PAGE_CHOICES, required=True)
     sort_by = forms.ChoiceField(choices=Sku.get_sortable_fields, required=True)
     keyword = forms.CharField(required=False, max_length=100)
@@ -651,7 +651,7 @@ class FormulaForm(forms.Form, utils.BootstrapFormControlMixin):
         return ingr[0]
 
     def save(self, commit=True):
-        instance = SkuIngredient(
+        instance = FormulaIngredient(
             sku_number=self.sku,
             ingredient_number=self.cleaned_data["ingredient"],
             quantity=self.cleaned_data["quantity"],
