@@ -118,7 +118,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+./lib/
 lib64/
 parts/
 sdist/
@@ -220,7 +220,7 @@ dmypy.json
 [Ss]hare
 [Bb]in
 [Ii]nclude
-[Ll]ib
+./[Ll]ib
 [Ll]ib64
 [Ll]ocal
 pyvenv.cfg

@@ -31,20 +31,7 @@ $(function() {
         skuCheckboxes.trigger("change");
     });
 
-    removeButton.on("click", function(ev) {
-        let toRemove = [];
-        skuCheckboxes.each(function(i, cb) {
-            if (cb.checked) {
-                toRemove.push(cb.id);
-            }
-        });
-        console.log(toRemove);
-        if (!confirm(
-            `Are you sure you want to remove ${toRemove.length} SKU(s)?\n` +
-            "This cannot be undone."
-        )) {
-            return;
-        }
+    function removeSkus(toRemove) {
         let csrf_token = $("input[name=csrfmiddlewaretoken]").val();
         $.ajax(removeSkuUrl, {
             type: "POST",
@@ -58,10 +45,26 @@ $(function() {
                 return;
             }
             if ("resp" in data) {
-                alert(data.resp);
+                makeToast("Success", data.resp, -1)
+                    .done(refreshPage);
             }
-            refreshPage();
         });
+    }
+
+    removeButton.on("click", function(ev) {
+        let toRemove = [];
+        skuCheckboxes.each(function(i, cb) {
+            if (cb.checked) {
+                toRemove.push(cb.id);
+            }
+        });
+        if (toRemove.length < 0) return;
+        makeModalAlert(`Remove ${toRemove.length} SKU(s)`,
+            `Are you sure you want to remove ${toRemove.length} SKU(s)?\n` +
+            "This will also remove their associated formulas.\n" +
+            "This cannot be undone.", function() {
+            removeSkus(toRemove);
+            });
     });
 
     exportButton.click(function() {
@@ -123,8 +126,8 @@ $(function() {
         skuFilterForm.submit();
     });
 
-    registerAutocomplete($(`#${ingredientsInputId}`), acIngredientUrl);
-    registerAutocomplete($(`#${productLinesInputId}`), acProductLineUrl);
+    registerAutocomplete($(`#${ingredientsInputId}`), acIngredientUrl, true);
+    registerAutocomplete($(`#${productLinesInputId}`), acProductLineUrl, true);
 
     $("#resetAllButton").click(refreshPage);
 });
