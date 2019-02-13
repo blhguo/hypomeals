@@ -232,8 +232,6 @@
            data-placement="left"
            title="You don't have permission to view the formulas."
            {% endif %}
-           data-toggle="modal"
-           data-target="#modalDiv"
            id="{{ sku.number }}">
             View
         </a>
@@ -296,6 +294,7 @@
 <a href="{% url 'remove_skus' %}" id="removeSkuUrl"></a>
 <a href="{% url 'view_formula' 0 %}" id="viewFormulaUrl"></a>
 </div>
+
 {% endblock %}
 
 {% block scriptend %}

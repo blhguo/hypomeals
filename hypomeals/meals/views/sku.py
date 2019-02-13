@@ -118,9 +118,10 @@ def remove_skus(request):
     to_remove = jsonpickle.loads(request.POST.get("to_remove", "[]"))
     try:
         with transaction.atomic():
-            num_deleted, _ = Sku.objects.filter(pk__in=to_remove).delete()
+            num_deleted, result = Sku.objects.filter(pk__in=to_remove).delete()
+            logger.info("removed %d SKUs: %s", num_deleted, result)
         return JsonResponse(
-            {"error": None, "resp": f"Successfully removed {num_deleted} SKUs"}
+            {"error": None, "resp": f"Successfully removed {result['meals.Sku']} SKUs"}
         )
     except DatabaseError as e:
         return JsonResponse({"error": str(e), "resp": "Not removed"})

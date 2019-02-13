@@ -94,5 +94,5 @@ $(function() {
         return false;
     });
 
-    registerAutocomplete($(`#${skusInputId}`), acSkusUrl);
+    registerAutocomplete($(`#${skusInputId}`), acSkusUrl, true);
 });
