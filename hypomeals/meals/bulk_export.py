@@ -8,7 +8,7 @@ from pathlib import Path
 from django.http import HttpResponse
 
 from meals import utils
-from .models import Sku, Ingredient, ProductLine, SkuIngredient
+from .models import Sku, Ingredient, ProductLine, FormulaIngredient
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ FILE_TYPES = {
     "skus": Sku,
     "ingredients": Ingredient,
     "product_lines": ProductLine,
-    "formulas": SkuIngredient,
+    "formulas": FormulaIngredient,
 }
 
 FILE_TYPE_TO_FILENAME = {file_type: f"{file_type}.csv" for file_type in FILE_TYPES}
@@ -123,7 +123,7 @@ def export_skus(skus, include_formulas=False, include_product_lines=False):
     logger.info("Exported %d SKU records", len(skus))
     exported_files = [sku_file]
     if include_formulas:
-        formulas = SkuIngredient.objects.filter(sku_number__in=skus).order_by(
+        formulas = FormulaIngredient.objects.filter(sku_number__in=skus).order_by(
             "sku_number__number"
         )
         formula_file = directory / FILE_TYPE_TO_FILENAME["formulas"]
@@ -189,7 +189,7 @@ def generate_ingredient_dependency_report(ingredients):
     writer = csv.writer(stream)
     writer.writerow(["Ingr#", "Ingredient Name", "SKU#", "SKU Name"])
     for ingredient in ingredients:
-        formulas = SkuIngredient.objects.filter(ingredient_number=ingredient)
+        formulas = FormulaIngredient.objects.filter(ingredient_number=ingredient)
         for formula in formulas:
             writer.writerow(
                 [

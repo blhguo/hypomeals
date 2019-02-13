@@ -14,7 +14,7 @@ from meals.exceptions import (
     CollisionOccurredException,
 )
 from meals.importers import IMPORTERS
-from .models import Sku, SkuIngredient, ProductLine, Ingredient
+from .models import Sku, FormulaIngredient, ProductLine, Ingredient
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ FILE_TYPES = {
     "skus": Sku,
     "ingredients": Ingredient,
     "product_lines": ProductLine,
-    "formulas": SkuIngredient,
+    "formulas": FormulaIngredient,
 }
 MODEL_TO_FILE_TYPES = {v: k for k, v in FILE_TYPES.items()}
 HEADERS = {
