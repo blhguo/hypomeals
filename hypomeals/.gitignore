@@ -67,6 +67,7 @@ fabric.properties
 
 # Project keys and security
 hypomeals-2f7acfcfe59c.json
+oauth_config.json
 
 # Virtual Environment
 hypomeal/
