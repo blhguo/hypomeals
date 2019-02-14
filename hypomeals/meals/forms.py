@@ -360,7 +360,6 @@ class EditProduct_LineForm(forms.ModelForm):
         fields = [
             "name",
         ]
-        exclude = ["name"]
         help_texts = {
             "name": "Name of the new Product Line",
         }
