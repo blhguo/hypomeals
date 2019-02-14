@@ -1,0 +1,140 @@
+{% extends "meals/base.html" %}
+{% load staticfiles %}
+
+{% block ingredient_active %}active{% endblock %}
+{% block title %}Ingredients{% endblock %}
+
+{% block body %}
+<div class="container-fluid m-auto">
+<form method="post" action="{% url 'product_line' %}" id="product_lineFilterForm">
+{%  csrf_token %}
+<div class="row">
+<div class="col-sm-8">
+<nav>
+<ul class="pagination my-4" id="pageList">
+{% if product_lines.has_previous %}
+    <li class="page-item">
+        <a class="page-link" page="{{  product_lines.previous_page_number }}" href="#">
+            <span>&laquo;</span>
+        </a>
+    </li>
+{% else %}
+    <li class="page-item disabled">
+        <a class="page-link" href="#">
+            <span>&laquo;</span>
+        </a>
+    </li>
+{% endif %}
+
+{% for page in pages %}
+    {%  if current_page == forloop.counter %}
+        <li class="page-item active">
+    {% else %}
+        <li class="page-item">
+    {% endif %}
+        <a class="page-link" page="{{ forloop.counter }}" href="#">
+        {{ forloop.counter }}
+        </a>
+    </li>
+{% endfor %}
+
+{% if product_lines.has_next %}
+    <li class="page-item">
+    <a class="page-link" page="{{ product_lines.next_page_number }}" href="#">
+        <span>&raquo;</span>
+    </a>
+    </li>
+{% else %}
+    <li class="page-item disabled">
+    <a class="page-link" href="#">
+        <span>&raquo;</span>
+    </a>
+    </li>
+{% endif %}
+</ul>
+</nav>
+</div>
+<div class="col-sm-4">
+    <div class="btn-group my-4" style="float:right;">
+        {% if perms.meals.add_product_line %}
+        <a id="addProduct_LineButton"
+           href="{%  url 'add_product_line' %}"
+           class="btn btn-primary">
+            <span class="fa fa-plus"></span> Add a new Product Line
+        </a>
+        {% endif %}
+        {% if perms.meals.delete_product_line %}
+        <button type="button"
+                class="btn btn-danger"
+                disabled
+                data-toggle="tooltip"
+                data-placement="top"
+                title="Select Product Lines below to remove them."
+                id="removeButton">
+            <span class="fa fa-minus"></span> Remove Selected
+        </button>
+        {% endif %}
+    </div>
+</div>
+</div>
+
+<!-- Table column -->
+<div class="col-sm-10">
+{% if messages %}
+<div class="alert alert-success" id="messagesDiv">
+{% for message in messages %}
+<p {% if message.tags %}class="{{ message.tags }}{% endif %}">{{ message }}</p>
+{% endfor %}
+</div>
+{% endif %}
+<table class="table" style="width:100%">
+    <thead class="thead-light">
+    <tr>
+        {% if perms.meals.delete_product_line %}
+        <th><input type="checkbox" id="selectAllCheckbox"> </th>
+        {% endif %}
+        <th>Name</th>
+    </tr>
+    </thead>
+    <tbody class="table-striped">
+    {% for product_line in product_lines %}
+    <tr>
+        {% if perms.meals.delete_product_lines %}
+        <td><input type="checkbox" class="product_line-checkbox" id="{{ product_line.number }}"> </td>
+        {% endif %}
+        <td>
+            <a href="{% url "edit_product_line" product_line.name %}"
+               {% if perms.meals.change_product_line %}
+               title="Click on the name to edit this product line."
+               {% else %}
+               title="You don't have permission to edit this Product Line."
+               {% endif %}
+               data-toggle="tooltip"
+               data-placement="right">
+                {{ product_line.name }}
+            </a>
+        </td>
+    </tr>
+    {%  empty %}
+    {% endfor %}
+    </tbody>
+</table>
+<div>
+    <p>Found {{ product_lines.paginator.count }} matches in {{ duration }} seconds</p>
+</div>
+</div>
+</div>
+</form>
+</div>
+<!-- Hidden div for template data -->
+<div style="display: none;">
+<a href="{% url 'remove_product_lines' %}" id="removeProduct_LinesUrl"></a>
+<a href="{% url 'product_line' %}" id="product_lineUrl"></a>
+<input id="pageNumInputId" value="{{ form.page_num.id_for_label }}">
+</div>
+{% endblock %}
+
+{% block scriptend %}
+<script src="{% static 'meals/common.js' %}"></script>
+<script src="{% static 'meals/ingredient/ingredient.js' %}"></script>
+{%  endblock %}

@@ -1,0 +1,15 @@
+{% extends 'meals/base.html' %}
+{% load staticfiles %}
+
+{% block body %}
+{% autoescape off %}
+    {{ form_html }}
+{% endautoescape %}
+{% endblock %}
+
+{% block scriptend %}
+<script src="{% static 'meals/common.js' %}"></script>
+<script src="{% static 'meals/product_line/edit_product_line.js' %}"></script>
+{% endblock %}
+
+{% block ingredient_active %}active{% endblock %}

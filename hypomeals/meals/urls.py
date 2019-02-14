@@ -9,6 +9,11 @@ urlpatterns = [
     # Normal views
     path("", views.index, name="index"),
     path("error", TemplateView.as_view(template_name="meals/error.html"), name="error"),
+    # Product Line Views
+    path("product-lines", views.product_line, name="product_line"),
+    path("remove-product-lines", views.remove_product_lines, name="remove_product_lines"),
+    path("add-product-line", views.add_product_line, name="add_product_line"),
+    path("edit-product-line/<str:product_line_name>", views.edit_product_line, name="edit_product_line"),
     # SKU views
     path("sku", views.sku, name="sku"),
     path("remove-skus", views.remove_skus, name="remove_skus"),

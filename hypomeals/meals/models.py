@@ -136,7 +136,11 @@ class Ingredient(
         related_name="ingredients",
         related_query_name="ingredient",
     )
-    cost = models.FloatField(blank=False, verbose_name="Cost")
+    cost = models.FloatField(blank=False, verbose_name="Cost", validators=[
+            MinValueValidator(
+                limit_value=0.01, message="Cost must be positive."
+            )
+        ])
     comment = models.CharField(max_length=4000, blank=True, verbose_name="Comment")
 
     def __repr__(self):
