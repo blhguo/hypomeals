@@ -8,6 +8,8 @@ from django.core.paginator import Paginator
 from django.db import transaction, DatabaseError
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.template.loader import render_to_string
+
 from django.views.decorators.http import require_POST
 
 from meals import auth
@@ -61,12 +63,18 @@ def edit_product_line(request, product_line_name):
             return redirect("product_line")
     else:
         form = EditProduct_LineForm(instance=instance)
+    form_html = render_to_string(
+        template_name="meals/product_line/edit_product_line_form.html",
+        context={"form": form, "editing": True, "product_line": instance},
+        request=request,
+    )
     return render(
         request,
         template_name="meals/product_line/edit_product_line_form.html",
         context={
             "form": form,
-            "product_line_name": str(instance),
+            "form_html": form_html,
+            "product_line_name": instance.name,
             "editing": True,
         },
     )
@@ -75,22 +83,32 @@ def edit_product_line(request, product_line_name):
 @login_required
 @permission_required("meals.add_product_line", raise_exception=True)
 def add_product_line(request):
-    skip = request.GET.get("skip", "0") == "1"
-
     if request.method == "POST":
         form = EditProduct_LineForm(request.POST)
         if form.is_valid():
             instance = form.save()
-            messages.info(request, f"Product Line #{instance.pk} has been saved successfully.")
-            if skip:
-                return redirect("sku")
-            return redirect("edit_formula", instance.pk)
+            message = f"Product_Line '{instance.name}' added successfully"
+            if request.is_ajax():
+                resp = {"error": None, "resp": None, "success": True, "alert": message}
+                return JsonResponse(resp)
+            messages.info(request, message)
+            return redirect("product_line")
     else:
         form = EditProduct_LineForm()
+
+    form_html = render_to_string(
+        template_name="meals/product_line/edit_product_line_form.html",
+        context={"form": form},
+        request=request,
+    )
+
+    if request.is_ajax():
+        resp = {"error": "Invalid form", "resp": form_html}
+        return JsonResponse(resp)
     return render(
         request,
         template_name="meals/product_line/edit_product_line.html",
-        context={"form": form, "editing": False},
+        context={"form": form, "form_html": form_html},
     )
 
 
