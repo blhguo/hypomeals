@@ -17,6 +17,13 @@ function lastTerm(val) {
  *      comma-separated words.
  */
 function registerAutocomplete(input, url, isMultiple) {
+    if (!url) {
+        url = input.attr("data-autocomplete-url");
+    }
+    if (isMultiple === undefined || isMultiple === null) {
+        isMultiple = input.attr("class")
+            .search("meals-autocomplete-multiple") !== -1;
+    }
     let opts = {
         source: function(request, response) {
             $.getJSON(url, {
@@ -61,6 +68,14 @@ $(function() {
             messagesDiv.fadeOut();
         }, 3000);
     }
+
+    $(".meals-autocomplete").each(function (i, e) {
+        let element = $(e);
+        let url = element.attr("data-autocomplete-url");
+        let isMultiple = element.attr("class")
+            .search("meals-autocomplete-multiple") !== -1;
+        registerAutocomplete(element, url, isMultiple);
+    })
 });
 
 /**
