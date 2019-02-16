@@ -65,12 +65,12 @@ def edit_product_line(request, product_line_name):
         form = EditProduct_LineForm(instance=instance)
     form_html = render_to_string(
         template_name="meals/product_line/edit_product_line_form.html",
-        context={"form": form, "editing": True, "product_line": instance},
+        context={"form": form, "editing": True, "product_line_name": instance.name},
         request=request,
     )
     return render(
         request,
-        template_name="meals/product_line/edit_product_line_form.html",
+        template_name="meals/product_line/edit_product_line.html",
         context={
             "form": form,
             "form_html": form_html,
