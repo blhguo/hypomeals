@@ -393,7 +393,7 @@ class EditProduct_LineForm(forms.ModelForm):
     def save(self, commit=False):
         instance = super().save(commit)
         # Manually save the foreign keys, then attach them to the instance
-        fks = ["name"]
+        fks = []
         for fk in fks:
             self.cleaned_data[fk].save()
             setattr(instance, fk, self.cleaned_data[fk])

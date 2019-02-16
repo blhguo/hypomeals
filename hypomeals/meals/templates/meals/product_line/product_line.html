@@ -131,10 +131,11 @@
 <a href="{% url 'remove_product_lines' %}" id="removeProduct_LinesUrl"></a>
 <a href="{% url 'product_line' %}" id="product_lineUrl"></a>
 <input id="pageNumInputId" value="{{ form.page_num.id_for_label }}">
+<input id="nameInputId" value="{{ form.name.id_for_label }}">
 </div>
 {% endblock %}
 
 {% block scriptend %}
 <script src="{% static 'meals/common.js' %}"></script>
-<script src="{% static 'meals/ingredient/ingredient.js' %}"></script>
+<script src="{% static 'meals/product_line/product_line.js' %}"></script>
 {%  endblock %}
