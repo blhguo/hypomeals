@@ -19,7 +19,7 @@ from meals import bulk_import
 from meals import utils
 from meals.exceptions import CollisionOccurredException
 from meals.models import GoalItem, Goal
-from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor
+from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor, Formula
 from meals.models import FormulaIngredient
 from meals.utils import BootstrapFormControlMixin, FilenameRegexValidator
 
@@ -255,6 +255,14 @@ def get_ingredient_choices():
 
 def get_product_line_choices():
     return [(pl.name, pl.name) for pl in ProductLine.objects.all()]
+
+
+def get_manufacturing_line_choices():
+    return [(pl.name, pl.name) for pl in ManufacturingLine.objects.all()]
+
+
+def get_formula_choices():
+    return [(pl.name, pl.name) for pl in Formula.objects.all()]
 
 
 def get_vendor_choices():
@@ -530,6 +538,17 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
         + get_product_line_choices(),
         required=True,
     )
+    formula = forms.ChoiceField(
+        choices=lambda: BLANK_CHOICE_DASH
+        + get_formula_choices(),
+        required=True,
+    )
+    manufacturing_line = forms.ChoiceField(
+        choices=lambda: BLANK_CHOICE_DASH
+        + [("custom", "Custom")]
+        + get_manufacturing_line_choices(),
+        required=True,
+    )
 
     class Meta:
         model = Sku
@@ -543,9 +562,12 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
             "product_line",
             "custom_product_line",
             "comment",
+            "formula",
+            "formula_scale",
+            "manufacturing_lines"
         ]
-        exclude = ["case_upc", "unit_upc", "product_line"]
-        widgets = {"comment": forms.Textarea(attrs={"maxlength": 200})}
+        exclude = ["case_upc", "unit_upc", "product_line", "formula", "manufacturing_lines"]
+        widgets = {"comment": forms.Textarea(attrs={"maxlength": 4000})}
         labels = {"number": "SKU#"}
         help_texts = {
             "name": "Name of the new SKU.",
@@ -563,6 +585,7 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
                         "case_upc": instance.case_upc.upc_number,
                         "unit_upc": instance.unit_upc.upc_number,
                         "product_line": instance.product_line.name,
+                        "formula": instance.formula.name,
                     }
                 )
         super().__init__(*args, initial=initial, **kwargs)
@@ -615,14 +638,21 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
                 )
             except ProductLine.DoesNotExist:
                 data["product_line"] = ProductLine(name=data["product_line"])
-
+        ### Remember to Solve the Inline Editing Latter
+        if "formula" in data:
+            try:
+                data["formula"] = Formula.objects.get(
+                    name=data["formula"]
+                )
+            except Formula.DoesNotExist:
+                data["formula"] = Formula(name=data["formula"])
         return data
 
     @transaction.atomic
     def save(self, commit=False):
         instance = super().save(commit)
         # Manually save the foreign keys, then attach them to the instance
-        fks = ["case_upc", "unit_upc", "product_line"]
+        fks = ["case_upc", "unit_upc", "product_line", "formula"]
         for fk in fks:
             self.cleaned_data[fk].save()
             setattr(instance, fk, self.cleaned_data[fk])
