@@ -101,6 +101,8 @@ class Unit(models.Model):
     def __repr__(self):
         return f"<Unit: {self.symbol}>"
 
+    __str__ = __repr__
+
 
 class Ingredient(
     models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutionMixin
@@ -141,6 +143,9 @@ class Ingredient(
 
     def __repr__(self):
         return f"<Ingr #{self.number}: {self.name}>"
+
+    def __str__(self):
+        return self.name
 
     class Meta:
         ordering = ["number"]
@@ -253,6 +258,9 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
     def __repr__(self):
         return f"<SKU #{self.number}: {self.name}>"
 
+    def __str__(self):
+        return self.verbose_name
+
     class Meta:
         ordering = ["number"]
 
@@ -296,6 +304,9 @@ class Formula(
     def __repr__(self):
         return f"<Formula #{self.number}: {self.name}>"
 
+    def __str__(self):
+        return self.name
+
     def save(self, *args, **kwargs):
         if not self.number:
             self.number = utils.next_id(Formula)
@@ -329,6 +340,8 @@ class FormulaIngredient(
             f"{self.ingredient.name} ({self.quantity})"
         )
 
+    __str__ = __repr__
+
     class Meta:
         unique_together = (("formula", "ingredient"),)
 
@@ -350,6 +363,9 @@ class ManufacturingLine(
 
     def __repr__(self):
         return f"<MfgLine #{self.number}: {self.shortname}>"
+
+    def __str__(self):
+        return self.shortname
 
     class Meta:
         ordering = ["shortname"]
@@ -396,6 +412,8 @@ class SkuManufacturingLine(
             f"{self.manufacturing_line.shortname} ({self.rate})>"
         )
 
+    __str__ = __repr__
+
     class Meta:
         unique_together = (("sku", "manufacturing_line"),)
 
@@ -418,6 +436,9 @@ class Goal(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutio
 
     def __repr__(self):
         return f"<Goal #{self.id}: {self.name}>"
+
+    def __str__(self):
+        return self.name
 
     class Meta:
         unique_together = (("user", "name", "save_time"),)
@@ -453,6 +474,8 @@ class GoalItem(
             f"<GoalItem #{self.id}: {self.goal.name} <-> "
             f"{self.sku.name} ({self.quantity})"
         )
+
+    __str__ = __repr__
 
     class Meta:
         unique_together = (("goal", "sku"),)
