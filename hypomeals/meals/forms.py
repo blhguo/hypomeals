@@ -13,6 +13,7 @@ from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, BLANK_CHOICE_DASH
 from django.forms import formset_factory
+from django.urls import reverse_lazy
 from django.utils import timezone
 
 from meals import bulk_import
@@ -27,6 +28,38 @@ logger = logging.getLogger(__name__)
 
 
 COMMA_SPLIT_REGEX = re.compile(r",\s*")
+
+
+class AutocompletedCharField(forms.CharField):
+    """
+    An CharField with autocomplete built-in.
+
+    This is nothing fancy. It simply adds the class "meals-autocomplete" to and an
+    extra attribute "data-autocomplete-url" to the input element, which are then used
+    by a hook in common.js to register autocomplete.
+
+    For example, to register an multiple field for ingredient names,
+    >>> from django.urls import reverse
+    >>> class MyForm(forms.Form):
+    ...     ingr = AutocompletedCharField(
+    ...         data_source=reverse("autocomplete-ingredient"),
+    ...         is_multiple=True,
+    ...     )
+    :param data_source: the url of an autocomplete view.
+    """
+
+    def __init__(self, *args, data_source, is_multiple=False, **kwargs):
+        self.data_source = data_source
+        self.is_multiple = is_multiple
+        super().__init__(*args, **kwargs)
+
+    def widget_attrs(self, widget):
+        attrs = super().widget_attrs(widget)
+        attrs["class"] = attrs.get("class", "") + " meals-autocomplete"
+        attrs["data-autocomplete-url"] = self.data_source
+        if self.is_multiple:
+            attrs["class"] += " meals-autocomplete-multiple"
+        return attrs
 
 
 class SkuQuantityForm(forms.ModelForm):
@@ -269,12 +302,12 @@ def get_vendor_choices():
     return [(ven.info, ven.info) for ven in Vendor.objects.all()]
 
 
-class CsvModelAttributeField(forms.CharField):
+class CsvAutocompletedField(AutocompletedCharField):
 
     attr = "pk"
 
-    def __init__(self, model, *args, attr, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, model, *args, attr, data_source, **kwargs):
+        super().__init__(*args, data_source=data_source, is_multiple=True, **kwargs)
         try:
             model._meta.get_field(attr)
         except FieldDoesNotExist:
@@ -460,28 +493,26 @@ class SkuFilterForm(forms.Form, utils.BootstrapFormControlMixin):
     num_per_page = forms.ChoiceField(choices=NUM_PER_PAGE_CHOICES, required=True)
     sort_by = forms.ChoiceField(choices=Sku.get_sortable_fields, required=True)
     keyword = forms.CharField(required=False, max_length=100)
-    ingredients = CsvModelAttributeField(
+    ingredients = CsvAutocompletedField(
         model=Ingredient,
+        data_source=reverse_lazy("autocomplete_ingredients"),
         required=False,
         attr="name",
-        widget=forms.TextInput(attrs={"placeholder": "Start typing..."}),
         help_text="Enter ingredients separated by commas",
     )
-    product_lines = CsvModelAttributeField(
+    product_lines = CsvAutocompletedField(
         model=ProductLine,
         required=False,
         attr="name",
-        widget=forms.TextInput(attrs={"placeholder": "Start typing..."}),
+        data_source=reverse_lazy("autocomplete_product_lines"),
         help_text="Enter Product Lines separated by commas",
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        for field in self.fields.values():
-            field.widget.attrs["class"] = (
-                getattr(field.widget.attrs, "class", "") + " mb-2"
-            )
+        self.fields["ingredients"].widget.attrs["placeholder"] = "Start typing..."
+        self.fields["product_lines"].widget.attrs["placeholder"] = "Start typing..."
 
     def query(self) -> Paginator:
         # Generate the correct query, execute it, and return the requested page.
@@ -723,4 +754,85 @@ class FormulaFormsetBase(forms.BaseFormSet):
 
 FormulaFormset = formset_factory(
     FormulaForm, extra=0, can_delete=True, formset=FormulaFormsetBase
+)
+
+
+class GoalForm(forms.Form, utils.BootstrapFormControlMixin):
+
+    name = forms.CharField(
+        max_length=100,
+        strip=True,
+        required=True,
+        help_text="The name for this manufacturing goal",
+        widget=forms.TextInput(attrs={"placeholder": "Name"}),
+    )
+    deadline = forms.DateField(
+        required=True, help_text="The deadline for this goal", widget=forms.DateInput()
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["deadline"].widget.attrs["class"] = (
+            self.fields["deadline"].widget.attrs.get("class", "") + " datepicker-input"
+        )
+        self.fields["deadline"].widget.attrs["data-target"] = "#datepicker1"
+
+
+class SkuQuantityForm(forms.Form, utils.BootstrapFormControlMixin):
+
+    sku = AutocompletedCharField(
+        data_source=reverse_lazy("autocomplete_skus"),
+        required=True,
+        widget=forms.TextInput(attrs={"placeholder": "Start typing..."}),
+    )
+    quantity = forms.DecimalField(required=True, min_value=0.00001)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def clean_sku(self):
+        raw = self.cleaned_data["sku"]
+        sku = Sku.from_name(raw)
+        if not sku:
+            raise ValidationError("SKU '%(raw)s does not exist.", params={"raw": raw})
+        return sku
+
+
+class SkuQuantityFormsetBase(forms.BaseFormSet):
+    def clean(self):
+        # At this point SKUs should have been cleaned and are SKU instances.
+        if any(self.errors):
+            return
+        skus = {}  # (sku number -> row number)
+        errors = []
+        index = 0
+        for form in self.forms:
+            if "DELETE" not in form.cleaned_data or form.cleaned_data["DELETE"]:
+                # Form is either incorrect or deleted. Don't process
+                continue
+            index += 1
+            logger.info("Processing form-%d: %s", index, form.cleaned_data)
+            sku_number = form.cleaned_data["sku"].number
+            if sku_number in skus:
+                errors.append(
+                    ValidationError(
+                        "Row %(error_row)d: SKU '%(name)s' is already specified in "
+                        "row %(orig_row)d",
+                        params={
+                            "name": form.cleaned_data["sku"].verbose_name,
+                            "error_row": index,
+                            "orig_row": skus[sku_number],
+                        },
+                    )
+                )
+            else:
+                skus[sku_number] = index
+        if not skus:
+            raise ValidationError("You must specify at least one item.")
+        if errors:
+            raise ValidationError(errors)
+
+
+SkuQuantityFormset = formset_factory(
+    SkuQuantityForm, formset=SkuQuantityFormsetBase, can_delete=True, extra=1
 )

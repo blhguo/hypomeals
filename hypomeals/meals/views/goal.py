@@ -1,22 +1,21 @@
 import logging
 import csv
 import tempfile
+
+from django.contrib import messages
+from django.db import transaction
+from django.utils.datetime_safe import datetime
 from reportlab.lib.pagesizes import letter, inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from reportlab.lib import colors
 from django.core.files import File
 
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from django.contrib.auth.decorators import login_required, permission_required
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse, JsonResponse
 
-from meals.forms import SkuQuantityForm
-from meals.models import (
-    Sku,
-    ProductLine,
-    Goal,
-    GoalItem,
-    Ingredient)
+from meals.forms import SkuQuantityForm, SkuQuantityFormset, GoalForm
+from meals.models import Sku, ProductLine, Goal, GoalItem, Ingredient
 from meals.models import FormulaIngredient
 
 logger = logging.getLogger(__name__)
@@ -41,7 +40,72 @@ def find_goal(goal_id, user):
 
 
 @login_required
-def show_one_goal(request, goal_id=-1):
+@permission_required("meals.add_goal", "meals.change_goal")
+def edit_goal(request, goal_id=-1):
+    if goal_id != -1:
+        goal_obj = get_object_or_404(Goal, pk=goal_id)
+    else:
+        goal_obj = None
+    if request.method == "POST":
+        formset = SkuQuantityFormset(request.POST)
+        form = GoalForm(request.POST)
+        if form.is_valid() and formset.is_valid():
+            with transaction.atomic():
+                if not goal_obj:
+                    goal_obj = Goal.objects.create(
+                        user=request.user,
+                        name=form.cleaned_data["name"],
+                        deadline=form.cleaned_data["deadline"],
+                    )
+                else:
+                    goal_obj.name = form.cleaned_data["name"]
+                    goal_obj.deadline = form.cleaned_data["deadline"]
+                    goal_obj.save_time = datetime.now()
+                    goal_obj.save()
+                saved = []
+                GoalItem.objects.filter(goal=goal_obj).delete()
+                for form, data in zip(formset.forms, formset.cleaned_data):
+                    if "DELETE" not in data or data["DELETE"]:
+                        continue
+                    saved.append(
+                        GoalItem(
+                            goal=goal_obj, sku=data["sku"], quantity=data["quantity"]
+                        )
+                    )
+                if saved:
+                    GoalItem.objects.bulk_create(saved)
+            messages.info(request, f"Successfully saved goal {goal_obj.name}")
+            return redirect("edit_goal", goal_obj.pk)
+
+    else:
+        if goal_obj:
+            items = GoalItem.objects.filter(goal=goal_obj)
+            initial = [
+                {"sku": item.sku.verbose_name, "quantity": item.quantity.normalize}
+                for item in items
+            ]
+            formset = SkuQuantityFormset(initial=initial)
+            form = GoalForm(
+                initial={"name": goal_obj.name, "deadline": goal_obj.deadline}
+            )
+        else:
+            formset = SkuQuantityFormset()
+            form = GoalForm()
+
+    return render(
+        request,
+        "meals/goal/edit_goal.html",
+        context={
+            "editing": bool(goal_obj),
+            "goal": goal_obj,
+            "formset": formset,
+            "form": form,
+        },
+    )
+
+
+@login_required
+def goal(request, goal_id=-1):
     errors = ""
     message = ""
     if request.method == "POST":
@@ -63,7 +127,7 @@ def show_one_goal(request, goal_id=-1):
     product_lines = ProductLine.objects.all()
     return render(
         request,
-        template_name="meals/show_one_goal.html",
+        template_name="meals/goal/edit_goal.html",
         context={
             "form": form,
             "errors": errors,
@@ -135,18 +199,14 @@ def save_goal(request):
     form.save_file(request, file)
     name = request.POST["name"]
     return render(
-        request,
-        template_name="meals/save_succeed.html",
-        context={"name": name},
+        request, template_name="meals/goal/save_succeed.html", context={"name": name}
     )
 
 
 @login_required
 def download_goal(request):
     save_goal(request)
-    goal = Goal.objects.filter(name=request.POST["name"]).order_by(
-        "-save_time"
-    )
+    goal = Goal.objects.filter(name=request.POST["name"]).order_by("-save_time")
     if goal:
         response = HttpResponse(goal[0].file)
     else:
@@ -206,11 +266,11 @@ def generate_calculation_pdf(request):
 
 
 @login_required
-def show_all_goals(request):
+def goals(request):
     all_goals = Goal.objects.filter(user=request.user).order_by("-save_time")
     return render(
         request,
-        template_name="meals/show_all_goals.html",
+        template_name="meals/goal/show_all_goals.html",
         context={"all_goals": all_goals},
     )
 

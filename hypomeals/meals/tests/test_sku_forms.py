@@ -3,7 +3,7 @@ from unittest import skip
 
 from django.core.exceptions import ValidationError
 
-from meals.forms import CsvModelAttributeField, SkuFilterForm
+from meals.forms import CsvAutocompletedField, SkuFilterForm
 from meals.models import Ingredient
 from .test_base import BaseTestCase
 
@@ -11,7 +11,7 @@ from .test_base import BaseTestCase
 class TestCsvModelAttributeField(BaseTestCase):
     def test_ignore_empty(self):
         [self.create_ingredient(name) for name in ["apple", "pear"]]
-        form = CsvModelAttributeField(Ingredient, attr="name")
+        form = CsvAutocompletedField(Ingredient, attr="name")
         test_cases = ["", " ", ",", "apple,", "pear"]
         expected_values = [set(), set(), set(), {"apple"}, {"pear"}]
         for test_case, expected in zip(test_cases, expected_values):
@@ -20,7 +20,7 @@ class TestCsvModelAttributeField(BaseTestCase):
 
     def test_nonexistent_ingredients(self):
         """Nonexistent ingredients should cause an exception to be raised"""
-        form = CsvModelAttributeField(Ingredient, attr="name")
+        form = CsvAutocompletedField(Ingredient, attr="name")
         [
             self.create_ingredient(name)
             for name in [

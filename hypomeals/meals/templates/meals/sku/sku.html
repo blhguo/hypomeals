@@ -111,6 +111,7 @@
 <div class="form-group">
     <label for="{{ form.ingredients.id_for_label }}">Contains ingredient(s):</label>
     {{ form.ingredients }}
+    <small>{{ form.ingredients.help_text }}</small>
     {% if form.ingredients.errors %}
     <small>{{ form.ingredients.errors }}</small>
     {% endif %}
@@ -118,6 +119,7 @@
 <div class="form-group">
     <label for="{{ form.product_lines.id_for_label }}">Belongs to product line(s):</label>
     {{ form.product_lines }}
+    <small>{{ form.product_lines.help_text }}</small>
     {% if form.product_lines.errors %}
     <small>{{ form.product_lines.errors }}</small>
     {% endif %}

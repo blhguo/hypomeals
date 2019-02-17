@@ -6,4 +6,4 @@ from .bulk import *
 from .formula import *
 from .ingredient import *
 from .sku import *
-from .manufacture_goal import *
+from .goal import *

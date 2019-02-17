@@ -9,7 +9,9 @@ from meals.models import Ingredient, ProductLine, Sku
 def autocomplete(request, manager, key="name"):
     term = request.GET.get("term", "")
     items = list(
-        manager.filter(name__istartswith=term).distinct().values_list(key, flat=True)
+        manager.filter(**{f"{key}__istartswith": term})
+        .distinct()
+        .values_list(key, flat=True)
     )
     return JsonResponse(items, safe=False)
 
