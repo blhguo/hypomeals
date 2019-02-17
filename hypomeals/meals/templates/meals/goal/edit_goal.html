@@ -36,17 +36,17 @@
 </div>
 </div>
 
+{% if messages %}
 <div class="row">
 <div class="col-sm">
     <div class="alert alert-success mt-2 mb-4" id="messagesDiv">
-    {% if messages %}
-        {% for message in messages %}
-        <p class="mb-0{% if message.tags %} {{ message.tags }}{% endif %}">{{ message }}</p>
-        {% endfor %}
-    {% endif %}
+    {% for message in messages %}
+    <p class="mb-0{% if message.tags %} {{ message.tags }}{% endif %}">{{ message }}</p>
+    {% endfor %}
+    </div>
 </div>
 </div>
-</div>
+{% endif %}
 
 <div class="row">
 <div class="col-sm">
@@ -115,7 +115,12 @@ Please correct the following error(s):
 {% for form in formset %}
 <tr>
     <td class="align-middle">
-    {{ form.sku }}
+    <div class="input-group">
+        {{ form.sku }}
+        <div class="input-group-append filterButtons" style="cursor: pointer;">
+            <div class="input-group-text"><i class="fas fa-filter"></i></div>
+        </div>
+    </div>
     {% if form.sku.errors %}<small>{{ form.sku.errors }}</small>{% endif %}
     </td>
     <td class="align-middle">
@@ -124,23 +129,24 @@ Please correct the following error(s):
     </td>
     <td class="align-middle">
         {{ form.DELETE }}
-        <div class="btn-group">
-            <a href="#" class="btn btn-link deleteButtons">Delete</a>
-            <a href="#" class="btn btn-link filterButtons">Filter By Product Line</a>
-        </div>
+        <a href="#" class="btn btn-link deleteButtons">Delete</a>
     </td>
 </tr>
 {% endfor %}
 
 <tr id="templateRow">
-    <td class="align-middle">{{ formset.empty_form.sku }}</td>
+    <td>
+        <div class="input-group">
+        {{ formset.empty_form.sku }}
+        <div class="input-group-append filterButtons" style="cursor: pointer;">
+            <div class="input-group-text"><i class="fas fa-filter"></i></div>
+        </div>
+        </div>
+    </td>
     <td class="align-middle">{{ formset.empty_form.quantity }}</td>
     <td class="align-middle">
         {{ formset.empty_form.DELETE }}
-        <div class="btn-group">
-            <a href="#" class="btn btn-link deleteButtons">Delete</a>
-            <a href="#" class="btn btn-link filterButtons">Filter By Product Line</a>
-        </div>
+        <a href="#" class="btn btn-link deleteButtons">Delete</a>
     </td>
 </tr>
 
@@ -167,30 +173,23 @@ add another item.
 
 
 <!-- Modal -->
-<div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="exampleModalLabel">Product Line Filter</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <select class="form-control" id="product_line_selector">
-          <option> None </option>
-          {% for product_line in product_lines %}
+<div style="display: none;">
+<div id="productLineFilter">
+    <label for="productLineSelect">Select a product line:</label>
+    <select class="form-control" id="productLineSelect">
+        <option> None </option>
+        {% for product_line in product_lines %}
             <option value="{{ product_line }}">{{ product_line }}</option>
-          {% endfor %}
-        </select>
-        <div class="list-group" id="SKU"></div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary">Save changes</button>
-      </div>
-    </div>
-  </div>
+        {% endfor %}
+    </select>
+    <small>Only product lines with at least one SKU is shown.</small>
+    <div class="mt-4" id="skuListGroup"></div>
+</div>
+</div>
+
+<!-- Hidden div for template data -->
+<div style="display: none;">
+<a href="{% url 'filter_skus' %}" id="filterSkusUrl"></a>
 </div>
 {% endblock %}
 

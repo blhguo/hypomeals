@@ -92,6 +92,13 @@ def edit_goal(request, goal_id=-1):
             formset = SkuQuantityFormset()
             form = GoalForm()
 
+    # Product line filters
+    product_lines = (
+        ProductLine.objects.filter(sku__count__gt=0)
+        .distinct()
+        .values_list("name", flat=True)
+    )
+
     return render(
         request,
         "meals/goal/edit_goal.html",
@@ -100,6 +107,7 @@ def edit_goal(request, goal_id=-1):
             "goal": goal_obj,
             "formset": formset,
             "form": form,
+            "product_lines": product_lines,
         },
     )
 
@@ -276,8 +284,8 @@ def goals(request):
 
 
 @login_required
-def find_product_line(request):
+def filter_skus(request):
     pd = request.GET.get("product_line", None)
     skus = Sku.objects.filter(product_line__name=pd)
-    result = {"skus": [str(sku) for sku in skus]}
+    result = {"error": None, "resp": [sku.verbose_name for sku in skus]}
     return JsonResponse(result)

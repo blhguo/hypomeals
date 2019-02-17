@@ -226,7 +226,7 @@ function makeModalAlert(title, message, success, cancel) {
         message = $("<p>").attr("style", "white-space: pre-line")
             .html(message);
     } else {
-        message = $(message);
+        message = $(message).clone(true, true);
     }
     modalBody.append(message);
     let successButton = modal.find("#modalSuccessButton");

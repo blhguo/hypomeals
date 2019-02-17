@@ -54,7 +54,7 @@ urlpatterns = [
         views.generate_calculation_pdf,
         name="generate_calculation_pdf",
     ),
-    path("find_product_line/", views.find_product_line, name="find_product_line"),
+    path("filter_skus/", views.filter_skus, name="filter_skus"),
     # Account management views
     path(
         "accounts/login/",
