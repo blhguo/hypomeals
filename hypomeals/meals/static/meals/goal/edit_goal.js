@@ -1,20 +1,26 @@
 let filteringInput = null;
+let filterSkusUrl = null;
 
 $(function () {
     let formset = $("form");
     let emptyAlert = $("#emptyAlert");
-    let filterSkusUrl = $("#filterSkusUrl").attr("href");
+    let deadlineInputId = $("#deadlineInputId").val();
+    let deadlineInput = $(`#${deadlineInputId}`);
+    filterSkusUrl = $("#filterSkusUrl").attr("href");
 
     $("#datepicker1").datetimepicker({format: "YYYY-MM-DD"});
 
     $(".filterButtons").click(renderModal);
+    registerFilterTooltip();
 
     registerFormset(
         formset,
         $("#addRowButton"),
         function(row) {
             registerAutocomplete(row.find("input.meals-autocomplete"));
+            row.find(".filterButtons").click(renderModal);
             toggleEmptyAlert();
+            registerFilterTooltip();
         },
         toggleEmptyAlert,
     );
@@ -22,6 +28,20 @@ $(function () {
     function toggleEmptyAlert() {
         emptyAlert.toggle(formset.find("tbody tr:visible").length === 0);
     }
+
+    deadlineInput.on("focus", function() {
+        let calendarPopover = $("#calendarIcon");
+        calendarPopover.popover({
+            container: "body",
+            placement: "top",
+            offset: 100,
+            title: "Show Calendar",
+            content: "Click here to show the calendar widget."
+        }).popover("show");
+        setTimeout(function() {
+            calendarPopover.popover("hide");
+        }, 2000);
+    })
 });
 
 function renderModal() {
@@ -54,4 +74,11 @@ function renderModal() {
         skuListGroup.children().remove();
         skuListGroup.append(listGroup);
     }
+}
+
+function registerFilterTooltip() {
+    $(".filterButtons").tooltip({
+        placement: "right",
+        title: "Click here to filter by product lines"
+    });
 }

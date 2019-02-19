@@ -25,6 +25,10 @@ class User(AbstractUser):
         unique=True,
     )
 
+    @property
+    def is_admin(self):
+        return self.is_superuser or self.groups.filter(name="Admins").exists()
+
 
 class Upc(models.Model, utils.ModelFieldsCompareMixin):
     compare_excluded_fields = ("id",)

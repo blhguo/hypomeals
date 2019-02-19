@@ -14,14 +14,12 @@ from django.db import transaction
 from django.db.models import Q, BLANK_CHOICE_DASH
 from django.forms import formset_factory
 from django.urls import reverse_lazy
-from django.utils import timezone
 
 from meals import bulk_import
 from meals import utils
 from meals.exceptions import CollisionOccurredException
-from meals.models import GoalItem, Goal
-from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor
 from meals.models import FormulaIngredient
+from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor
 from meals.utils import BootstrapFormControlMixin, FilenameRegexValidator
 
 logger = logging.getLogger(__name__)
@@ -60,109 +58,6 @@ class AutocompletedCharField(forms.CharField):
         if self.is_multiple:
             attrs["class"] += " meals-autocomplete-multiple"
         return attrs
-
-
-class SkuQuantityForm(forms.ModelForm):
-    name = forms.CharField(required=True)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["name"].widget.attrs["class"] = "form-control"
-        if not args:
-            self.initial["name"] = ""
-            self.initial["save_time"] = timezone.now()
-            number = 1
-        else:
-            form_content = args[0]
-            self.initial["name"] = form_content["name"]
-            self.initial["save_time"] = timezone.now()
-            number = self.get_entry_number(args[0])
-        for i in range(number):
-            sku_name = "sku_%s" % (i,)
-            self.fields[sku_name] = forms.CharField(required=False)
-            self.fields[sku_name].widget.attrs["class"] = "form-control autocomplete"
-            self.fields[sku_name].widget.attrs["placeholder"] = "Sku"
-            quantity_name = "quantity_%s" % (i,)
-            self.fields[quantity_name] = forms.CharField(required=False)
-            self.fields[quantity_name].widget.attrs["class"] = "form-control"
-            self.fields[quantity_name].widget.attrs["placeholder"] = "Quantity"
-            if args:
-                self.initial[sku_name] = form_content[sku_name]
-                self.initial[quantity_name] = form_content[quantity_name]
-            else:
-                self.initial[sku_name] = ""
-                self.initial[quantity_name] = ""
-
-            if i == number - 1:
-                self.fields[sku_name].widget.attrs[
-                    "class"
-                ] = "sku-list-new form-control autocomplete"
-
-    def clean(self):
-        if self.is_valid():
-            skus = set()
-            quantities = set()
-            sku_quantity = []
-            i = 0
-            sku_name = "sku_%s" % (i,)
-            quantity_name = "quantity_%s" % (i,)
-            while self.cleaned_data.get(sku_name) or self.cleaned_data.get(
-                quantity_name
-            ):
-                sku = self.cleaned_data[sku_name]
-                quantity = self.cleaned_data[quantity_name]
-                print("DEBUG", sku, quantity)
-                if Sku.from_name(sku) is None:
-                    err_message = "This SKU %s is not a valid one!" % (sku,)
-                    self.add_error(sku_name, err_message)
-
-                if quantity == "":
-                    err_message = "Quantity is a required field"
-                    self.add_error(quantity_name, err_message)
-
-                if sku == "":
-                    err_message = "Sku is a required field"
-                    self.add_error(sku_name, err_message)
-
-                if sku in skus:
-                    self.add_error(sku_name, "Duplicate")
-                else:
-                    skus.add(sku)
-                    quantities.add(quantity)
-                    sku_quantity.append((sku, quantity))
-                i += 1
-                sku_name = "sku_%s" % (i,)
-                quantity_name = "quantity_%s" % (i,)
-            self.cleaned_data["sku_quantity"] = sku_quantity
-
-    def save_file(self, request, file):
-        if self.is_valid():
-            sq = self.instance
-            sq.name = self.cleaned_data["name"]
-            sq.user = request.user
-            sq.file.save("temp", file)
-            sq.save()
-            for sku, quantity in self.cleaned_data["sku_quantity"]:
-                GoalItem.objects.create(name=sq, sku=sku, quantity=quantity)
-        else:
-            print(self.errors)
-
-    def get_interest_fields(self):
-        for sku_name in self.fields:
-            if sku_name.startswith("sku_"):
-                sku_index = sku_name.split("_")[1]
-                quantity_name = "quantity_%s" % (sku_index,)
-                yield sku_index, self[sku_name], self[quantity_name]
-
-    def get_entry_number(self, request):
-        cnt = 0
-        while ("sku_" + str(cnt)) in request:
-            cnt += 1
-        return cnt
-
-    class Meta:
-        model = Goal
-        fields = ["name"]
 
 
 class ImportForm(forms.Form, BootstrapFormControlMixin):
@@ -737,7 +632,9 @@ class GoalForm(forms.Form, utils.BootstrapFormControlMixin):
         widget=forms.TextInput(attrs={"placeholder": "Name"}),
     )
     deadline = forms.DateField(
-        required=True, help_text="The deadline for this goal", widget=forms.DateInput()
+        required=True,
+        help_text="The deadline for this goal",
+        widget=forms.DateInput(attrs={"placeholder": "YYYY-MM-DD"}),
     )
 
     def __init__(self, *args, **kwargs):

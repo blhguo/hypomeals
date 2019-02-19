@@ -1,5 +1,4 @@
 from django.contrib.auth import views as auth_views
-from django.contrib.auth.decorators import login_required
 from django.urls import path
 from django.views.generic import TemplateView
 
@@ -43,16 +42,16 @@ urlpatterns = [
     path("goal/new/", views.edit_goal, name="add_goal"),
     path("goal/<int:goal_id>", views.edit_goal, name="edit_goal"),
     path("goals", views.goals, name="goals"),
-    path("generate_report/", views.generate_report, name="result"),
+    path("goal/export/csv/<int:goal_id>", views.export_csv, name="export_goal_csv"),
     path(
-        "download_calculation/", views.download_calculation, name="download_calculation"
+        "goal/calculation/view/<int:goal_id>",
+        views.view_calculations,
+        name="view_calculation",
     ),
-    path("save_goal/", login_required(views.save_goal), name="save_goal"),
-    path("download_goal/", views.download_goal, name="download_goal"),
     path(
-        "generate_calculation_pdf/",
-        views.generate_calculation_pdf,
-        name="generate_calculation_pdf",
+        "goal/calculation/csv/<int:goal_id>",
+        views.generate_calculation_csv,
+        name="export_calculation_csv",
     ),
     path("filter_skus/", views.filter_skus, name="filter_skus"),
     # Account management views

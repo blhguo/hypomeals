@@ -1,0 +1,178 @@
+{% extends 'meals/base.html' %}
+{% load humanize %}
+{% load staticfiles %}
+
+{% block goal_active %}active{% endblock %}
+{% block title %}Manufacturing Goals{% endblock %}
+
+{% block body %}
+<div class="container m-auto">
+<div class="row">
+<div class="col-sm mt-4">
+<div class="alert alert-success">
+    <h3>Manufacturing Goals</h3>
+    <p>
+        Review your saved goals here. Your goals are private to you. If you want
+        to create a new goal, click the "Add a new Goal" button.
+    </p>
+    <p>Click on the goal's name to edit the goal. If you wish to view a
+    formatted manufacturing report, click the "Report" button. You may also
+    download manufacturing reports and the goal itself from the "Download"
+    menu.</p>
+    {% if request.user.is_admin %}
+    <p class="mb-0">
+    As administrator you may select goals from different users to compile
+    <a href="#" class="mfgScheduleTooltips">manufacturing schedules</a>.
+    </p>
+    {% else %}
+    <p class="mb-0">
+        An administrator may choose to enable or disable your goals to produce
+        a <a href="#" class="mfgScheduleTooltips">manufacturing schedule</a>.
+    </p>
+    {% endif %}
+</div>
+</div>
+</div>
+
+{% if messages %}
+<div class="row">
+<div class="col-sm-12">
+    <div class="alert alert-success" id="messagesDiv">
+    {% for message in messages %}
+    <p class="{% if message.tags %}{{ message.tags }}{% endif %}{% if forloop.counter == messages|length %} mb-0{% endif %}">
+        {{ message }}
+    </p>
+    {% endfor %}
+    </div>
+</div>
+</div>
+{% endif %}
+
+
+<div class="row">
+<div class="col-sm mt-2">
+    <div class="d-flex justify-content-between align-items-center">
+    {% if request.user.is_admin %}
+    <div class="custom-control custom-checkbox">
+        <input type="checkbox" class="custom-control-input" id="showAllCheckbox">
+        <label class="custom-control-label"
+               for="showAllCheckbox">
+            Show goals owned by others
+            <span class="badge badge-pill badge-info"
+                  data-placement="right"
+                  title="This option is enabled because you are an administrator"
+                  data-toggle="tooltip">i</span>
+        </label>
+    </div>
+    {% else %}
+    <div></div>  <!-- Empty div to position the btn-group -->
+    {% endif %}
+    <div class="btn btn-group">
+        <a href="{% url "add_goal" %}" class="btn btn-primary">
+            <span class="fas fa-plus"></span> Add a new Goal
+        </a>
+        {% if request.user.is_admin %}
+        <a href="#" class="btn btn-success">
+            <span class="fas fa-calendar-check"></span> Schedule
+        </a>
+        {% endif %}
+    </div>
+    </div>
+</div>
+</div>
+<div class="row">
+<div class="col-sm mt-4">
+<table class="table">
+<thead class="thead-light">
+<tr>
+    {% if request.user.is_admin %}
+    <th>
+        <div class="custom-control custom-checkbox">
+        <input type="checkbox"
+               id="selectAllCheckbox"
+               class="custom-control-input">
+        <label for="selectAllCheckbox" class="custom-control-label"></label>
+        </div>
+    </th>
+    {% endif %}
+    <th>Goal Name</th>
+    <th>Deadline</th>
+    {% if request.user.is_admin %}
+    <th class="ownerCol">Owner</th>
+    {% endif %}
+    <th>Last Modified Time</th>
+    <th>Actions</th>
+</thead>
+<tbody>
+{% for goal in all_goals %}
+{% if goal.user == request.user %}
+<tr>
+{% else %}
+<tr class="ownedRows">
+{% endif %}
+    {% if request.user.is_admin %}
+    <td>
+        <div class="custom-control custom-checkbox">
+        <input type="checkbox" data-goal-id="{{ goal.pk }}"
+               id="checkbox-{{ goal.pk }}"
+               class="custom-control-input selectGoalCheckboxes">
+        <label for="checkbox-{{ goal.pk }}" class="custom-control-label"></label>
+        </div>
+    </td>
+    {% endif %}
+    <td><a href = "{% url 'edit_goal' goal.pk %}">{{ goal.name }}</a></td>
+    <td>{{ goal.deadline|date:"N d, Y" }} ({{ goal.deadline|naturaltime }})</td>
+    {% if request.user.is_admin %}
+    <td class="ownerCol">{{ goal.user.get_full_name }}</td>
+    {% endif %}
+    <td>{{ goal.save_time|naturaltime }}</td>
+    <td>
+        <div class="btn-group">
+        <a href="{% url 'view_calculation' goal.pk %}"
+           data-toggle="tooltip"
+           data-placement="left"
+           title="View formatted report for ingredients used in this goal."
+           class="btn btn-link">Report</a>
+        <div class="dropdown">
+            <button class="btn btn-link dropdown-toggle" type="button" data-toggle="dropdown">
+                Download
+            </button>
+            <div class="dropdown-menu">
+            <h6 class="dropdown-header downloadCalculationsHeader">
+                Download calculations as
+            </h6>
+            <a href="{% url 'export_calculation_csv' goal.pk %}" class="dropdown-item">CSV</a>
+            <a href="{% url 'view_calculation' goal.pk %}?print=1" class="dropdown-item">PDF</a>
+            <div class="dropdown-divider"></div>
+            <h6 class="dropdown-header downloadGoalHeader">
+                Download goal as
+            </h6>
+            <a href="{% url 'export_goal_csv' goal.pk %}" class="dropdown-item">CSV</a>
+            <div data-placement="left"
+                 title="Upgrade to premium version to enable PDF exports."
+                 data-toggle="tooltip">
+                <a href="#" class="dropdown-item disabled">PDF</a>
+            </div>
+            </div>
+        </div>
+        </div>
+    </td>
+</tr>
+{% empty %}
+<div class="alert alert-danger">
+<p class="mb-0">You don't currently have any goals. Create one by clicking the
+"Add a new Goal" button.</p>
+</div>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
+{% endblock %}
+
+{% block scriptend %}
+<script src="{% static 'meals/common.js' %}"></script>
+<script src="{% static 'meals/goal/goal.js' %}"></script>
+{% endblock %}

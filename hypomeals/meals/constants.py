@@ -1,7 +1,7 @@
 """
 This file defines some constants (e.g., units) used throughout the project
 """
-
+from datetime import time
 
 MASS_BASED_UNITS = {
     "kg": {
@@ -82,3 +82,5 @@ UNITS = {
     "volume": VOLUME_BASED_UNITS,
     "count": COUNT_BASED_UNITS,
 }
+
+END_OF_DAY = time(17, 0)  # 5 PM is end of day

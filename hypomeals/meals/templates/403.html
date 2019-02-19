@@ -7,11 +7,29 @@
 <div class="row">
 <div class="col-sm-12">
     <div class="alert alert-danger my-4">
-        You don't have permission to view this page.
-        Please contact the administrator, if you believe you are seeing this
-        message in error.
-        <br/>
-        <a href="{% url 'index' %}">Back to Dashboard</a>
+        <div class="row">
+        <div class="col-sm-2">
+            <div class="my-2 d-flex justify-content-center">
+            <span class="fas fa-exclamation-triangle fa-5x"></span>
+            </div>
+        </div>
+        <div class="col-sm-10">
+            {% if exception %}{{ exception }}{% else %}
+            You don't have permission to view this page,
+            {% endif %}
+            {% if messages %}because of the following reason{{ messages|pluralize }}:
+            <ul class="messages">
+                {% for message in messages %}
+                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                {% endfor %}
+            </ul>
+            {% else %}.{% endif %}
+            Please contact the administrator, if you believe you are seeing this
+            message in error.
+            <br/>
+            <a class="mb-0" href="{% url 'index' %}">Back to Dashboard</a>
+        </div>
+        </div>
     </div>
 </div>
 </div>
