@@ -20,6 +20,11 @@ urlpatterns = [
         name="autocomplete_ingredients",
     ),
     path(
+        "ac-manufacturing-lines",
+        views.autocomplete_manufacturing_lines,
+        name="autocomplete_manufacturing_lines",
+    ),
+    path(
         "ac-product-lines",
         views.autocomplete_product_lines,
         name="autocomplete_product_lines",

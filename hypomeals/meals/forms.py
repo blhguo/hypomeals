@@ -21,7 +21,7 @@ from meals import utils
 from meals.exceptions import CollisionOccurredException
 from meals.models import GoalItem, Goal
 from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor, Formula
-from meals.models import FormulaIngredient
+from meals.models import FormulaIngredient, ManufacturingLine, SkuManufacturingLine
 from meals.utils import BootstrapFormControlMixin, FilenameRegexValidator
 
 logger = logging.getLogger(__name__)
@@ -574,12 +574,14 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
         + get_formula_choices(),
         required=True,
     )
-    manufacturing_line = forms.ChoiceField(
-        choices=lambda: BLANK_CHOICE_DASH
-        + [("custom", "Custom")]
-        + get_manufacturing_line_choices(),
+    manufacturing_lines = CsvAutocompletedField(
+        model=ManufacturingLine,
+        data_source=reverse_lazy("autocomplete_manufacturing_lines"),
         required=True,
+        attr="shortname",
+        help_text="Enter Manufacturing Lines separated by commas",
     )
+    rate = forms.FloatField(min_value=0.00)
 
     class Meta:
         model = Sku
@@ -595,9 +597,10 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
             "comment",
             "formula",
             "formula_scale",
-            "manufacturing_lines"
+            "manufacturing_lines",
+            "rate",
         ]
-        exclude = ["case_upc", "unit_upc", "product_line", "formula", "manufacturing_lines"]
+        exclude = ["case_upc", "unit_upc", "product_line", "formula", "manufacturing_lines", "rate"]
         widgets = {"comment": forms.Textarea(attrs={"maxlength": 4000})}
         labels = {"number": "SKU#"}
         help_texts = {
@@ -611,12 +614,16 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
         if "instance" in kwargs:
             instance = kwargs["instance"]
             if hasattr(instance, "pk") and instance.pk:
+                sku_manufacturing_lines = SkuManufacturingLine.objects.filter(sku = instance)
+                manufacturing_lines = ", ".join([instance.manufacturing_line.shortname for instance in sku_manufacturing_lines])
                 initial.update(
                     {
                         "case_upc": instance.case_upc.upc_number,
                         "unit_upc": instance.unit_upc.upc_number,
                         "product_line": instance.product_line.name,
                         "formula": instance.formula.name,
+                        "manufacturing_lines": manufacturing_lines,
+                        "rate": sku_manufacturing_lines[0].rate,
                     }
                 )
         super().__init__(*args, initial=initial, **kwargs)
@@ -677,6 +684,19 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
                 )
             except Formula.DoesNotExist:
                 data["formula"] = Formula(name=data["formula"])
+
+        if "manufacturing_lines" in data:
+            manufacturing_lines = self.cleaned_data["manufacturing_lines"]
+            manufacturing_lines_objs = []
+            for manufacturing_line in manufacturing_lines:
+                try:
+                    manufacturing_line_obj = ManufacturingLine.objects.get(shortname=manufacturing_line)
+                    manufacturing_lines_objs.append(manufacturing_line_obj)
+                except ManufacturingLine.DoesNotExist:
+                    error_message = "Manufactuing Line with Short Name: %s doesn't exist" % (manufacturing_line, )
+                    self.add_error(self.cleaned_data["manufacturing_line"], error_message)
+            data["manufacturing_lines"] = manufacturing_lines_objs
+
         return data
 
     @transaction.atomic
@@ -687,6 +707,15 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
         for fk in fks:
             self.cleaned_data[fk].save()
             setattr(instance, fk, self.cleaned_data[fk])
+        manufacturing_lines = self.cleaned_data["manufacturing_lines"]
+        SkuManufacturingLine.objects.filter(sku = instance).delete()
+        for manufacturing_line in manufacturing_lines:
+            print(manufacturing_line)
+            SkuManufacturingLine.objects.create(
+                sku=instance,
+                manufacturing_line=manufacturing_line,
+                rate=self.cleaned_data["rate"]
+            )
         instance.save()
         self.save_m2m()
         return instance
@@ -713,8 +742,8 @@ class FormulaForm(forms.Form, utils.BootstrapFormControlMixin):
 
     def save(self, commit=True):
         instance = FormulaIngredient(
-            sku_number=self.sku,
-            ingredient_number=self.cleaned_data["ingredient"],
+            formula=self.sku.formula,
+            ingredient=self.cleaned_data["ingredient"],
             quantity=self.cleaned_data["quantity"],
         )
         if commit:

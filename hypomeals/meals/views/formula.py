@@ -28,7 +28,7 @@ def edit_formula(request, sku_number):
             logger.info("Cleaned data: %s", formset.cleaned_data)
             saved = []
             with transaction.atomic():
-                FormulaIngredient.objects.filter(sku_number=sku).delete()
+                FormulaIngredient.objects.filter(formula=sku.formula).delete()
                 for form, data in zip(formset.forms, formset.cleaned_data):
                     if "DELETE" not in data or data["DELETE"]:
                         continue
@@ -38,9 +38,9 @@ def edit_formula(request, sku_number):
             messages.info(request, f"Successfully inserted {len(saved)} ingredients.")
             return redirect("sku")
     else:
-        formulas = FormulaIngredient.objects.filter(sku_number=sku_number)
+        formulas = FormulaIngredient.objects.filter(formula=sku.formula)
         initial_data = [
-            {"ingredient": formula.ingredient_number.name, "quantity": formula.quantity}
+            {"ingredient": formula.ingredient.name, "quantity": formula.quantity}
             for formula in formulas
         ]
         formset = FormulaFormset(initial=initial_data, form_kwargs={"sku": sku})

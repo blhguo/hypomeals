@@ -1,4 +1,5 @@
 {% extends 'meals/base.html' %}
+{% load staticfiles %}
 
 {% block title %}
     {% if editing %}Edit SKU #{{ sku_number }}{% else %}Add SKU{% endif %}
@@ -111,6 +112,7 @@ $(function() {
     })
 });
 </script>
+<script src="{% static 'meals/common.js' %}"></script>
 {% endblock %}
 
 {% block sku_active %}active{% endblock %}
