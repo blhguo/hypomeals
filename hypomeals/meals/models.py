@@ -91,7 +91,15 @@ class Unit(models.Model):
     verbose_name = models.CharField(max_length=20, blank=True)
     # A scale factor w.r.t. the base unit for this class. I.e., this unit multiplied by
     # the scale factor should equal to the base unit
-    scale_factor = models.DecimalField(max_digits=12, decimal_places=6)
+    scale_factor = models.DecimalField(
+        max_digits=12,
+        decimal_places=6,
+        validators=[
+            MinValueValidator(
+                limit_value=0.000001, message="Formula scale factor must be positive."
+            )
+        ],
+    )
     # Whether this is the base unit. This implies a scale factor of 1.0.
     is_base = models.BooleanField(default=False)
     unit_type = models.CharField(
@@ -121,7 +129,6 @@ class Ingredient(
     )
     vendor = models.ForeignKey(Vendor, verbose_name="Vendor", on_delete=models.CASCADE)
     size = models.DecimalField(
-        max_length=100,
         verbose_name="Size",
         blank=False,
         max_digits=12,
@@ -138,7 +145,9 @@ class Ingredient(
         related_name="ingredients",
         related_query_name="ingredient",
     )
-    cost = models.FloatField(blank=False, verbose_name="Cost")
+    cost = models.DecimalField(
+        blank=False, max_digits=12, decimal_places=2, verbose_name="Cost"
+    )
     comment = models.CharField(max_length=4000, blank=True, verbose_name="Comment")
 
     def __repr__(self):
@@ -322,7 +331,7 @@ class FormulaIngredient(
     compare_excluded_fields = ("id",)
 
     formula = models.ForeignKey(
-        Formula, blank=False, on_delete=models.CASCADE, verbose_name="SKU#"
+        Formula, blank=False, on_delete=models.CASCADE, verbose_name="Formula#"
     )
     ingredient = models.ForeignKey(
         Ingredient,
@@ -332,12 +341,12 @@ class FormulaIngredient(
         related_name="formulas",
         related_query_name="formula",
     )
-    quantity = models.FloatField(blank=False)
+    quantity = models.DecimalField(blank=False, max_digits=12, decimal_places=6)
 
     def __repr__(self):
         return (
             f"<FormulaIngr #{self.id}: {self.formula.name} <-> "
-            f"{self.ingredient.name} ({self.quantity})"
+            f"{self.ingredient.name} ({self.quantity})>"
         )
 
     __str__ = __repr__
