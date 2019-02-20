@@ -1,0 +1,31 @@
+<div class="container">
+<div class="row">
+<div class="col-sm-12">
+<h3>Related SKUs</h3>
+    <table class="table">
+    <thead class="thead-light">
+    <tr>
+        <th>SKU#</th>
+        <th>SKU Name</th>
+    </tr>
+    </thead>
+    <tbody id="formsetTable">
+    {% for pl_sku in pl_skus %}
+    <tr>
+        <td class="align-middle">
+            {{ pl_sku.number }}
+        </td>
+        <td class="align-middle">
+            {{ pl_sku.name }}
+        </td>
+    </tr>
+    {% empty %}
+        <div class="alert alert-danger" id="emptyAlert">
+        There are no related SKUs
+        </div>
+    {% endfor %}
+    </tbody>
+    </table>
+</div>
+</div>
+</div>

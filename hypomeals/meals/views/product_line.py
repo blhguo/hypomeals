@@ -10,11 +10,11 @@ from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
 
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 
 from meals import auth
 from meals.forms import Product_LineFilterForm, EditProduct_LineForm
-from meals.models import ProductLine
+from meals.models import ProductLine, Sku
 
 logger = logging.getLogger(__name__)
 
@@ -126,3 +126,21 @@ def remove_product_lines(request):
         )
     except DatabaseError as e:
         return JsonResponse({"error": str(e), "resp": "Not removed"})
+
+
+@login_required
+@require_GET
+@permission_required("meals.view_pl_skus", raise_exception=True)
+def view_pl_skus(request, product_line_name):
+    queryset = ProductLine.objects.filter(name=product_line_name)
+    if queryset.exists():
+        productline = queryset[0]
+        pl_skus = Sku.objects.filter(product_line=productline)
+        resp = render_to_string(template_name="meals/sku/view_sku.html",
+                                context={"pl_skus": pl_skus},
+                                request=request,)
+        error = None
+    else:
+        error = f"Product Line with name '{product_line_name}' not found."
+        resp = error
+    return JsonResponse({"error": error, "resp": resp})

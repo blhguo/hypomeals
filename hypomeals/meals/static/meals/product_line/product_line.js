@@ -76,6 +76,37 @@ $(function() {
         $("#product_lineFilterForm").submit();
     });
 
+    /***************** View Related SKUs ****************/
+
+    let viewPLSkusButtons = $('.viewPLSkus');
+    let viewPLSkusUrl = $("#viewPLSkusUrl").attr("href");
+    let loadingSpinner = $("#loadingSpinner");
+    let modalBody = $("#modalBody");
+    let modalDiv = $("#modalDiv");
+
+    function viewPLSkus() {
+        let product_line_name = $(this).attr("id");
+        let url = viewPLSkusUrl.replace("0", String(product_line_name));
+        let removed = modalBody.find("div.container").remove();
+        if (removed.length > 0) {
+            loadingSpinner.toggle(false);
+        }
+        $.getJSON(url, {})
+            .done(function(data, textStatus) {
+                if (!showNetworkError(data, textStatus)) {
+                    return;
+                }
+                if ("error" in data && data.error != null) {
+                    alert(data.error);
+                    modalDiv.modal("hide");
+                    return;
+                }
+                loadingSpinner.toggle(false);
+                $(data.resp).appendTo(modalBody);
+        })
+    }
+    viewPLSkusButtons.click(viewPLSkus);
+
     exportButton.on("click", function() {
         const original = product_lineFilterForm.attr("action");
         product_lineFilterForm.attr("action", original + "?export=1")

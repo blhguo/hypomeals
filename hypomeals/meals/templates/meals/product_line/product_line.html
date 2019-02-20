@@ -94,6 +94,7 @@
         <th><input type="checkbox" id="selectAllCheckbox"> </th>
         {% endif %}
         <th>Name</th>
+        <th>Options</th>
     </tr>
     </thead>
     <tbody class="table-striped">
@@ -114,6 +115,22 @@
                 {{ product_line.name }}
             </a>
         </td>
+        <td>
+            <a class="btn btn-link viewPLSkus"
+               href="#"
+               {% if not perms.meals.view_pl_skus %}
+               disabled="disabled"
+               data-toggle="tooltip"
+               data-placement="left"
+               title="You don't have permission to view this product line's SKUs"
+               {% endif %}
+                data-toggle="modal"
+               data-target="#modalDiv"
+               id="{{ product_line.name }}">
+                View
+            </a>
+        <!--TODO: Not sure if I need to add the ability to edit a product line-->
+        </td>
     </tr>
     {%  empty %}
     {% endfor %}
@@ -126,12 +143,42 @@
 </div>
 </form>
 </div>
+
+<!-- Modal -->
+
+<div class="modal" tabindex="-1" role="dialog" id="modalDiv">
+<div class="modal-dialog modal-lg" role="document">
+<div class="modal-content">
+    <div class="modal-header">
+        <h5 class="modal-title"></h5>
+        <button type="button" class="close" data-dismiss="modal">
+            <span class="fas fa-times"></span>
+        </button>
+    </div>
+    <div class="modal-body" id="modalBody">
+        <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status" id="loadingSpinner">
+            <span class="sr-only">Loading...</span>
+        </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button"
+                class="btn btn-secondary"
+                data-dismiss="modal">Close</button>
+    </div>
+</div>
+</div>
+</div>
+
+
 <!-- Hidden div for template data -->
 <div style="display: none;">
 <a href="{% url 'remove_product_lines' %}" id="removeProduct_LinesUrl"></a>
 <a href="{% url 'product_line' %}" id="product_lineUrl"></a>
 <input id="pageNumInputId" value="{{ form.page_num.id_for_label }}">
 <input id="nameInputId" value="{{ form.name.id_for_label }}">
+<a href="{% url 'view_pl_skus' 0 %}" id="viewPLSkusUrl"></a>
 </div>
 {% endblock %}
 
