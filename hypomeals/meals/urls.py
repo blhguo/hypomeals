@@ -16,7 +16,8 @@ urlpatterns = [
     path("add-product-line", views.add_product_line, name="add_product_line"),
     path("edit-product-line/<str:product_line_name>",
          views.edit_product_line, name="edit_product_line"),
-    path("view-pl-skus/<str:product_line_name>", views.view_pl_skus, name="view_pl_skus"),
+    path("view-pl-skus/<str:product_line_name>",
+         views.view_pl_skus, name="view_pl_skus"),
     # SKU views
     path("sku", views.sku, name="sku"),
     path("remove-skus", views.remove_skus, name="remove_skus"),
