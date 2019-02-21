@@ -210,7 +210,9 @@ class SkuImporter(Importer):
             setattr(instance, field_name, row[self.field_dict[field_name]])
         setattr(instance, "manufacturing_lines", row["ML Shortnames"])
         for ML_obj in row["ML Shortnames"]:
-            SML = SkuManufacturingLine(sku=instance, manufacturing_line=ML_obj, rate=row["Rate"])
+            SML = SkuManufacturingLine(sku=instance,
+                                       manufacturing_line=ML_obj,
+                                       rate=row["Rate"])
             SML.save()
         return instance
 
