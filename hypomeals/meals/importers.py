@@ -14,7 +14,9 @@ from meals.exceptions import (
     CollisionException,
     DuplicateException,
 )
-from meals.models import Sku, ProductLine, Upc, Vendor, Ingredient, FormulaIngredient, ManufacturingLine, SkuManufacturingLine
+from meals.models import Sku, ProductLine, Upc, \
+    Vendor, Ingredient, FormulaIngredient, \
+    ManufacturingLine, SkuManufacturingLine
 
 logger = logging.getLogger(__name__)
 
@@ -207,6 +209,9 @@ class SkuImporter(Importer):
         for field_name in self.fields:
             setattr(instance, field_name, row[self.field_dict[field_name]])
         setattr(instance, "manufacturing_lines", row["ML Shortnames"])
+        for ML_obj in row["ML Shortnames"]:
+            SML = SkuManufacturingLine(sku=instance, manufacturing_line=ML_obj, rate=row["Rate"])
+            SML.save()
         return instance
 
     def _process_row(self, row, line_num=None):
