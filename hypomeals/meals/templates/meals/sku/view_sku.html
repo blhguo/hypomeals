@@ -6,7 +6,7 @@
     <thead class="thead-light">
     <tr>
         <th>SKU#</th>
-        <th>SKU Name</th>
+        <th>SKU</th>
     </tr>
     </thead>
     <tbody id="formsetTable">
@@ -16,7 +16,7 @@
             {{ pl_sku.number }}
         </td>
         <td class="align-middle">
-            {{ pl_sku.name }}
+            {{ pl_sku.verbose_name }}
         </td>
     </tr>
     {% empty %}

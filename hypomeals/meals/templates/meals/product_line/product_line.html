@@ -6,7 +6,7 @@
 
 {% block body %}
 <div class="container-fluid m-auto">
-<form method="post" action="{% url 'product_line' %}" id="product_lineFilterForm">
+<form method="post" action="{% url 'product_line' %}" id="productlineFilterForm">
 {%  csrf_token %}
 <div class="row">
 <div class="col-sm-8">
@@ -63,17 +63,7 @@
             <span class="fa fa-plus"></span> Add a new Product Line
         </a>
         {% endif %}
-        {% if perms.meals.delete_product_line %}
-        <button type="button"
-                class="btn btn-danger"
-                disabled
-                data-toggle="tooltip"
-                data-placement="top"
-                title="Select Product Lines below to remove them."
-                id="removeButton">
-            <span class="fa fa-minus"></span> Remove Selected
-        </button>
-        {% endif %}
+        
     </div>
 </div>
 </div>
@@ -174,8 +164,8 @@
 
 <!-- Hidden div for template data -->
 <div style="display: none;">
-<a href="{% url 'remove_product_lines' %}" id="removeProduct_LinesUrl"></a>
-<a href="{% url 'product_line' %}" id="product_lineUrl"></a>
+<a href="{% url 'remove_product_lines' %}" id="removeProductLinesUrl"></a>
+<a href="{% url 'product_line' %}" id="productlineUrl"></a>
 <input id="pageNumInputId" value="{{ form.page_num.id_for_label }}">
 <input id="nameInputId" value="{{ form.name.id_for_label }}">
 <a href="{% url 'view_pl_skus' 0 %}" id="viewPLSkusUrl"></a>

@@ -300,7 +300,7 @@ class CsvModelAttributeField(forms.CharField):
         return found
 
 
-class Product_LineFilterForm(forms.Form):
+class ProductLineFilterForm(forms.Form):
     NUM_PER_PAGE_CHOICES = [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
 
     page_num = forms.IntegerField(
@@ -348,7 +348,7 @@ class Product_LineFilterForm(forms.Form):
         return Paginator(query.distinct(), num_per_page)
 
 
-class EditProduct_LineForm(forms.ModelForm):
+class EditProductLineForm(forms.ModelForm):
     name = forms.CharField(
         required=True,
         widget=forms.TextInput(attrs={"placeholder": "Enter a new name..."}),
