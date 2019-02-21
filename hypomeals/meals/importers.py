@@ -14,7 +14,7 @@ from meals.exceptions import (
     CollisionException,
     DuplicateException,
 )
-from meals.models import Sku, ProductLine, Upc, Vendor, Ingredient, FormulaIngredient
+from meals.models import Sku, ProductLine, Upc, Vendor, Ingredient, FormulaIngredient, ManufacturingLine, SkuManufacturingLine
 
 logger = logging.getLogger(__name__)
 
@@ -178,6 +178,10 @@ class SkuImporter(Importer):
         "Unit size",
         "Count per case",
         "Product Line Name",
+        "Formula#",
+        "Formula factor",
+        "ML Shortnames",
+        "Rate",
         "Comment",
     ]
     primary_key = Sku._meta.get_field("number")
@@ -192,8 +196,18 @@ class SkuImporter(Importer):
         "unit_size": "Unit size",
         "count": "Count per case",
         "product_line": "Product Line Name",
+        "formula": "Formula#",
+        "formula_scale": "Formula factor",
+        "manufacturing_lines": "ML Shortnames",
         "comment": "Comment",
     }
+
+    def _construct_instance(self, row, line_num=None):
+        instance = self.model()
+        for field_name in self.fields:
+            setattr(instance, field_name, row[self.field_dict[field_name]])
+        setattr(instance, "manufacturing_lines", row["ML Shortnames"])
+        return instance
 
     def _process_row(self, row, line_num=None):
         raw_case_upc = row["Case UPC"]
@@ -216,6 +230,22 @@ class SkuImporter(Importer):
                 fk_name="Product Line Name",
                 fk_value=row["Product Line Name"],
             )
+
+        ml_short_set_string = row["ML Shortnames"]
+        ml_short_set = ml_short_set_string.split(",")
+        ml_short = ManufacturingLine.objects.filter(shortname__in=ml_short_set)
+        if len(ml_short) != len(ml_short_set):
+            #we have an error, some manufacturing lines were attempted to be imported
+            raise IntegrityException(
+                message=f"Cannot import SKU #{row['SKU#']}",
+                line_num=line_num,
+                referring_name="SKU",
+                referred_name="Manufacturing Line",
+                fk_name="Manufacturing Line Name",
+                fk_value=row["ML Shortnames"],
+            )
+        else:
+            row["ML Shortnames"] = ml_short
         return row
 
 
