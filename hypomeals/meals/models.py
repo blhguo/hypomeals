@@ -150,7 +150,7 @@ class Ingredient(
         blank=False, max_digits=12, decimal_places=2, verbose_name="Cost",  validators=[
             MinValueValidator(
                 limit_value=0.01, message="Cost must be positive."
-            )
+            )]
     )
     comment = models.CharField(max_length=4000, blank=True, verbose_name="Comment")
 
