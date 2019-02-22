@@ -12,3 +12,4 @@ python-magic
 reportlab
 cachetools
 gunicorn
+requests

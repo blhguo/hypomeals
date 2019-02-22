@@ -91,7 +91,15 @@ class Unit(models.Model):
     verbose_name = models.CharField(max_length=20, blank=True)
     # A scale factor w.r.t. the base unit for this class. I.e., this unit multiplied by
     # the scale factor should equal to the base unit
-    scale_factor = models.DecimalField(max_digits=12, decimal_places=6)
+    scale_factor = models.DecimalField(
+        max_digits=12,
+        decimal_places=6,
+        validators=[
+            MinValueValidator(
+                limit_value=0.000001, message="Formula scale factor must be positive."
+            )
+        ],
+    )
     # Whether this is the base unit. This implies a scale factor of 1.0.
     is_base = models.BooleanField(default=False)
     unit_type = models.CharField(
@@ -100,6 +108,8 @@ class Unit(models.Model):
 
     def __repr__(self):
         return f"<Unit: {self.symbol}>"
+
+    __str__ = __repr__
 
 
 class Ingredient(
@@ -119,7 +129,6 @@ class Ingredient(
     )
     vendor = models.ForeignKey(Vendor, verbose_name="Vendor", on_delete=models.CASCADE)
     size = models.DecimalField(
-        max_length=100,
         verbose_name="Size",
         blank=False,
         max_digits=12,
@@ -136,15 +145,20 @@ class Ingredient(
         related_name="ingredients",
         related_query_name="ingredient",
     )
-    cost = models.FloatField(blank=False, verbose_name="Cost", validators=[
+
+    cost = models.DecimalField(
+        blank=False, max_digits=12, decimal_places=2, verbose_name="Cost",  validators=[
             MinValueValidator(
                 limit_value=0.01, message="Cost must be positive."
             )
-        ])
+    )
     comment = models.CharField(max_length=4000, blank=True, verbose_name="Comment")
 
     def __repr__(self):
         return f"<Ingr #{self.number}: {self.name}>"
+
+    def __str__(self):
+        return self.name
 
     class Meta:
         ordering = ["number"]
@@ -257,6 +271,9 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
     def __repr__(self):
         return f"<SKU #{self.number}: {self.name}>"
 
+    def __str__(self):
+        return self.verbose_name
+
     class Meta:
         ordering = ["number"]
 
@@ -300,6 +317,9 @@ class Formula(
     def __repr__(self):
         return f"<Formula #{self.number}: {self.name}>"
 
+    def __str__(self):
+        return self.name
+
     def save(self, *args, **kwargs):
         if not self.number:
             self.number = utils.next_id(Formula)
@@ -315,7 +335,7 @@ class FormulaIngredient(
     compare_excluded_fields = ("id",)
 
     formula = models.ForeignKey(
-        Formula, blank=False, on_delete=models.CASCADE, verbose_name="SKU#"
+        Formula, blank=False, on_delete=models.CASCADE, verbose_name="Formula#"
     )
     ingredient = models.ForeignKey(
         Ingredient,
@@ -325,13 +345,15 @@ class FormulaIngredient(
         related_name="formulas",
         related_query_name="formula",
     )
-    quantity = models.FloatField(blank=False)
+    quantity = models.DecimalField(blank=False, max_digits=12, decimal_places=6)
 
     def __repr__(self):
         return (
             f"<FormulaIngr #{self.id}: {self.formula.name} <-> "
-            f"{self.ingredient.name} ({self.quantity})"
+            f"{self.ingredient.name} ({self.quantity})>"
         )
+
+    __str__ = __repr__
 
     class Meta:
         unique_together = (("formula", "ingredient"),)
@@ -354,6 +376,9 @@ class ManufacturingLine(
 
     def __repr__(self):
         return f"<MfgLine #{self.number}: {self.shortname}>"
+
+    def __str__(self):
+        return self.shortname
 
     class Meta:
         ordering = ["shortname"]
@@ -400,6 +425,8 @@ class SkuManufacturingLine(
             f"{self.manufacturing_line.shortname} ({self.rate})>"
         )
 
+    __str__ = __repr__
+
     class Meta:
         unique_together = (("sku", "manufacturing_line"),)
 
@@ -422,6 +449,9 @@ class Goal(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutio
 
     def __repr__(self):
         return f"<Goal #{self.id}: {self.name}>"
+
+    def __str__(self):
+        return self.name
 
     class Meta:
         unique_together = (("user", "name", "save_time"),)
@@ -457,6 +487,8 @@ class GoalItem(
             f"<GoalItem #{self.id}: {self.goal.name} <-> "
             f"{self.sku.name} ({self.quantity})"
         )
+
+    __str__ = __repr__
 
     class Meta:
         unique_together = (("goal", "sku"),)

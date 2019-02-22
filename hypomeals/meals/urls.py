@@ -69,6 +69,12 @@ urlpatterns = [
     ),
     path("find_product_line/", views.find_product_line, name="find_product_line"),
     # Account management views
-    path("accounts/login/", auth_views.LoginView.as_view(), name="login"),
+    path(
+        "accounts/login/",
+        auth_views.LoginView.as_view(template_name="meals/accounts/login.html"),
+        name="login",
+    ),
     path("accounts/logout/", views.logout_view, name="logout"),
+    path("accounts/sso/authorize", views.sso_start, name="sso"),
+    path("accounts/sso", views.sso_landing, name="sso_landing"),
 ]
