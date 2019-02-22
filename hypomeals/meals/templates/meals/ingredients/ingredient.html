@@ -181,7 +181,7 @@
             </a>
         </td>
         <td>{{ ingredient.vendor.info }}</td>
-        <td>{{ ingredient.size }}</td>
+        <td>{{ ingredient.size.normalize }} {{ ingredient.unit.symbol }}</td>
         <td>{{ ingredient.cost }}</td>
         <td>{{ ingredient.comment|truncatewords:20 }}</td>
     </tr>
