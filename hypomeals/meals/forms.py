@@ -19,7 +19,7 @@ from meals import bulk_import
 from meals import utils
 from meals.exceptions import CollisionOccurredException
 from meals.models import GoalItem, Goal
-from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor
+from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor, Unit
 from meals.models import FormulaIngredient
 from meals.utils import BootstrapFormControlMixin, FilenameRegexValidator
 
@@ -261,6 +261,11 @@ def get_vendor_choices():
     return [(ven.info, ven.info) for ven in Vendor.objects.all()]
 
 
+def get_unit_choices():
+    return [(un.symbol, f"{un.symbol} ({un.verbose_name})")
+            for un in Unit.objects.all()]
+
+
 class CsvModelAttributeField(forms.CharField):
 
     attr = "pk"
@@ -372,6 +377,12 @@ class EditIngredientForm(forms.ModelForm):
         required=True,
     )
 
+    unit = forms.ChoiceField(
+        choices=lambda: BLANK_CHOICE_DASH
+        + get_unit_choices(),
+        required=True,
+    )
+
     class Meta:
         model = Ingredient
         fields = [
@@ -380,11 +391,12 @@ class EditIngredientForm(forms.ModelForm):
             "vendor",
             "custom_vendor",
             "size",
+            "unit",
             "cost",
             "comment",
         ]
         exclude = ["vendor"]
-        widgets = {"comment": forms.Textarea(attrs={"maxlength": 200})}
+        widgets = {"comment": forms.Textarea(attrs={"maxlength": 4000})}
         labels = {"number": "Ingr#"}
         help_texts = {
             "name": "Name of the new Ingredient.",
@@ -398,6 +410,7 @@ class EditIngredientForm(forms.ModelForm):
             instance = kwargs["instance"]
             if hasattr(instance, "pk") and instance.pk:
                 initial.update({"vendor": instance.vendor.info})
+                initial.update({"unit": instance.unit.symbol})
         super().__init__(*args, initial=initial, **kwargs)
         reordered_fields = OrderedDict()
         for field_name in self.Meta.fields:
@@ -415,7 +428,7 @@ class EditIngredientForm(forms.ModelForm):
 
     def clean(self):
         # The main thing to check for here is whether the user has supplied a custom
-        # Product Line, if "Custom" was chosen in the dropdown
+        # Vendor, if "Custom" was chosen in the dropdown
         data = super().clean()
         if "vendor" in data:
             if data["vendor"] == "custom":
@@ -427,6 +440,12 @@ class EditIngredientForm(forms.ModelForm):
                 data["vendor"] = data["custom_vendor"]
             qs = Vendor.objects.filter(info=data["vendor"])
             data["vendor"] = qs[0] if qs.exists() else Vendor(info=data["vendor"])
+        if "unit" not in data or not Unit.objects.filter(symbol=data["unit"]).exists():
+            raise ValidationError(
+                    "You must specify a Unit"
+            )
+        else:
+            data["unit"] = Unit.objects.filter(symbol=data["unit"])[0]
 
         return data
 
