@@ -15,7 +15,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.utils.datetime_safe import datetime
 
 from meals import auth
-from meals.constants import WORK_HOURS_END
+from meals.constants import WORK_HOURS_END, ADMINS_GROUP
 from meals.forms import SkuQuantityFormset, GoalForm, GoalFilterForm
 from meals.models import Sku, ProductLine, Goal, GoalItem
 from meals.utils import SortedDefaultDict
@@ -32,7 +32,7 @@ def _get_goal(request, goal_id):
         it. Raises PermissionDenied otherwise.
     """
     goal = get_object_or_404(Goal, pk=goal_id)
-    if request.user.is_superuser or request.user.groups.filter(name="Admins").exists():
+    if request.user.is_superuser or request.user.groups.filter(name=ADMINS_GROUP).exists():
         # User is admin, grant access
         logger.info("Granting admin access for goal %d", goal_id)
         return goal
