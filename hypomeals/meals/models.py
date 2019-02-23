@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.utils.text import Truncator
 
 from meals import utils
+from meals.constants import ADMINS_GROUP
 from meals.validators import validate_alphanumeric, validate_netid
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ class User(AbstractUser):
 
     @property
     def is_admin(self):
-        return self.is_superuser or self.groups.filter(name="Admins").exists()
+        return self.is_superuser or self.groups.filter(name=ADMINS_GROUP).exists()
 
 
 class Upc(models.Model, utils.ModelFieldsCompareMixin):
@@ -150,8 +151,12 @@ class Ingredient(
         related_name="ingredients",
         related_query_name="ingredient",
     )
+
     cost = models.DecimalField(
-        blank=False, max_digits=12, decimal_places=2, verbose_name="Cost"
+        blank=False, max_digits=12, decimal_places=2, verbose_name="Cost",  validators=[
+            MinValueValidator(
+                limit_value=0.01, message="Cost must be positive."
+            )]
     )
     comment = models.CharField(max_length=4000, blank=True, verbose_name="Comment")
 
@@ -459,6 +464,11 @@ class Goal(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutio
             for item in self.details.all()
             if item.completion_time is not None
         )
+
+    @property
+    def scheduled(self):
+        """A goal is scheduled if all of its items have been scheduled."""
+        return all(hasattr(item, "schedule") for item in self.details.all())
 
     @classmethod
     def get_sortable_fields(cls):

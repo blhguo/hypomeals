@@ -71,7 +71,7 @@
         <button class="btn btn-success" id="showHelpButton">
             <span class="fas fa-question-circle"></span> Help
         </button>
-        <a href="{% url "add_goal" %}" class="btn btn-primary">
+        <a href="{% url "add_goal" %}" id="addGoalButton" class="btn btn-primary">
             <span class="fas fa-plus"></span> Add a new Goal
         </a>
         {% if request.user.is_admin %}
@@ -86,7 +86,7 @@
            class="dropdown-item"><span class="fas fa-check"></span> Enable Goals</a>
         <a href="#"
            id="disableGoalsButton"
-           class="dropdown-item"><span class="fas fa-times"></span> Disabled Goals</a>
+           class="dropdown-item"><span class="fas fa-times"></span> Disable Goals</a>
         </div>
         {% endif %}
     </div>
@@ -102,7 +102,7 @@
 {% csrf_token %}
 {% if form.non_field_errors %}
     <div class="alert alert-danger">
-    <p>Please correct the following error{{ form.non_field_errors|pluralize }}</p>
+    <p>Please correct the following error{{ form.non_field_errors|pluralize }}:</p>
     {{ form.non_field_errors }}
     </div>
 {% endif %}
@@ -110,7 +110,7 @@
     <div class="form-group">
     {{ field.label_tag }}
     {{ field }}
-    {% if field.errors %}<small>{{ field.errors }}</small>{% endif %}
+    {% if field.errors %}<small class="errorlist">{{ field.errors }}</small>{% endif %}
     </div>
 {% endfor %}
 </form>
@@ -142,7 +142,14 @@
     <th>Goal Name</th>
     <th>Deadline</th>
     {% if request.user.is_admin %}
-    <th class="ownerCol">Owner</th>
+    <th>
+        E&#47;S?
+        <span class="fas fa-info-circle"
+              title="Enabled / Scheduled"
+              data-toggle="tooltip"
+              data-placement="top"></span>
+    </th>
+    <th>Creator</th>
     {% endif %}
     <th>Last Modified Time</th>
     <th>Actions</th>
@@ -163,7 +170,25 @@
     <td><a href = "{% url 'edit_goal' goal.pk %}">{{ goal.name }}</a></td>
     <td>{{ goal.deadline|date:"N d, Y" }} ({{ goal.deadline|naturaltime }})</td>
     {% if request.user.is_admin %}
-    <td class="ownerCol">{{ goal.user.get_full_name }}</td>
+    <td>
+        <div class="custom-control custom-control-inline custom-checkbox m-0">
+        <input type="checkbox"
+               disabled="disabled"
+               {% if goal.is_enabled %}checked="checked"{% endif %}
+               id="enabled-{{ goal.pk }}"
+               class="custom-control-input">
+        <label for="enabled-{{ goal.pk }}" class="custom-control-label"></label>
+        </div>
+        <div class="custom-control custom-control-inline custom-checkbox m-0">
+        <input type="checkbox"
+               disabled="disabled"
+               {% if goal.is_scheduled %}checked="checked"{% endif %}
+               id="scheduled-{{ goal.pk }}"
+               class="custom-control-input">
+        <label for="scheduled-{{ goal.pk }}" class="custom-control-label"></label>
+        </div>
+    </td>
+    <td>{{ goal.user.get_full_name }}</td>
     {% endif %}
     <td>{{ goal.save_time|naturaltime }}</td>
     <td>
@@ -222,5 +247,7 @@
 
 {% block scriptend %}
 <script src="{% static 'meals/common.js' %}"></script>
+<script src="{% static 'meals/lib/underscore.js' %}"></script>
+<script src="https://craig.global.ssl.fastly.net/js/mousetrap/mousetrap.min.js"></script>
 <script src="{% static 'meals/goal/goal.js' %}"></script>
 {% endblock %}

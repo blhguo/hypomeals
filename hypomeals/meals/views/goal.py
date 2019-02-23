@@ -1,4 +1,5 @@
 import csv
+import json
 import logging
 import operator
 import tempfile
@@ -223,15 +224,15 @@ def filter_skus(request):
 
 
 def _enable_goals(request, is_enabled=False):
-    logger.debug("Raw GET: %s", request.GET.get("g", "<empty>"))
-    raw = request.GET.get("g", "")
+    raw = request.GET.get("g", "[]")
+    logger.debug("Raw GET: %r", raw)
     try:
-        goal_ids = {int(goal_id.strip()) for goal_id in raw.split(",")} - {""}
+        goal_ids = set(map(int, json.loads(raw)))
     except ValueError as e:
         return JsonResponse(
             {
                 "error": "Unable to parse the following goal IDs: "
-                f"'raw', because {str(e)}",
+                f"'{raw}', because {str(e)}",
                 "resp": None,
             }
         )

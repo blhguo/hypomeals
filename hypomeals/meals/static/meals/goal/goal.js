@@ -1,4 +1,26 @@
 $(function() {
+    let selectAllCheckbox = $("#selectAllCheckbox");
+    Mousetrap.bind(["command+a", "ctrl+a"], function(e) {
+        e.preventDefault();
+        selectAllCheckbox.prop("checked", true).trigger("change");
+    });
+
+    Mousetrap.bind(["command+e", "ctrl+e"], function(e) {
+        e.preventDefault();
+        $("#enableGoalsButton").trigger("click");
+    });
+
+    Mousetrap.bind(["command+d", "ctrl+d"], function(e) {
+        e.preventDefault();
+        $("#disableGoalsButton").trigger("click");
+    });
+
+    Mousetrap.bind("n", function(e) {
+        e.preventDefault();
+        console.log("n");
+        window.location.href = $("#addGoalButton").attr("href");
+    });
+
     $("[data-toggle='tooltip']").tooltip();
     $(".downloadCalculationsHeader").tooltip({
         placement: "left",
@@ -20,11 +42,14 @@ $(function() {
         $(".ownedRows").toggle($(this).prop("checked"));
     }).trigger("change");
 
-    $("#selectAllCheckbox").change(function() {
+    selectAllCheckbox.change(function() {
         $(".selectGoalCheckboxes:visible")
             .prop("checked", ($(this).prop("checked")))
             .trigger("change");
     });
+
+    $("#enableGoalsButton").click(_.partial(toggleGoal, true));
+    $("#disableGoalsButton").click(_.partial(toggleGoal, false));
 
     $("#showHelpButton").click(function() {
         $("#helpDiv").toggle("fast");
@@ -38,12 +63,13 @@ $(function() {
             makeModalAlert(
                 `Cannot ${enabled ? 'Enable' : 'Disable'}`,
                 "You must select at least one goal from " +
-                `the table below before ${enabled ? 'enabling' : 'disabling'} them`);
+                `the table below before ${enabled ? 'enabling' : 'disabling'} them.`);
             return;
         }
         let urlId = `#${enabled ? 'enable' : 'disable'}GoalsUrl`;
         let url = new URL($(urlId).attr("href"), window.location.href);
-        $.getJSON(url, {g: selectedGoals})
+        console.log(selectedGoals);
+        $.getJSON(url, {g: JSON.stringify(selectedGoals)})
             .done(function(data, textStatus) {
                 if (!showNetworkError(data, textStatus)) {
                     return;
@@ -53,10 +79,11 @@ $(function() {
                     return;
                 }
                 if ("resp" in data && data.resp) {
-                    makeModalAlert("Success", data.resp);
+                    makeModalAlert("Success",
+                        data.resp,
+                        null,
+                        () => $("#goalFilterForm").submit());
                 }
             });
     }
-
-
 });
