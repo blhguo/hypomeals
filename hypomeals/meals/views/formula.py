@@ -1,10 +1,11 @@
 import logging
 import time
 
+import jsonpickle
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
-from django.db import transaction
+from django.db import transaction, DatabaseError
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
@@ -12,7 +13,6 @@ from django.views.decorators.http import require_GET, require_POST
 
 from meals import auth
 from meals.forms import FormulaFormset, FormulaFilterForm, FormulaNameForm
-from meals.models import Sku
 from meals.models import FormulaIngredient
 from meals.models import Formula
 
@@ -54,14 +54,12 @@ def add_formula(request):
 @permission_required("meals.view_formulaingredient", raise_exception=True)
 def formula(request):
     start = time.time()
-    export = request.GET.get("export", "0") == "1"
-    report = request.GET.get("report", "0") == "1"
     if request.method == "POST":
         form = FormulaFilterForm(request.POST)
         if form.is_valid():
             formulas = form.query()
         else:
-            formulas = Paginator(Ingredient.objects.all(), 50)
+            formulas = Paginator(Formula.objects.all(), 50)
     else:
         form = FormulaFilterForm()
         formulas = Paginator(Formula.objects.all(), 50)
@@ -86,7 +84,6 @@ def formula(request):
 @login_required
 @permission_required("meals.view_formulaingredient", raise_exception=True)
 def edit_formula(request, formula_number):
-    # sku = get_object_or_404(Sku, pk=sku_number)
     formula = get_object_or_404(Formula, pk=formula_number)
     in_flow = request.GET.get("in_flow", "0") == "1"
     if request.method == "POST":
@@ -94,7 +91,9 @@ def edit_formula(request, formula_number):
         formset = FormulaFormset(request.POST)
         form = FormulaNameForm(request.POST, instance=formula)
         if form.is_valid() and formset.is_valid():
-            instance = form.save()
+            formula.name = form.cleaned_data["name"]
+            formula.comment = form.cleaned_data["comment"]
+            formula.save()
             logger.info("Cleaned data: %s", formset.cleaned_data)
             saved = []
             with transaction.atomic():
@@ -144,9 +143,8 @@ def view_formula(request, formula_number):
         )
         error = None
     else:
-        error = f"SKU with number '{sku_number}' not found."
+        error = f"Formula with number '{formula_number}' not found."
         resp = error
-    print(resp)
     return JsonResponse({"error": error, "resp": resp})
 
 
