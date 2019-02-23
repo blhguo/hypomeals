@@ -17,8 +17,7 @@ from django.urls import reverse_lazy
 
 from meals import bulk_import
 from meals import utils
-from meals.exceptions import CollisionOccurredException
-from meals.exceptions import IllegalArgumentsException
+from meals.exceptions import CollisionOccurredException, IllegalArgumentsException
 from meals.models import FormulaIngredient
 from meals.models import Goal
 from meals.models import GoalSchedule, User
