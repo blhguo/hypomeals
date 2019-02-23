@@ -7,3 +7,4 @@ from .formula import *
 from .ingredient import *
 from .sku import *
 from .goal import *
+from .product_line import *

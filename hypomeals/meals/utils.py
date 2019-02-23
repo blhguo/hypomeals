@@ -1,4 +1,4 @@
-#pylint: disable-msg=protected-access
+# pylint: disable-msg=protected-access
 
 import functools
 import logging
@@ -7,6 +7,7 @@ import os.path
 import random
 import string
 import time
+from datetime import datetime, timedelta
 from functools import wraps
 
 import magic
@@ -22,6 +23,13 @@ from django.utils.crypto import salted_hmac
 from django.utils.deconstruct import deconstructible
 from django.utils.http import int_to_base36
 from six import string_types
+
+from meals.constants import (
+    WORK_HOURS_PER_DAY,
+    WORK_HOURS_END,
+    WORK_HOURS_START,
+    SECONDS_PER_HOUR,
+)
 
 
 def exception_to_error(func):
@@ -422,3 +430,34 @@ def next_id(cls, increment_func=lambda x: x + 1, default=0):
     return increment_func(
         cls.objects.aggregate(Max(pk_field.name))[f"{pk_field.name}__max"]
     )
+
+
+def compute_end_time(start_time: datetime, num_hours: float) -> datetime:
+    """
+    Computes manufacturing end time, taking into consideration work hours of
+    manufacturing lines (supplied by constants.py).
+    :param start_time: datetime at which production starts
+    :param num_hours: total number of hours to complete production on a MfgLine
+    :return: the datetime at which production is scheduled to complete
+    """
+    num_days = int(num_hours / WORK_HOURS_PER_DAY)
+    remaining_hours = num_hours % WORK_HOURS_PER_DAY
+    if remaining_hours == 0:
+        num_days -= 1
+        remaining_hours = WORK_HOURS_PER_DAY
+    if WORK_HOURS_END >= start_time.time() >= WORK_HOURS_START:
+        first_day_end = datetime.combine(start_time.date(), WORK_HOURS_END)
+        remaining_hours -= (
+            first_day_end - start_time
+        ).total_seconds() / SECONDS_PER_HOUR
+    end_time = start_time + timedelta(days=num_days)
+    if remaining_hours > 0:
+        end_time = datetime.combine(
+            (end_time + timedelta(days=1)).date(), WORK_HOURS_START
+        )
+        end_time += timedelta(hours=remaining_hours)
+    else:
+        end_time = datetime.combine(end_time.date(), WORK_HOURS_END) + timedelta(
+            hours=remaining_hours
+        )
+    return end_time

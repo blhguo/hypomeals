@@ -20,7 +20,7 @@ from meals import bulk_import
 from meals import utils
 from meals.exceptions import CollisionOccurredException
 from meals.models import GoalItem, Goal
-from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor, Formula
+from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor, Unit, Formula
 from meals.models import FormulaIngredient, ManufacturingLine, SkuManufacturingLine
 from meals.utils import BootstrapFormControlMixin, FilenameRegexValidator
 
@@ -302,6 +302,15 @@ def get_vendor_choices():
     return [(ven.info, ven.info) for ven in Vendor.objects.all()]
 
 
+def get_sku_choices():
+    return [(sku.number, sku.number) for sku in Sku.objects.all()]
+
+
+def get_unit_choices():
+    return [(un.symbol, f"{un.symbol} ({un.verbose_name})")
+            for un in Unit.objects.all()]
+
+
 class CsvAutocompletedField(AutocompletedCharField):
 
     attr = "pk"
@@ -335,6 +344,108 @@ class CsvAutocompletedField(AutocompletedCharField):
                 )
             raise ValidationError(errors)
         return found
+
+
+class ProductLineFilterForm(forms.Form):
+    NUM_PER_PAGE_CHOICES = [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
+
+    page_num = forms.IntegerField(
+        widget=forms.HiddenInput(), initial=1, min_value=1, required=False
+    )
+    num_per_page = forms.ChoiceField(choices=NUM_PER_PAGE_CHOICES, required=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-control mb-2"
+
+    def clean_skus(self):
+        value = self.cleaned_data["skus"]
+        items = {item.strip() for item in COMMA_SPLIT_REGEX.split(value)} - {""}
+        if not items:
+            return items
+        found = set()
+        not_found = []
+        for item in items:
+            sku = Sku.from_name(item)
+            if sku is None:
+                not_found.append(item)
+            else:
+                found.add(sku)
+        if not_found:
+            errors = []
+            for item in not_found:
+                errors.append(
+                    ValidationError(
+                        "'%(item)s' cannot be found.", params={"item": item}
+                    )
+                )
+            raise ValidationError(errors)
+        return found
+
+    def query(self) -> Paginator:
+        params = self.cleaned_data
+        logger.info("Querying Product Lines with parameters %s", params)
+        num_per_page = int(params.get("num_per_page", 50))
+        query = ProductLine.objects.all()
+        if num_per_page == -1:
+            num_per_page = query.count()
+        return Paginator(query.distinct(), num_per_page)
+
+
+class EditProductLineForm(forms.ModelForm):
+    name = forms.CharField(
+        required=True,
+        widget=forms.TextInput(attrs={"placeholder": "Enter a new name..."}),
+        help_text="Note that this field is case sensitive!",
+    )
+
+    class Meta:
+        model = ProductLine
+        fields = [
+            "name",
+        ]
+        help_texts = {
+            "name": "Name of the new Product Line",
+        }
+
+    def __init__(self, *args, **kwargs):
+        initial = {}
+        if "instance" in kwargs:
+            instance = kwargs["instance"]
+            if hasattr(instance, "pk") and instance.pk:
+                initial.update({"name": instance.name})
+        super().__init__(*args, initial=initial, **kwargs)
+        reordered_fields = OrderedDict()
+        for field_name in self.Meta.fields:
+            if field_name in self.fields:
+                reordered_fields[field_name] = self.fields[field_name]
+                reordered_fields[field_name].widget.attrs["class"] = "form-control"
+        self.fields = reordered_fields
+
+    def clean(self):
+        # The main thing to check for here is whether the user has supplied a custom
+        # Product Line, if "Custom" was chosen in the dropdown
+        data = super().clean()
+        if "name" in data:
+            if data["name"] is None:
+                raise ValidationError(
+                        "You must specify a name"
+                )
+        return data
+
+    @transaction.atomic
+    def save(self, commit=False):
+        instance = super().save(commit)
+        # Manually save the foreign keys, then attach them to the instance
+        fks = []
+        for fk in fks:
+            self.cleaned_data[fk].save()
+            setattr(instance, fk, self.cleaned_data[fk])
+        instance.save()
+        self.save_m2m()
+        return instance
 
 
 class IngredientFilterForm(forms.Form):
@@ -474,6 +585,12 @@ class EditIngredientForm(forms.ModelForm):
         required=True,
     )
 
+    unit = forms.ChoiceField(
+        choices=lambda: BLANK_CHOICE_DASH
+        + get_unit_choices(),
+        required=True,
+    )
+
     class Meta:
         model = Ingredient
         fields = [
@@ -482,11 +599,12 @@ class EditIngredientForm(forms.ModelForm):
             "vendor",
             "custom_vendor",
             "size",
+            "unit",
             "cost",
             "comment",
         ]
         exclude = ["vendor"]
-        widgets = {"comment": forms.Textarea(attrs={"maxlength": 200})}
+        widgets = {"comment": forms.Textarea(attrs={"maxlength": 4000})}
         labels = {"number": "Ingr#"}
         help_texts = {
             "name": "Name of the new Ingredient.",
@@ -500,6 +618,7 @@ class EditIngredientForm(forms.ModelForm):
             instance = kwargs["instance"]
             if hasattr(instance, "pk") and instance.pk:
                 initial.update({"vendor": instance.vendor.info})
+                initial.update({"unit": instance.unit.symbol})
         super().__init__(*args, initial=initial, **kwargs)
         reordered_fields = OrderedDict()
         for field_name in self.Meta.fields:
@@ -517,7 +636,7 @@ class EditIngredientForm(forms.ModelForm):
 
     def clean(self):
         # The main thing to check for here is whether the user has supplied a custom
-        # Product Line, if "Custom" was chosen in the dropdown
+        # Vendor, if "Custom" was chosen in the dropdown
         data = super().clean()
         if "vendor" in data:
             if data["vendor"] == "custom":
@@ -529,6 +648,12 @@ class EditIngredientForm(forms.ModelForm):
                 data["vendor"] = data["custom_vendor"]
             qs = Vendor.objects.filter(info=data["vendor"])
             data["vendor"] = qs[0] if qs.exists() else Vendor(info=data["vendor"])
+        if "unit" not in data or not Unit.objects.filter(symbol=data["unit"]).exists():
+            raise ValidationError(
+                    "You must specify a Unit"
+            )
+        else:
+            data["unit"] = Unit.objects.filter(symbol=data["unit"])[0]
 
         return data
 
