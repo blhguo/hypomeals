@@ -307,8 +307,9 @@ def get_sku_choices():
 
 
 def get_unit_choices():
-    return [(un.symbol, f"{un.symbol} ({un.verbose_name})")
-            for un in Unit.objects.all()]
+    return [
+        (un.symbol, f"{un.symbol} ({un.verbose_name})") for un in Unit.objects.all()
+    ]
 
 
 class CsvAutocompletedField(AutocompletedCharField):
@@ -403,12 +404,8 @@ class EditProductLineForm(forms.ModelForm):
 
     class Meta:
         model = ProductLine
-        fields = [
-            "name",
-        ]
-        help_texts = {
-            "name": "Name of the new Product Line",
-        }
+        fields = ["name"]
+        help_texts = {"name": "Name of the new Product Line"}
 
     def __init__(self, *args, **kwargs):
         initial = {}
@@ -430,9 +427,7 @@ class EditProductLineForm(forms.ModelForm):
         data = super().clean()
         if "name" in data:
             if data["name"] is None:
-                raise ValidationError(
-                        "You must specify a name"
-                )
+                raise ValidationError("You must specify a name")
         return data
 
     @transaction.atomic
@@ -510,6 +505,7 @@ class IngredientFilterForm(forms.Form):
             num_per_page = query.count()
         return Paginator(query.distinct(), num_per_page)
 
+
 class FormulaFilterForm(forms.Form):
     NUM_PER_PAGE_CHOICES = [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
 
@@ -572,6 +568,7 @@ class FormulaFilterForm(forms.Form):
             num_per_page = query.count()
         return Paginator(query.distinct(), num_per_page)
 
+
 class EditIngredientForm(forms.ModelForm):
     custom_vendor = forms.CharField(
         required=False,
@@ -586,9 +583,7 @@ class EditIngredientForm(forms.ModelForm):
     )
 
     unit = forms.ChoiceField(
-        choices=lambda: BLANK_CHOICE_DASH
-        + get_unit_choices(),
-        required=True,
+        choices=lambda: BLANK_CHOICE_DASH + get_unit_choices(), required=True
     )
 
     class Meta:
@@ -649,9 +644,7 @@ class EditIngredientForm(forms.ModelForm):
             qs = Vendor.objects.filter(info=data["vendor"])
             data["vendor"] = qs[0] if qs.exists() else Vendor(info=data["vendor"])
         if "unit" not in data or not Unit.objects.filter(symbol=data["unit"]).exists():
-            raise ValidationError(
-                    "You must specify a Unit"
-            )
+            raise ValidationError("You must specify a Unit")
         else:
             data["unit"] = Unit.objects.filter(symbol=data["unit"])[0]
 
@@ -922,6 +915,7 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
         self.save_m2m()
         return instance
 
+
 class FormulaNameForm(forms.ModelForm, utils.BootstrapFormControlMixin):
     def __init__(self, *args, **kwargs):
         initial = kwargs.pop("initial") if "initial" in kwargs else {}
@@ -942,13 +936,10 @@ class FormulaNameForm(forms.ModelForm, utils.BootstrapFormControlMixin):
 
     class Meta:
         model = Formula
-        fields = [
-            "name",
-            "number",
-            "comment",
-        ]
+        fields = ["name", "number", "comment"]
         widgets = {"comment": forms.Textarea(attrs={"maxlength": 200})}
         labels = {"number": "Formula#"}
+
 
 class FormulaForm(forms.Form, utils.BootstrapFormControlMixin):
     ingredient = forms.CharField(

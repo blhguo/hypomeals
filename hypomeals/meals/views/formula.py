@@ -18,6 +18,7 @@ from meals.models import Formula
 
 logger = logging.getLogger(__name__)
 
+
 @login_required
 @permission_required("meals.add_formula", raise_exception=True)
 def add_formula(request):
@@ -91,7 +92,7 @@ def edit_formula(request, formula_number):
     if request.method == "POST":
         logger.debug("Raw POST data: %s", request.POST)
         formset = FormulaFormset(request.POST)
-        form = FormulaNameForm(request.POST, instance = formula)
+        form = FormulaNameForm(request.POST, instance=formula)
         if form.is_valid() and formset.is_valid():
             instance = form.save()
             logger.info("Cleaned data: %s", formset.cleaned_data)
@@ -113,12 +114,18 @@ def edit_formula(request, formula_number):
             for formula in formulas
         ]
         formset = FormulaFormset(initial=initial_data)
-        form = FormulaNameForm(instance = formula)
+        form = FormulaNameForm(instance=formula)
 
     return render(
         request,
         template_name="meals/formula/edit_formula.html",
-        context={"form": form, "formula": formula, "formset": formset, "in_flow": in_flow, "edit": True},
+        context={
+            "form": form,
+            "formula": formula,
+            "formset": formset,
+            "in_flow": in_flow,
+            "edit": True,
+        },
     )
 
 
@@ -153,7 +160,10 @@ def remove_formulas(request):
             num_deleted, result = Formula.objects.filter(pk__in=to_remove).delete()
             logger.info("removed %d Formulas: %s", num_deleted, result)
         return JsonResponse(
-            {"error": None, "resp": f"Successfully removed {result['meals.Formula']} Formulas"}
+            {
+                "error": None,
+                "resp": f"Successfully removed {result['meals.Formula']} Formulas",
+            }
         )
     except DatabaseError as e:
         return JsonResponse({"error": str(e), "resp": "Not removed"})
