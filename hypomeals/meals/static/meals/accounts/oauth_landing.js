@@ -15,11 +15,14 @@ function oauth_fix() {
         if (!showNetworkError(data, textStatus)) {
             return false;
         }
+        if (!"resp" in data) {
+            data.resp = "/"
+        }
         if ("error" in data && data.error) {
             makeModalAlert("Error", data.error, null, function() {
-                window.location.href = loginUrl;
+                window.location.href = data.resp;
             })
-        } else if ("resp" in data) {
+        } else {
             window.location.href = data.resp;
         }
     });

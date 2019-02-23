@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.middleware import csrf
 from django.shortcuts import render, redirect, resolve_url
+from django.urls import reverse
 from django.utils.http import is_safe_url
 from django.views.decorators.debug import sensitive_post_parameters
 
@@ -84,6 +85,17 @@ def sso_landing(request):
                 "Authorization": f"{token_type} {token}",
             },
         )
+        if resp.status_code != 200:
+            logger.error(
+                "Received error from IDENTITY_API: (%d) %s", resp.status_code, resp.text
+            )
+            return JsonResponse(
+                {
+                    "error": "Error contacting the identity API. "
+                    "Please try again later.",
+                    "resp": reverse("login"),
+                }
+            )
         if sign_in_netid_user(request, json.loads(resp.text)):
             redirect_to = request.session.get(
                 "login_redirect", resolve_url(settings.LOGIN_REDIRECT_URL)

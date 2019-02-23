@@ -5,14 +5,14 @@
 <div class="col-sm">
 <div class="alert alert-success my-4">
     {% if editing %}
-    <h3>Editing Ingr #{{ ingredient.number }}: {{ ingredient.name }}</h3>
+    <h3>Editing Product Line {{ product_line.name }}</h3>
     <p>
-        Modify the Ingredient using the form below. Note that you cannot change
+        Modify the Product Line using the form below. Note that you cannot change
         some of the fields.
     </p>
     {% else %}
-    <h3>Add a new Ingredient</h3>
-    <p>Enter the information about a new Ingredient below. All fields are required unless otherwise specified.</p>
+    <h3>Add a new Product Line</h3>
+    <p>Enter the information about a new Product Line below. All fields are required.</p>
     {% endif %}
 </div>
 </div>
@@ -20,9 +20,9 @@
 <div class="row mb-4">
     <div class="col-sm">
     {% if editing %}
-    <form method="post" action="{% url 'edit_ingredient' ingredient.number %}" id="editIngredientForm">
+    <form method="post" action="{% url 'edit_product_line' product_line_name %}" id="editProduct_LineForm">
     {% else %}
-    <form method="post" action="{% url 'add_ingredient' %}" id="editIngredientForm">
+    <form method="post" action="{% url 'add_product_line' %}" id="editProduct_LineForm">
     {% endif %}
     {% csrf_token %}
     {% if form.non_field_errors %}
@@ -39,7 +39,7 @@
         {% if field.errors %}{{ field.errors }}{% endif %}
         </div>
     {% endfor %}
-    <input type="submit" id="editIngredientSubmitButton" style="display: none;">
+    <input type="submit" id="editProduct_LineSubmitButton" style="display: none;">
     </form>
     <div class="btn-group" id="formSubmitBtnGroup">
         {% if editing %}
@@ -47,7 +47,7 @@
         {% else %}
         <a href="#" id="nextButton" class="btn btn-success">Save</a>
         {% endif %}
-        <a href="{% url 'ingredient' %}" class="btn btn-secondary">Cancel</a>
+        <a href="{% url 'product_line' %}" class="btn btn-secondary">Cancel</a>
     </div>
     </div>
 </div>
@@ -55,8 +55,7 @@
 
 <!-- Hidden div with template data -->
 <div style="display: none;">
-<input id="customVendorInputId" value="{{ form.custom_vendor.id_for_label }}">
-<input id="vendorInputId" value="{{ form.vendor.id_for_label }}">
+<input id="nameInputId" value="{{ form.name.id_for_label }}">
 </div>
 
-<script src="{% static 'meals/ingredient/edit_ingredient.js' %}"></script>
+<script src="{% static 'meals/product_line/edit_product_line.js' %}"></script>
