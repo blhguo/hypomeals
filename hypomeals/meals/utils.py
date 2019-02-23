@@ -7,6 +7,7 @@ import os.path
 import random
 import string
 import time
+from collections import defaultdict
 from datetime import datetime, timedelta
 from functools import wraps
 
@@ -430,6 +431,31 @@ def next_id(cls, increment_func=lambda x: x + 1, default=0):
     return increment_func(
         cls.objects.aggregate(Max(pk_field.name))[f"{pk_field.name}__max"]
     )
+
+
+class SortedDefaultDict(defaultdict):
+    """
+    A default dict that is also sorted by its keys. Accepts the same arguments as the
+    builtin sorted function.
+    """
+
+    def __init__(self, *args, key=None, reverse=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not callable(key):
+            raise RuntimeError(f"key function {key} is not callable")
+        self.key = key
+        self.reverse = reverse
+
+    def items(self):
+        items = super().items()
+        return sorted(items, key=lambda item: self.key(item[0]), reverse=self.reverse)
+
+    def __iter__(self):
+        return iter(self.keys())
+
+    def keys(self):
+        super_keys = super().keys()
+        return sorted(super_keys, key=self.key, reverse=self.reverse)
 
 
 def compute_end_time(start_time: datetime, num_hours: float) -> datetime:

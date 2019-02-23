@@ -126,8 +126,8 @@ $(function() {
         skuFilterForm.submit();
     });
 
-    registerAutocomplete($(`#${ingredientsInputId}`), acIngredientUrl, true);
-    registerAutocomplete($(`#${productLinesInputId}`), acProductLineUrl, true);
+    // registerAutocomplete($(`#${ingredientsInputId}`), acIngredientUrl, true);
+    // registerAutocomplete($(`#${productLinesInputId}`), acProductLineUrl, true);
 
     $("#resetAllButton").click(refreshPage);
 });

@@ -89,3 +89,6 @@ WORK_HOURS_PER_DAY = 10  # Per req. 4.4.4, factories run 10 hours per day
 HOURS_PER_DAY = 24
 SECONDS_PER_HOUR = 3600
 SECONDS_PER_DAY = SECONDS_PER_HOUR * 24
+
+ADMINS_GROUP = "Admins"
+USERS_GROUP = "Users"

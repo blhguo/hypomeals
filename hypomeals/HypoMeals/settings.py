@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     "meals.apps.MealsConfig",
     "django.contrib.admin",
     "django.contrib.auth",
+    "django.contrib.humanize",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
@@ -227,7 +228,7 @@ LOGGING = {
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "EST"
 
 USE_I18N = True
 

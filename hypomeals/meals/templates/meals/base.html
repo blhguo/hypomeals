@@ -58,13 +58,13 @@
             <li class="nav-item {% block ingredient_active %}{% endblock %}">
                 <a class="nav-link" href="{% url 'ingredient' %}">Ingredients</a>
             </li>
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                Goals
+            <li class="nav-item dropdown {% block manufacturing_active %}{% endblock %}">
+              <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">
+                Manufacturing
               </a>
-              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                <a class="dropdown-item" href="/show_all_goals/">Show All Goals</a>
-                <a class="dropdown-item" href="/show_one_goal">Create New Goal</a>
+              <div class="dropdown-menu">
+                <a class="dropdown-item" href="{% url 'goals' %}">Goals</a>
+                <a class="dropdown-item" href="{% url 'schedule' %}">Schedule</a>
               </div>
             </li>
             <li class="nav-item {% block import_active %}{% endblock %}">
@@ -74,7 +74,16 @@
 
         <ul class="navbar-nav mr-2">
         {% if request.user.is_authenticated %}
-            <li><span class="navbar-text">{{ request.user.first_name }}</span></li>
+            <li>
+                <div class="d-inline-flex align-items-baseline">
+                <span class="navbar-text align-top">
+                {% if request.user.is_admin %}
+                    <span class="badge badge-dark">admin</span>
+                {% endif %}
+                {{ request.user.first_name }}
+                </span>
+                </div>
+            </li>
             <li class="nav-item">
             <a class="nav-link" href="{% url 'logout' %}"><span class="fa fa-sign-out-alt"></span> Logout</a>
             </li>
