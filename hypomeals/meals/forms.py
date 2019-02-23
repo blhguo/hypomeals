@@ -399,6 +399,67 @@ class IngredientFilterForm(forms.Form):
             num_per_page = query.count()
         return Paginator(query.distinct(), num_per_page)
 
+class FormulaFilterForm(forms.Form):
+    NUM_PER_PAGE_CHOICES = [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
+
+    page_num = forms.IntegerField(
+        widget=forms.HiddenInput(), initial=1, min_value=1, required=False
+    )
+    num_per_page = forms.ChoiceField(choices=NUM_PER_PAGE_CHOICES, required=True)
+    sort_by = forms.ChoiceField(choices=Formula.get_sortable_fields, required=True)
+    keyword = forms.CharField(required=False, max_length=100)
+    ingredients = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"placeholder": "Start typing..."}),
+        help_text="Enter ingredients separated by commas",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-control mb-2"
+
+    def clean_formulas(self):
+        value = self.cleaned_data["formulas"]
+        items = {item.strip() for item in COMMA_SPLIT_REGEX.split(value)} - {""}
+        if not items:
+            return items
+        found = set()
+        not_found = []
+        for item in items:
+            formula = Formula.from_name(item)
+            if formula is None:
+                not_found.append(item)
+            else:
+                found.add(formula)
+        if not_found:
+            errors = []
+            for item in not_found:
+                errors.append(
+                    ValidationError(
+                        "'%(item)s' cannot be found.", params={"item": item}
+                    )
+                )
+            raise ValidationError(errors)
+        return found
+
+    def query(self) -> Paginator:
+        params = self.cleaned_data
+        logger.info("Querying ingredients with parameters %s", params)
+        num_per_page = int(params.get("num_per_page", 50))
+        sort_by = params.get("sort_by", "")
+        query_filter = Q()
+        if params["keyword"]:
+            query_filter &= Q(name__icontains=params["keyword"])
+        if params["ingredients"]:
+            query_filter &= Q(ingredient__in=params["ingredients"])
+        query = FormulaIngredient.objects.filter(query_filter)
+        if sort_by:
+            query = query.order_by(sort_by)
+        if num_per_page == -1:
+            num_per_page = query.count()
+        return Paginator(query.distinct(), num_per_page)
 
 class EditIngredientForm(forms.ModelForm):
     custom_vendor = forms.CharField(
@@ -727,7 +788,6 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
         manufacturing_lines = self.cleaned_data["manufacturing_lines"]
         SkuManufacturingLine.objects.filter(sku=instance).delete()
         for manufacturing_line in manufacturing_lines:
-            print(manufacturing_line)
             SkuManufacturingLine.objects.create(
                 sku=instance,
                 manufacturing_line=manufacturing_line,
@@ -737,6 +797,33 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
         self.save_m2m()
         return instance
 
+class FormulaNameForm(forms.ModelForm, utils.BootstrapFormControlMixin):
+    def __init__(self, *args, **kwargs):
+        initial = kwargs.pop("initial") if "initial" in kwargs else {}
+        super().__init__(*args, initial=initial, **kwargs)
+        reordered_fields = OrderedDict()
+        for field_name in self.Meta.fields:
+            if field_name in self.fields:
+                reordered_fields[field_name] = self.fields[field_name]
+                reordered_fields[field_name].widget.attrs["class"] = "form-control"
+        self.fields = reordered_fields
+
+        self.fields["number"].required = False
+        if "instance" in kwargs:
+            instance = kwargs["instance"]
+            self.instance = instance
+            if hasattr(instance, "pk") and instance.pk:
+                self.fields["number"].disabled = True
+
+    class Meta:
+        model = Formula
+        fields = [
+            "name",
+            "number",
+            "comment",
+        ]
+        widgets = {"comment": forms.Textarea(attrs={"maxlength": 200})}
+        labels = {"number": "Formula#"}
 
 class FormulaForm(forms.Form, utils.BootstrapFormControlMixin):
     ingredient = forms.CharField(
@@ -744,9 +831,8 @@ class FormulaForm(forms.Form, utils.BootstrapFormControlMixin):
     )
     quantity = forms.DecimalField(required=True, min_value=0.00001)
 
-    def __init__(self, *args, sku, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.sku = sku
 
     def clean_ingredient(self):
         raw = self.cleaned_data["ingredient"]
@@ -757,9 +843,9 @@ class FormulaForm(forms.Form, utils.BootstrapFormControlMixin):
             )
         return ingr[0]
 
-    def save(self, commit=True):
+    def save(self, formula, commit=True):
         instance = FormulaIngredient(
-            formula=self.sku.formula,
+            formula=formula,
             ingredient=self.cleaned_data["ingredient"],
             quantity=self.cleaned_data["quantity"],
         )

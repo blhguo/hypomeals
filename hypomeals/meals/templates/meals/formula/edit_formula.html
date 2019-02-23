@@ -5,13 +5,14 @@
 
 {% block body %}
 <div class="container m-auto">
+{% if edit %}
 <div class="row">
 <div class="col-sm">
     <div class="alert alert-success my-4">
     {% if perms.meals.change_skuingredient or perms.meals.add_skuingredient %}
-    <h3>Edit formula for SKU #{{ sku.number }}: {{ sku.name }}</h3>
+    <h3>Edit Formula #{{ formula.number }}: {{ formula.name }}</h3>
     {% else %}
-    <h3>View formula for SKU #{{ sku.number }}: {{ sku.name }}</h3>
+    <h3>View Formula #{{ formula.number }}: {{ formula.name }}</h3>
     {% endif %}
     {% if messages %}
     {% for message in messages %}
@@ -29,6 +30,7 @@
     </div>
 </div>
 </div>
+{% endif %}
 
 <div class="row">
 <div class="col-sm mb-4">
@@ -55,7 +57,11 @@
 
 <div class="row">
 <div class="col-sm">
-<form action="{% url 'edit_formula' sku.number %}" method="post">
+{% if edit %}
+  <form action="{% url 'edit_formula' formula.number %}" method="post">
+{% else %}
+  <form action="{% url 'add_formula' %}" method="post">
+{% endif %}
 {% csrf_token %}
 {{ formset.management_form }}
 {% if formset.non_form_errors %}
@@ -64,6 +70,7 @@ Please correct the following error(s):
 {{ formset.non_form_errors }}
 </div>
 {% endif %}
+{{ form }}
 <table class="table">
 <thead class="thead-light">
 <tr>
@@ -105,7 +112,7 @@ add another ingredient to this SKU.
 <input type="submit" class="btn btn-success" value="Finish">
 {% else %}
 <input type="submit" class="btn btn-success" value="Apply Changes">
-<a href="{% url 'sku' %}" class="btn btn-secondary">Cancel</a>
+<a href="{% url 'formula' %}" class="btn btn-secondary">Cancel</a>
 {% endif %}
 </div>
 </form>

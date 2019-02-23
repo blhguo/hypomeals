@@ -230,17 +230,19 @@
         <div class="btn-group">
         <a class="btn btn-link viewFormula"
            href="#"
-           {% if not perms.meals.view_skuingredient %}
+           {% if not perms.meals.view_formulaingredient %}
            disabled="disabled"
            data-toggle="tooltip"
            data-placement="left"
            title="You don't have permission to view the formulas."
            {% endif %}
-           id="{{ sku.number }}">
+           data-toggle="modal"
+           data-target="#modalDiv"
+           id="{{ sku.formula.number }}">
             View
         </a>
         {% if perms.meals.change_skuingredient and perms.meals.add_skuingredient %}
-        <a class="btn btn-link" href="{% url 'edit_formula' sku.number %}">Edit</a>
+        <a class="btn btn-link" href="{% url 'edit_formula' sku.formula.number %}">Edit</a>
         {% endif %}
         </div>
     </td>

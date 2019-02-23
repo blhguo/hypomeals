@@ -316,6 +316,13 @@ class Formula(
     def __str__(self):
         return self.name
 
+    @classmethod
+    def get_sortable_fields(cls):
+        return [
+            ("number", "Number"),
+            ("name", "Name"),
+        ]
+
     def save(self, *args, **kwargs):
         if not self.number:
             self.number = utils.next_id(Formula)
