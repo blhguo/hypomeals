@@ -23,6 +23,7 @@ urlpatterns = [
         views.autocomplete_product_lines,
         name="autocomplete_product_lines",
     ),
+    path("ac-users", views.autocomplete_users, name="autocomplete_users"),
     path("ingredient", views.ingredient, name="ingredient"),
     path("remove-ingredient", views.remove_ingredients, name="remove_ingredients"),
     path("add-ingredient", views.add_ingredient, name="add_ingredient"),
@@ -41,6 +42,8 @@ urlpatterns = [
     # Manufacturer Goal views
     path("goal/new/", views.edit_goal, name="add_goal"),
     path("goal/<int:goal_id>", views.edit_goal, name="edit_goal"),
+    path("goals/enable", views.enable_goals, name="enable_goals"),
+    path("goals/disable", views.disable_goals, name="disable_goals"),
     path("goals", views.goals, name="goals"),
     path("goal/export/csv/<int:goal_id>", views.export_csv, name="export_goal_csv"),
     path(
@@ -53,6 +56,7 @@ urlpatterns = [
         views.generate_calculation_csv,
         name="export_calculation_csv",
     ),
+    path("goals/schedule", views.schedule, name="schedule"),
     path("filter_skus/", views.filter_skus, name="filter_skus"),
     # Account management views
     path(

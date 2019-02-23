@@ -83,4 +83,9 @@ UNITS = {
     "count": COUNT_BASED_UNITS,
 }
 
-END_OF_DAY = time(17, 0)  # 5 PM is end of day
+WORK_HOURS_START = time(hour=8)
+WORK_HOURS_END = time(hour=18)
+WORK_HOURS_PER_DAY = 10  # Per req. 4.4.4, factories run 10 hours per day
+HOURS_PER_DAY = 24
+SECONDS_PER_HOUR = 3600
+SECONDS_PER_DAY = SECONDS_PER_HOUR * 24

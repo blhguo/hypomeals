@@ -74,7 +74,16 @@
 
         <ul class="navbar-nav mr-2">
         {% if request.user.is_authenticated %}
-            <li><span class="navbar-text">{{ request.user.first_name }}</span></li>
+            <li>
+                <div class="d-inline-flex align-items-baseline">
+                <span class="navbar-text align-top">
+                {% if request.user.is_admin %}
+                    <span class="badge badge-dark">admin</span>
+                {% endif %}
+                {{ request.user.first_name }}
+                </span>
+                </div>
+            </li>
             <li class="nav-item">
             <a class="nav-link" href="{% url 'logout' %}"><span class="fa fa-sign-out-alt"></span> Logout</a>
             </li>

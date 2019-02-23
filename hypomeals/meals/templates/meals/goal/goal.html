@@ -6,9 +6,9 @@
 {% block title %}Manufacturing Goals{% endblock %}
 
 {% block body %}
-<div class="container m-auto">
-<div class="row">
-<div class="col-sm mt-4">
+<div class="container-fluid m-auto">
+<div class="row mt-4" id="helpDiv" style="display: none;">
+<div class="col-sm">
 <div class="alert alert-success">
     <h3>Manufacturing Goals</h3>
     <p>
@@ -49,10 +49,10 @@
 {% endif %}
 
 
-<div class="row">
-<div class="col-sm mt-2">
+<div class="row mt-2">
+<div class="col-sm">
     <div class="d-flex justify-content-between align-items-center">
-    {% if request.user.is_admin %}
+    {% if False %}
     <div class="custom-control custom-checkbox">
         <input type="checkbox" class="custom-control-input" id="showAllCheckbox">
         <label class="custom-control-label"
@@ -68,20 +68,64 @@
     <div></div>  <!-- Empty div to position the btn-group -->
     {% endif %}
     <div class="btn btn-group">
+        <button class="btn btn-success" id="showHelpButton">
+            <span class="fas fa-question-circle"></span> Help
+        </button>
         <a href="{% url "add_goal" %}" class="btn btn-primary">
             <span class="fas fa-plus"></span> Add a new Goal
         </a>
         {% if request.user.is_admin %}
-        <a href="#" class="btn btn-success">
-            <span class="fas fa-calendar-check"></span> Schedule
-        </a>
+        <button class="btn btn-primary dropdown-toggle dropdown-toggle-split"
+                data-toggle="dropdown"></button>
+        <div class="dropdown-menu">
+        <a href="#"
+           id="scheduleButton"
+           class="dropdown-item"><span class="fas fa-calendar-check"></span> Schedule</a>
+        <a href="#"
+           id="enableGoalsButton"
+           class="dropdown-item"><span class="fas fa-check"></span> Enable Goals</a>
+        <a href="#"
+           id="disableGoalsButton"
+           class="dropdown-item"><span class="fas fa-times"></span> Disabled Goals</a>
+        </div>
         {% endif %}
     </div>
     </div>
 </div>
 </div>
-<div class="row">
-<div class="col-sm mt-4">
+
+
+<div class="row mt-2">
+<div class="col-sm-2">
+<h3>Filter</h3>
+<form method="post" id="goalFilterForm">
+{% csrf_token %}
+{% if form.non_field_errors %}
+    <div class="alert alert-danger">
+    <p>Please correct the following error{{ form.non_field_errors|pluralize }}</p>
+    {{ form.non_field_errors }}
+    </div>
+{% endif %}
+{% for field in form %}
+    <div class="form-group">
+    {{ field.label_tag }}
+    {{ field }}
+    {% if field.errors %}<small>{{ field.errors }}</small>{% endif %}
+    </div>
+{% endfor %}
+</form>
+
+<div class="btn-group w-100">
+    <button class="btn btn-success w-100" form="goalFilterForm" type="submit">
+        <span class="fas fa-filter"></span> Filter
+    </button>
+    <a class="btn btn-danger w-100" href="{% url 'goals' %}">
+        <span class="fas fa-trash"></span> Reset
+    </a>
+</div>
+</div>
+
+<div class="col-sm-10">
 <table class="table">
 <thead class="thead-light">
 <tr>
@@ -105,11 +149,7 @@
 </thead>
 <tbody>
 {% for goal in all_goals %}
-{% if goal.user == request.user %}
 <tr>
-{% else %}
-<tr class="ownedRows">
-{% endif %}
     {% if request.user.is_admin %}
     <td>
         <div class="custom-control custom-checkbox">
@@ -128,18 +168,15 @@
     <td>{{ goal.save_time|naturaltime }}</td>
     <td>
         <div class="btn-group">
-        <a href="{% url 'view_calculation' goal.pk %}"
-           data-toggle="tooltip"
-           data-placement="left"
-           title="View formatted report for ingredients used in this goal."
-           class="btn btn-link">Report</a>
         <div class="dropdown">
-            <button class="btn btn-link dropdown-toggle" type="button" data-toggle="dropdown">
+            <button class="btn btn-link dropdown-toggle"
+                    type="button"
+                    data-toggle="dropdown">
                 Download
             </button>
             <div class="dropdown-menu">
             <h6 class="dropdown-header downloadCalculationsHeader">
-                Download calculations as
+                Download report as
             </h6>
             <a href="{% url 'export_calculation_csv' goal.pk %}" class="dropdown-item">CSV</a>
             <a href="{% url 'view_calculation' goal.pk %}?print=1" class="dropdown-item">PDF</a>
@@ -153,22 +190,33 @@
                  data-toggle="tooltip">
                 <a href="#" class="dropdown-item disabled">PDF</a>
             </div>
-            </div>
+        </div>
+        <a href="{% url 'view_calculation' goal.pk %}"
+           data-toggle="tooltip"
+           data-placement="left"
+           title="View formatted report for ingredients used in this goal."
+           class="btn btn-link">Report</a>
         </div>
         </div>
     </td>
 </tr>
 {% empty %}
 <div class="alert alert-danger">
-<p class="mb-0">You don't currently have any goals. Create one by clicking the
-"Add a new Goal" button.</p>
+<p class="mb-0">Your search returned 0 result. Check your search parameters
+    or create one by clicking the "Add a new Goal" button.</p>
 </div>
 {% endfor %}
 </tbody>
 </table>
+
+<p>Found {{ all_goals|length }} match{{ all_goals|pluralize:',es' }} in {{ seconds }} second{{ second|pluralize }}</p>
 </div>
 </div>
 </div>
+
+<!-- Hidden div with template data -->
+<a href="{% url 'enable_goals' %}" id="enableGoalsUrl"></a>
+<a href="{% url 'disable_goals' %}" id="disableGoalsUrl"></a>
 
 {% endblock %}
 

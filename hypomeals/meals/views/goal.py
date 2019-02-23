@@ -2,6 +2,7 @@ import csv
 import logging
 import operator
 import tempfile
+import time
 from decimal import Decimal
 
 from django.contrib import messages
@@ -12,8 +13,9 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils.datetime_safe import datetime
 
-from meals.constants import END_OF_DAY
-from meals.forms import SkuQuantityFormset, GoalForm
+from meals import auth
+from meals.constants import WORK_HOURS_END
+from meals.forms import SkuQuantityFormset, GoalForm, GoalFilterForm
 from meals.models import Sku, ProductLine, Goal, GoalItem
 from meals.utils import SortedDefaultDict
 
@@ -183,14 +185,32 @@ generate_calculation_csv = login_required(_generate_calculation)
 
 @login_required
 def goals(request):
-    if request.user.is_admin:
-        all_goals = Goal.objects.order_by("-save_time").all()
+    start = time.time()
+
+    if request.method == "POST":
+        form = GoalFilterForm(request.POST)
     else:
-        all_goals = request.user.goals.order_by("-save_time")
+        form = GoalFilterForm()
+
+    if form.is_valid():
+        all_goals = form.query(request.user)
+    else:
+        if request.user.is_admin:
+            all_goals = Goal.objects.all()
+        else:
+            all_goals = Goal.objects.filter(user=request.user).all()
+
     for g in all_goals:
-        g.deadline = datetime.combine(g.deadline, END_OF_DAY)
+        g.deadline = datetime.combine(g.deadline, WORK_HOURS_END)
+    end = time.time()
     return render(
-        request, template_name="meals/goal/goal.html", context={"all_goals": all_goals}
+        request,
+        template_name="meals/goal/goal.html",
+        context={
+            "all_goals": all_goals,
+            "form": form,
+            "seconds": f"{end - start:6.3f}",
+        },
     )
 
 
@@ -200,3 +220,69 @@ def filter_skus(request):
     skus = Sku.objects.filter(product_line__name=pd)
     result = {"error": None, "resp": [sku.verbose_name for sku in skus]}
     return JsonResponse(result)
+
+
+def _enable_goals(request, is_enabled=False):
+    logger.debug("Raw GET: %s", request.GET.get("g", "<empty>"))
+    raw = request.GET.get("g", "")
+    try:
+        goal_ids = {int(goal_id.strip()) for goal_id in raw.split(",")} - {""}
+    except ValueError as e:
+        return JsonResponse(
+            {
+                "error": "Unable to parse the following goal IDs: "
+                f"'raw', because {str(e)}",
+                "resp": None,
+            }
+        )
+    logger.info("Got %d goal IDs: %s", len(goal_ids), goal_ids)
+    if not goal_ids:
+        return JsonResponse({"error": None, "resp": "No Goal ID was found in request."})
+
+    goal_objs = Goal.objects.filter(pk__in=goal_ids)
+    found = set(goal_objs.values_list("pk", flat=True))
+    logger.info("Found %d goals", len(found))
+    missing = goal_ids - found
+    if missing:
+        return JsonResponse(
+            {
+                "error": (
+                    "The following goal ID cannot be found: "
+                    f"'{', '.join(map(str, goal_ids))}'"
+                ),
+                "resp": None,
+            }
+        )
+    goal_objs.update(is_enabled=is_enabled)
+    return JsonResponse(
+        {
+            "error": None,
+            "resp": f"Successfully {'enabled' if is_enabled else 'disabled'} "
+            f"{len(goal_objs)} goals",
+        }
+    )
+
+
+@login_required
+@auth.user_is_admin_ajax(msg="Only administrators may enable goals.")
+def enable_goals(request):
+    return _enable_goals(request, True)
+
+
+@login_required
+@auth.user_is_admin_ajax(msg="Only administrators may disable goals.")
+def disable_goals(request):
+    return _enable_goals(request, False)
+
+
+@login_required
+def schedule(request):
+    if not request.user.is_admin:
+        messages.error(
+            request, "You don't have permission to edit the manufacturing schedule."
+        )
+        raise PermissionDenied
+
+    return render(
+        request, template_name="meals/goal/schedule.html", context={"goals": None}
+    )

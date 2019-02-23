@@ -3,6 +3,7 @@ A series of functions / decorators to aid authentication and permission checking
 """
 import functools
 
+from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied
@@ -33,6 +34,22 @@ def permission_required_ajax(func, perm):
         return JsonResponse(
             {"error": "Permission Denied", "resp": message, "alert": message}
         )
+
+    return wrapper
+
+
+@utils.parameterized
+def user_is_admin_ajax(func, msg):
+    @functools.wraps(func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_admin:
+            if not request.is_ajax():
+                messages.error(request, msg)
+                raise PermissionDenied(msg)
+            return JsonResponse(
+                {"error": "Permission Denied", "resp": msg, "alert": msg}
+            )
+        return func(request, *args, **kwargs)
 
     return wrapper
 
