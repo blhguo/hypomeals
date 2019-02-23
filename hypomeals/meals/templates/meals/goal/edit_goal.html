@@ -1,0 +1,203 @@
+{% extends 'meals/base.html' %}
+{% load staticfiles %}
+
+{% block title %}
+{% if editing %}Edit Goal #{{ goal.pk }}{% else %}Add Goal{% endif %}
+{% endblock %}
+
+{% block manufacturing_active %}active{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.0.1/css/tempusdominus-bootstrap-4.min.css" />
+{% endblock %}
+
+{% block body %}
+<div class="container m-auto">
+<div class="row">
+<div class="col-sm">
+
+<div class="alert alert-success my-4">
+    {% if editing %}
+    <h3>Edit Goal {{ goal.name }}</h3>
+    {% else %}
+    <h3>Add a new Goal</h3>
+    {% endif %}
+    <p>Give this goal a name, a deadline, then add, remove, or edit
+        SKUs and quantities in the table below.</p>
+    <p>As you type, SKUs will be autocompleted. You may also use the filter
+        button to quickly add SKUs if you know its product line.
+        If you need to use a new SKU, you must create it first.</p>
+    <p>To add more rows to the table, simply click the "Add row" button. To delete
+    a row, click on the "Delete" button to the right of each row.</p>
+    <p class="mb-0">
+        Click the {% if editing %}"Apply Changes"{% else %}"Save"{% endif %}
+        button when you have finished. To go back, click "Cancel".
+        Empty rows will not be processed.
+    </p>
+</div>
+</div>
+</div>
+
+{% if messages %}
+<div class="row">
+<div class="col-sm">
+    <div class="alert alert-success mt-2 mb-4" id="messagesDiv">
+    {% for message in messages %}
+    <p class="mb-0{% if message.tags %} {{ message.tags }}{% endif %}">{{ message }}</p>
+    {% endfor %}
+    </div>
+</div>
+</div>
+{% endif %}
+
+<div class="row">
+<div class="col-sm">
+{% if editing %}
+<form action="{% url 'edit_goal' goal.pk %}" method="post">
+{% else %}
+<form action="{% url 'add_goal' %}" method="post">
+{% endif %}
+{% csrf_token %}
+{{ formset.management_form }}
+{% if formset.non_form_errors or form.non_field_errors %}
+<div class="alert alert-danger">
+Please correct the following error(s):
+{{ formset.non_form_errors }}
+{{ form.non_field_errors }}
+</div>
+{% endif %}
+
+<div class="form-group">
+<div class="form-row">
+    <div class="input-group col-sm-6">
+        <div class="input-group-prepend">
+            <span class="input-group-text">Name: </span>
+        </div>
+        {{ form.name }}
+        {% if form.name.errors %}<small>{{ form.name.errors }}</small>{% endif %}
+    </div>
+    <div class="input-group date col-sm-6" id="datepicker1" data-target-input="nearest">
+        <div class="input-group-prepend">
+            <span class="input-group-text">Deadline: </span>
+        </div>
+        {{ form.deadline }}
+        <div class="input-group-append" data-target="#datepicker1" data-toggle="datetimepicker">
+            <div class="input-group-text"><i class="fas fa-calendar" id="calendarIcon"></i></div>
+        </div>
+        {% if form.deadline.errors %}<small>{{ form.deadline.errors }}</small>{% endif %}
+    </div>
+</div>
+</div>
+
+<!-- Row controls -->
+<div class="row">
+<div class="col-sm mb-4">
+<div class="btn-group float-right">
+    <button type="button"
+            id="addRowButton"
+            class="btn btn-primary">
+        <span class="fa fa-plus"></span> Add row
+    </button>
+</div>
+</div>
+</div>
+
+<table class="table">
+<thead class="thead-light">
+<tr>
+    <th>SKU</th>
+    <th>Quantity</th>
+    <th>Action</th>
+</tr>
+</thead>
+
+<tbody class="formsetTable">
+{% for form in formset %}
+<tr>
+    <td class="align-middle">
+    <div class="input-group">
+        {{ form.sku }}
+        <div class="input-group-append filterButtons" style="cursor: pointer;">
+            <div class="input-group-text"><i class="fas fa-filter"></i></div>
+        </div>
+    </div>
+    {% if form.sku.errors %}<small>{{ form.sku.errors }}</small>{% endif %}
+    </td>
+    <td class="align-middle">
+    {{ form.quantity }}
+    {% if form.quantity.errors %}<small>{{ form.quantity.errors }}</small>{% endif %}
+    </td>
+    <td class="align-middle">
+        {{ form.DELETE }}
+        <a href="#" class="btn btn-link deleteButtons">Delete</a>
+    </td>
+</tr>
+{% endfor %}
+
+<tr id="templateRow">
+    <td>
+        <div class="input-group">
+        {{ formset.empty_form.sku }}
+        <div class="input-group-append filterButtons" style="cursor: pointer;">
+            <div class="input-group-text"><i class="fas fa-filter"></i></div>
+        </div>
+        </div>
+    </td>
+    <td class="align-middle">{{ formset.empty_form.quantity }}</td>
+    <td class="align-middle">
+        {{ formset.empty_form.DELETE }}
+        <a href="#" class="btn btn-link deleteButtons">Delete</a>
+    </td>
+</tr>
+
+<div class="alert alert-danger" id="emptyAlert" style="display: none;">
+There is no item in this goal. Click on "Add row" to
+add another item.
+</div>
+</tbody>
+</table>
+
+<div class="btn-group">
+{% if editing %}
+<input type="submit" class="btn btn-success" value="Apply Changes">
+{% else %}
+<input type="submit" class="btn btn-success" value="Save">
+{% endif %}
+<a href="{% url 'goals' %}" class="btn btn-secondary">Cancel</a>
+</div>
+
+</form>
+</div>
+</div>
+</div>  <!-- container -->
+
+
+<!-- Modal -->
+<div style="display: none;">
+<div id="productLineFilter">
+    <label for="productLineSelect">Select a product line:</label>
+    <select class="form-control" id="productLineSelect">
+        <option> None </option>
+        {% for product_line in product_lines %}
+            <option value="{{ product_line }}">{{ product_line }}</option>
+        {% endfor %}
+    </select>
+    <small>Only product lines with at least one SKU is shown.</small>
+    <div class="mt-4" id="skuListGroup"></div>
+</div>
+</div>
+
+<!-- Hidden div for template data -->
+<div style="display: none;">
+<a href="{% url 'filter_skus' %}" id="filterSkusUrl"></a>
+<input type="text" id="deadlineInputId" value="{{ form.deadline.id_for_label }}">
+</div>
+{% endblock %}
+
+{% block scriptend %}
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.0.1/js/tempusdominus-bootstrap-4.min.js"></script>
+<script src="{% static 'meals/common.js' %}"></script>
+<script src="{% static 'meals/formset.js' %}"></script>
+<script src="{% static 'meals/goal/edit_goal.js' %}"></script>
+{% endblock %}
