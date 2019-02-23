@@ -1,5 +1,4 @@
 from django.contrib.auth import views as auth_views
-from django.contrib.auth.decorators import login_required
 from django.urls import path
 from django.views.generic import TemplateView
 
@@ -38,6 +37,7 @@ urlpatterns = [
         views.autocomplete_product_lines,
         name="autocomplete_product_lines",
     ),
+    path("ac-users", views.autocomplete_users, name="autocomplete_users"),
     path("ingredient", views.ingredient, name="ingredient"),
     path("remove-ingredient", views.remove_ingredients, name="remove_ingredients"),
     path("add-ingredient", views.add_ingredient, name="add_ingredient"),
@@ -59,19 +59,22 @@ urlpatterns = [
     # Manufacturer Goal views
     path("goal/new/", views.edit_goal, name="add_goal"),
     path("goal/<int:goal_id>", views.edit_goal, name="edit_goal"),
+    path("goals/enable", views.enable_goals, name="enable_goals"),
+    path("goals/disable", views.disable_goals, name="disable_goals"),
     path("goals", views.goals, name="goals"),
-    path("generate_report/", views.generate_report, name="result"),
+    path("goal/export/csv/<int:goal_id>", views.export_csv, name="export_goal_csv"),
     path(
-        "download_calculation/", views.download_calculation, name="download_calculation"
+        "goal/calculation/view/<int:goal_id>",
+        views.view_calculations,
+        name="view_calculation",
     ),
-    path("save_goal/", login_required(views.save_goal), name="save_goal"),
-    path("download_goal/", views.download_goal, name="download_goal"),
     path(
-        "generate_calculation_pdf/",
-        views.generate_calculation_pdf,
-        name="generate_calculation_pdf",
+        "goal/calculation/csv/<int:goal_id>",
+        views.generate_calculation_csv,
+        name="export_calculation_csv",
     ),
-    path("find_product_line/", views.find_product_line, name="find_product_line"),
+    path("goals/schedule", views.schedule, name="schedule"),
+    path("filter_skus/", views.filter_skus, name="filter_skus"),
     # Account management views
     path(
         "accounts/login/",

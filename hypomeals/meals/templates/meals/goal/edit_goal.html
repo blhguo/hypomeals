@@ -5,7 +5,7 @@
 {% if editing %}Edit Goal #{{ goal.pk }}{% else %}Add Goal{% endif %}
 {% endblock %}
 
-{% block goal_active %}active{% endblock %}
+{% block manufacturing_active %}active{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.0.1/css/tempusdominus-bootstrap-4.min.css" />
@@ -17,36 +17,38 @@
 <div class="col-sm">
 
 <div class="alert alert-success my-4">
-    {% if perms.meals.change_goal or perms.meals.add_goal %}
     {% if editing %}
     <h3>Edit Goal {{ goal.name }}</h3>
     {% else %}
     <h3>Add a new Goal</h3>
     {% endif %}
-    {% else %}
-    <h3>View Goal {{ goal.name }}</h3>
-    {% endif %}
-    <p>Add, remove, or edit SKUs and quantities below.</p>
-    <p>As you type, SKUs will be autocompleted. If you need to use a new SKU,
-    you must create it first.</p>
+    <p>Give this goal a name, a deadline, then add, remove, or edit
+        SKUs and quantities in the table below.</p>
+    <p>As you type, SKUs will be autocompleted. You may also use the filter
+        button to quickly add SKUs if you know its product line.
+        If you need to use a new SKU, you must create it first.</p>
     <p>To add more rows to the table, simply click the "Add row" button. To delete
     a row, click on the "Delete" button to the right of each row.</p>
-    <p class="mb-0">Empty rows will not be processed.</p>
+    <p class="mb-0">
+        Click the {% if editing %}"Apply Changes"{% else %}"Save"{% endif %}
+        button when you have finished. To go back, click "Cancel".
+        Empty rows will not be processed.
+    </p>
 </div>
 </div>
 </div>
 
+{% if messages %}
 <div class="row">
 <div class="col-sm">
     <div class="alert alert-success mt-2 mb-4" id="messagesDiv">
-    {% if messages %}
-        {% for message in messages %}
-        <p class="mb-0{% if message.tags %} {{ message.tags }}{% endif %}">{{ message }}</p>
-        {% endfor %}
-    {% endif %}
+    {% for message in messages %}
+    <p class="mb-0{% if message.tags %} {{ message.tags }}{% endif %}">{{ message }}</p>
+    {% endfor %}
+    </div>
 </div>
 </div>
-</div>
+{% endif %}
 
 <div class="row">
 <div class="col-sm">
@@ -80,7 +82,7 @@ Please correct the following error(s):
         </div>
         {{ form.deadline }}
         <div class="input-group-append" data-target="#datepicker1" data-toggle="datetimepicker">
-            <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+            <div class="input-group-text"><i class="fas fa-calendar" id="calendarIcon"></i></div>
         </div>
         {% if form.deadline.errors %}<small>{{ form.deadline.errors }}</small>{% endif %}
     </div>
@@ -91,13 +93,11 @@ Please correct the following error(s):
 <div class="row">
 <div class="col-sm mb-4">
 <div class="btn-group float-right">
-    {% if perms.meals.add_goal_item %}
     <button type="button"
             id="addRowButton"
             class="btn btn-primary">
         <span class="fa fa-plus"></span> Add row
     </button>
-    {% endif %}
 </div>
 </div>
 </div>
@@ -115,7 +115,12 @@ Please correct the following error(s):
 {% for form in formset %}
 <tr>
     <td class="align-middle">
-    {{ form.sku }}
+    <div class="input-group">
+        {{ form.sku }}
+        <div class="input-group-append filterButtons" style="cursor: pointer;">
+            <div class="input-group-text"><i class="fas fa-filter"></i></div>
+        </div>
+    </div>
     {% if form.sku.errors %}<small>{{ form.sku.errors }}</small>{% endif %}
     </td>
     <td class="align-middle">
@@ -124,23 +129,24 @@ Please correct the following error(s):
     </td>
     <td class="align-middle">
         {{ form.DELETE }}
-        <div class="btn-group">
-            <a href="#" class="btn btn-link deleteButtons">Delete</a>
-            <a href="#" class="btn btn-link filterButtons">Filter By Product Line</a>
-        </div>
+        <a href="#" class="btn btn-link deleteButtons">Delete</a>
     </td>
 </tr>
 {% endfor %}
 
 <tr id="templateRow">
-    <td class="align-middle">{{ formset.empty_form.sku }}</td>
+    <td>
+        <div class="input-group">
+        {{ formset.empty_form.sku }}
+        <div class="input-group-append filterButtons" style="cursor: pointer;">
+            <div class="input-group-text"><i class="fas fa-filter"></i></div>
+        </div>
+        </div>
+    </td>
     <td class="align-middle">{{ formset.empty_form.quantity }}</td>
     <td class="align-middle">
         {{ formset.empty_form.DELETE }}
-        <div class="btn-group">
-            <a href="#" class="btn btn-link deleteButtons">Delete</a>
-            <a href="#" class="btn btn-link filterButtons">Filter By Product Line</a>
-        </div>
+        <a href="#" class="btn btn-link deleteButtons">Delete</a>
     </td>
 </tr>
 
@@ -156,8 +162,8 @@ add another item.
 <input type="submit" class="btn btn-success" value="Apply Changes">
 {% else %}
 <input type="submit" class="btn btn-success" value="Save">
-<a href="{% url 'goals' %}" class="btn btn-secondary">Cancel</a>
 {% endif %}
+<a href="{% url 'goals' %}" class="btn btn-secondary">Cancel</a>
 </div>
 
 </form>
@@ -167,30 +173,24 @@ add another item.
 
 
 <!-- Modal -->
-<div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="exampleModalLabel">Product Line Filter</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <select class="form-control" id="product_line_selector">
-          <option> None </option>
-          {% for product_line in product_lines %}
+<div style="display: none;">
+<div id="productLineFilter">
+    <label for="productLineSelect">Select a product line:</label>
+    <select class="form-control" id="productLineSelect">
+        <option> None </option>
+        {% for product_line in product_lines %}
             <option value="{{ product_line }}">{{ product_line }}</option>
-          {% endfor %}
-        </select>
-        <div class="list-group" id="SKU"></div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary">Save changes</button>
-      </div>
-    </div>
-  </div>
+        {% endfor %}
+    </select>
+    <small>Only product lines with at least one SKU is shown.</small>
+    <div class="mt-4" id="skuListGroup"></div>
+</div>
+</div>
+
+<!-- Hidden div for template data -->
+<div style="display: none;">
+<a href="{% url 'filter_skus' %}" id="filterSkusUrl"></a>
+<input type="text" id="deadlineInputId" value="{{ form.deadline.id_for_label }}">
 </div>
 {% endblock %}
 

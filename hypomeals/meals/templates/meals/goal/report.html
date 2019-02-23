@@ -1,0 +1,84 @@
+{% extends 'meals/base.html' %}
+{% load meals_extras %}
+{% load humanize %}
+
+{% block title %}Manufacturing Report{% endblock %}
+{% block manufacturing_active %}active{% endblock %}
+
+{% block body %}
+<div class="container m-auto">
+<div class="row">
+<div class="col-sm-12 my-4">
+    <div class="alert alert-success">
+    <h3>Manufacturing Report for Goal #{{ goal.pk }}: {{ goal.name }}.</h3>
+    <p>This goal was prepared by {{ goal.user.get_full_name }}
+        at {{ goal.save_time }}</p>
+    <p class="mb-0">Scheduled deadline: {{ goal.deadline }} by end of day.</p>
+    </div>
+</div>
+</div>
+
+<div class="row d-print-none">
+<div class="col-sm-12 mb-4">
+<div class="float-right">
+    <div class="dropdown">
+    <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">
+        Download
+    </button>
+    <div class="dropdown-menu">
+    <h6 class="dropdown-header downloadCalculationsHeader">
+        Download calculations as
+    </h6>
+    <a href="{% url 'export_calculation_csv' goal.pk %}" class="dropdown-item">CSV</a>
+    <button type="button" onclick="window.print();" class="dropdown-item">PDF</button>
+    </div>
+    </div>
+</div>
+</div>
+</div>
+
+<div class="row">
+<div class="col-sm-12 mb-4">
+    <table class="table">
+    <thead class="thead-light">
+    <tr>
+        <th>Ingr#</th>
+        <th>Name</th>
+        <th>Amount (packages)</th>
+        <th>Amount</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    {% for ingr, amount in report %}
+    <tr>
+        <td>{{ ingr.number }}</td>
+        <td>{{ ingr.name }}</td>
+        <td>{{ amount.normalize|floatformat:2 }}</td>
+        <td>{% multiply amount ingr.size 2 %} {{ ingr.unit.symbol }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+    </table>
+
+<p>Total: {{ report|length }} ingredient{{ report|pluralize }}</p>
+</div>
+</div>
+</div>
+
+<!-- Hidden div with template data -->
+<div style="display: none;">
+<input type="checkbox" {% if print %}checked="checked"{% endif %} id="printCheckbox">
+</div>
+{% endblock %}
+
+
+{% block scriptend %}
+<script type="text/javascript">
+$(function() {
+    if ($("#printCheckbox").attr("checked")) {
+        window.print();
+    }
+});
+</script>
+{% endblock %}

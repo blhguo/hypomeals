@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.utils.text import Truncator
 
 from meals import utils
+from meals.constants import ADMINS_GROUP
 from meals.validators import validate_alphanumeric, validate_netid
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,10 @@ class User(AbstractUser):
         default=None,
         unique=True,
     )
+
+    @property
+    def is_admin(self):
+        return self.is_superuser or self.groups.filter(name=ADMINS_GROUP).exists()
 
 
 class Upc(models.Model, utils.ModelFieldsCompareMixin):
@@ -467,9 +472,23 @@ class Goal(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutio
             if item.completion_time is not None
         )
 
+    @property
+    def scheduled(self):
+        """A goal is scheduled if all of its items have been scheduled."""
+        return all(hasattr(item, "schedule") for item in self.details.all())
+
+    @classmethod
+    def get_sortable_fields(cls):
+        return [
+            ("-save_time", "Last Modified Time"),
+            ("name", "Name"),
+            ("user__first_name", "Creator Name"),
+            ("deadline", "Deadline")
+        ]
+
     class Meta:
         unique_together = (("user", "name", "save_time"),)
-        ordering = ["pk"]
+        ordering = ["-save_time"]
 
 
 class GoalItem(
