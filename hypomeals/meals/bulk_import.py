@@ -27,8 +27,7 @@ FILE_TYPES = {
 }
 MODEL_TO_FILE_TYPES = {v: k for k, v in FILE_TYPES.items()}
 HEADERS = {
-    "skus": "SKU#,Name,Case UPC,Unit UPC,Unit size,"
-    "Count per case,Product Line Name,Comment",
+    "skus": "SKU#,Name,Case UPC,Unit UPC,Unit size,Count per case,Product Line Name,Formula#,Formula factor,ML Shortnames,Rate,Comment",
     "ingredients": "Ingr#,Name,Vendor Info,Size,Cost,Comment",
     "product_lines": "Name",
     "formulas": "SKU#,Ingr#,Quantity",

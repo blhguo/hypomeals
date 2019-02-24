@@ -14,7 +14,7 @@ from meals.exceptions import (
     CollisionException,
     DuplicateException,
 )
-from meals.models import Sku, ProductLine, Upc, \
+from meals.models import Sku, Formula, ProductLine, Upc, \
     Vendor, Ingredient, FormulaIngredient, \
     ManufacturingLine, SkuManufacturingLine
 
@@ -208,15 +208,26 @@ class SkuImporter(Importer):
         instance = self.model()
         for field_name in self.fields:
             setattr(instance, field_name, row[self.field_dict[field_name]])
-        setattr(instance, "manufacturing_lines", row["ML Shortnames"])
+        #setattr(instance, "manufacturing_lines", row["ML Shortnames"])
         for ML_obj in row["ML Shortnames"]:
             SML = SkuManufacturingLine(sku=instance,
-                                       manufacturing_line=ML_obj,
+                                       line=ML_obj,
                                        rate=row["Rate"])
             SML.save()
         return instance
 
     def _process_row(self, row, line_num=None):
+        raw_formula = row["Formula#"]
+        row["Formula#"] = Formula.objects.get(number=raw_formula)
+        if not row["Formula#"]:
+            raise IntegrityException(
+                message=f"Cannot import SKU #{row['SKU#']}",
+                line_num=line_num,
+                referring_name="SKU",
+                referred_name="Product Line",
+                fk_name="Formula",
+                fk_value=row["Formula#"],
+            )
         raw_case_upc = row["Case UPC"]
         if utils.is_valid_upc(raw_case_upc):
             row["Case UPC"] = Upc.objects.get_or_create(upc_number=raw_case_upc)[0]
@@ -239,7 +250,7 @@ class SkuImporter(Importer):
             )
 
         ml_short_set_string = row["ML Shortnames"]
-        ml_short_set = ml_short_set_string.split(",")
+        ml_short_set = ml_short_set_string.split(", ")
         ml_short = ManufacturingLine.objects.filter(shortname__in=ml_short_set)
         if len(ml_short) != len(ml_short_set):
             #we have an error, some manufacturing lines were attempted to be imported
