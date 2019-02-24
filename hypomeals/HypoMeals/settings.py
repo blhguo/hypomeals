@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/2.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.1/ref/settings/
 """
-
+import json
 import os
 
 from google.oauth2 import service_account
@@ -54,12 +54,26 @@ USE_LOCAL_DB = os.getenv("DJANGO_USE_LOCAL_DB", "0") == "1"
 DB_HOST = os.getenv("DJANGO_DB_HOST", "vcm-4081.vm.duke.edu")
 DB_PORT = os.getenv("DJANGO_DB_PORT", "5432")
 
+OAUTH_CONFIG_FILE = os.path.join(BASE_DIR, "oauth_config.json")
+if os.path.exists(OAUTH_CONFIG_FILE):
+    with open(os.path.join(BASE_DIR, "oauth_config.json")) as oauth_config:
+        OAUTH_CONFIG = json.load(oauth_config)
+        OAUTH_SECRET_KEY = OAUTH_CONFIG["secret_key"]
+        OAUTH_CLIENT_ID = OAUTH_CONFIG["client_id"]
+        OAUTH_AUTHORIZE_URL = OAUTH_CONFIG["authorize_url"]
+        OAUTH_REDIRECT_URL = "http://127.0.0.1:8000/accounts/sso"
+else:
+    OAUTH_CONFIG = None
+
+IDENTITY_API_URL = "https://api.colab.duke.edu/identity/v1/"
+
 # Application definition
 
 INSTALLED_APPS = [
     "meals.apps.MealsConfig",
     "django.contrib.admin",
     "django.contrib.auth",
+    "django.contrib.humanize",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
@@ -214,7 +228,7 @@ LOGGING = {
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "EST"
 
 USE_I18N = True
 

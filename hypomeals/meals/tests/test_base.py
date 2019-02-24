@@ -156,6 +156,33 @@ class BaseTestCase(TestCase):
             comment=f"Test ManufacturingLine #{number}",
         )
 
+    def ajax_get(self, *args, **kwargs):
+        kwargs.update({"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"})
+        return self.client.get(*args, **kwargs)
+
+    def ajax_post(self, *args, **kwargs):
+        kwargs.update({"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"})
+        return self.client.post(*args, **kwargs)
+
+    def assertInAny(self, member, containers, msg=""):
+        """
+        Asserts that member is found in any of the containers. Useful when searching
+        through some log output. E.g.,
+
+        >>> with self.assertLogs(logger, level="INFO") as cm:
+        ...     do_stuff()
+        >>> self.assertInAny("My super cool message", cm.output)
+        :param msg: a message to print when assertion fails
+        :param member: a member to search for
+        :param containers: an iterable of containers to search through
+        :return: None
+        :raises: AssertionError if member is not found in any of the containers
+        """
+        for container in containers:
+            if member in container:
+                return
+        raise AssertionError(f"'{member}' not found in {containers}: {msg}")
+
     def tearDown(self):
         self.logger.removeHandler(self._log_handler)
         super().tearDown()

@@ -13,7 +13,7 @@ from django.template.loader import render_to_string
 from django.views.decorators.http import require_POST, require_GET
 
 from meals import auth
-from meals.forms import Product_LineFilterForm, EditProduct_LineForm
+from meals.forms import ProductLineFilterForm, EditProductLineForm
 from meals.models import ProductLine, Sku
 
 logger = logging.getLogger(__name__)
@@ -23,13 +23,13 @@ logger = logging.getLogger(__name__)
 def product_line(request):
     start = time.time()
     if request.method == "POST":
-        form = Product_LineFilterForm(request.POST)
+        form = ProductLineFilterForm(request.POST)
         if form.is_valid():
             product_lines = form.query()
         else:
             product_lines = Paginator(ProductLine.objects.all(), 50)
     else:
-        form = Product_LineFilterForm()
+        form = ProductLineFilterForm()
         product_lines = Paginator(ProductLine.objects.all(), 50)
     page = getattr(form, "cleaned_data", {"page_num": 1}).get("page_num", 1)
     if page > product_lines.num_pages:
@@ -56,13 +56,13 @@ def product_line(request):
 def edit_product_line(request, product_line_name):
     instance = get_object_or_404(ProductLine, name=product_line_name)
     if request.method == "POST":
-        form = EditProduct_LineForm(request.POST, instance=instance)
+        form = EditProductLineForm(request.POST, instance=instance)
         if form.is_valid():
             instance = form.save()
             messages.info(request, f"Successfully saved Product Line #{instance.pk}")
             return redirect("product_line")
     else:
-        form = EditProduct_LineForm(instance=instance)
+        form = EditProductLineForm(instance=instance)
     form_html = render_to_string(
         template_name="meals/product_line/edit_product_line_form.html",
         context={"form": form, "editing": True, "product_line_name": instance.name},
@@ -84,7 +84,7 @@ def edit_product_line(request, product_line_name):
 @permission_required("meals.add_product_line", raise_exception=True)
 def add_product_line(request):
     if request.method == "POST":
-        form = EditProduct_LineForm(request.POST)
+        form = EditProductLineForm(request.POST)
         if form.is_valid():
             instance = form.save()
             message = f"Product_Line '{instance.name}' added successfully"
@@ -94,7 +94,7 @@ def add_product_line(request):
             messages.info(request, message)
             return redirect("product_line")
     else:
-        form = EditProduct_LineForm()
+        form = EditProductLineForm()
 
     form_html = render_to_string(
         template_name="meals/product_line/edit_product_line_form.html",

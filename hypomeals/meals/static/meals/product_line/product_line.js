@@ -1,12 +1,12 @@
 $(function() {
     let removeButton = $("#removeButton");
-    let product_lineCheckboxes = $(".product_line-checkbox");
+    let productlineCheckboxes = $(".product_line-checkbox");
     let selectAllCheckbox = $("#selectAllCheckbox");
     let resetAllButton = $("#resetAllButton");
     let submitButton = $("#submitButton");
-    const product_lineFilterForm = $("#product_lineFilterForm");
-    const removeProduct_LinesUrl = $("#removeProduct_LinesUrl").attr("href");
-    const product_lineUrl = $("#product_lineUrl").attr("href");
+    const productlineFilterForm = $("#productlineFilterForm");
+    const removeProductLinesUrl = $("#removeProductLinesUrl").attr("href");
+    const productlineUrl = $("#productlineUrl").attr("href");
     //const acProductLineUrl = $("#acProductLineUrl").attr("href");
     const pageNumInputId = $("#pageNumInputId").val();
     //const nameInputId = $("#nameInputId").val();
@@ -16,18 +16,18 @@ $(function() {
     $("[data-toggle='tooltip']").tooltip();
 
     function refreshPage() {
-        window.location.href = product_lineUrl;
+        window.location.href = productlineUrl;
     }
 
-    product_lineCheckboxes.change(function() {
+    productlineCheckboxes.change(function() {
         removeButton.attr("disabled",
             $(".product_line-checkbox:selected").length > 0);
     });
 
     selectAllCheckbox.on("change", function(ev) {
-        product_lineCheckboxes.prop("checked",
+        productlineCheckboxes.prop("checked",
             $(this).prop("checked"));
-        product_lineCheckboxes.trigger("change");
+        productlineCheckboxes.trigger("change");
     });
 
     resetAllButton.click(function() {
@@ -36,12 +36,12 @@ $(function() {
     });
 
     submitButton.click(function() {
-        product_lineFilterForm.submit();
+        productlineFilterForm.submit();
     });
 
     removeButton.on("click", function(ev) {
         let toRemove = [];
-        product_lineCheckboxes.each(function(_, cb) {
+        productlineCheckboxes.each(function(_, cb) {
             if (cb.checked) {
                 toRemove.push(cb.id);
             }
@@ -51,7 +51,7 @@ $(function() {
             `Are you sure you want to remove ${toRemove.length} Product Lines(s)?\n` +
             "This cannot be undone."
         )) {
-            $.ajax(removeProduct_LinesUrl, {
+            $.ajax(removeProductLinesUrl, {
                 type: "POST",
                 data: {
                     to_remove: JSON.stringify(toRemove),
@@ -108,8 +108,8 @@ $(function() {
     viewPLSkusButtons.click(viewPLSkus);
 
     exportButton.on("click", function() {
-        const original = product_lineFilterForm.attr("action");
-        product_lineFilterForm.attr("action", original + "?export=1")
+        const original = productlineFilterForm.attr("action");
+        productlineFilterForm.attr("action", original + "?export=1")
             .submit()
             .attr("action", original);
 
@@ -117,8 +117,8 @@ $(function() {
     });
 
     reportButton.click(function() {
-        const original = product_lineFilterForm.attr("action");
-        product_lineFilterForm.attr("action", original + "?report=1")
+        const original = productlineFilterForm.attr("action");
+        productlineFilterForm.attr("action", original + "?report=1")
             .submit()
             .attr("action", original);
 

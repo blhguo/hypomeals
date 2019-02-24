@@ -3,12 +3,14 @@ import logging
 import re
 
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
 from django.utils.text import Truncator
 
 from meals import utils
+from meals.constants import ADMINS_GROUP
 from meals.validators import validate_alphanumeric, validate_netid
 
 logger = logging.getLogger(__name__)
@@ -24,6 +26,10 @@ class User(AbstractUser):
         default=None,
         unique=True,
     )
+
+    @property
+    def is_admin(self):
+        return self.is_superuser or self.groups.filter(name=ADMINS_GROUP).exists()
 
 
 class Upc(models.Model, utils.ModelFieldsCompareMixin):
@@ -91,7 +97,15 @@ class Unit(models.Model):
     verbose_name = models.CharField(max_length=20, blank=True)
     # A scale factor w.r.t. the base unit for this class. I.e., this unit multiplied by
     # the scale factor should equal to the base unit
-    scale_factor = models.DecimalField(max_digits=12, decimal_places=6)
+    scale_factor = models.DecimalField(
+        max_digits=12,
+        decimal_places=6,
+        validators=[
+            MinValueValidator(
+                limit_value=0.000001, message="Formula scale factor must be positive."
+            )
+        ],
+    )
     # Whether this is the base unit. This implies a scale factor of 1.0.
     is_base = models.BooleanField(default=False)
     unit_type = models.CharField(
@@ -100,6 +114,8 @@ class Unit(models.Model):
 
     def __repr__(self):
         return f"<Unit: {self.symbol}>"
+
+    __str__ = __repr__
 
 
 class Ingredient(
@@ -119,7 +135,6 @@ class Ingredient(
     )
     vendor = models.ForeignKey(Vendor, verbose_name="Vendor", on_delete=models.CASCADE)
     size = models.DecimalField(
-        max_length=100,
         verbose_name="Size",
         blank=False,
         max_digits=12,
@@ -136,15 +151,20 @@ class Ingredient(
         related_name="ingredients",
         related_query_name="ingredient",
     )
-    cost = models.FloatField(blank=False, verbose_name="Cost", validators=[
+
+    cost = models.DecimalField(
+        blank=False, max_digits=12, decimal_places=2, verbose_name="Cost",  validators=[
             MinValueValidator(
                 limit_value=0.01, message="Cost must be positive."
-            )
-        ])
+            )]
+    )
     comment = models.CharField(max_length=4000, blank=True, verbose_name="Comment")
 
     def __repr__(self):
         return f"<Ingr #{self.number}: {self.name}>"
+
+    def __str__(self):
+        return self.name
 
     class Meta:
         ordering = ["number"]
@@ -257,6 +277,9 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
     def __repr__(self):
         return f"<SKU #{self.number}: {self.name}>"
 
+    def __str__(self):
+        return self.verbose_name
+
     class Meta:
         ordering = ["number"]
 
@@ -300,6 +323,9 @@ class Formula(
     def __repr__(self):
         return f"<Formula #{self.number}: {self.name}>"
 
+    def __str__(self):
+        return self.name
+
     def save(self, *args, **kwargs):
         if not self.number:
             self.number = utils.next_id(Formula)
@@ -315,7 +341,7 @@ class FormulaIngredient(
     compare_excluded_fields = ("id",)
 
     formula = models.ForeignKey(
-        Formula, blank=False, on_delete=models.CASCADE, verbose_name="SKU#"
+        Formula, blank=False, on_delete=models.CASCADE, verbose_name="Formula#"
     )
     ingredient = models.ForeignKey(
         Ingredient,
@@ -325,13 +351,15 @@ class FormulaIngredient(
         related_name="formulas",
         related_query_name="formula",
     )
-    quantity = models.FloatField(blank=False)
+    quantity = models.DecimalField(blank=False, max_digits=12, decimal_places=6)
 
     def __repr__(self):
         return (
             f"<FormulaIngr #{self.id}: {self.formula.name} <-> "
-            f"{self.ingredient.name} ({self.quantity})"
+            f"{self.ingredient.name} ({self.quantity})>"
         )
+
+    __str__ = __repr__
 
     class Meta:
         unique_together = (("formula", "ingredient"),)
@@ -353,7 +381,10 @@ class ManufacturingLine(
     comment = models.CharField(max_length=4000, verbose_name="Comment")
 
     def __repr__(self):
-        return f"<MfgLine #{self.number}: {self.shortname}>"
+        return f"<MfgLine #{self.pk}: {self.shortname}>"
+
+    def __str__(self):
+        return self.shortname
 
     class Meta:
         ordering = ["shortname"]
@@ -367,11 +398,11 @@ class SkuManufacturingLine(
     sku = models.ForeignKey(
         Sku,
         on_delete=models.CASCADE,
-        # This will enable related queries with "manufacturing_line". For example:
-        # >>> Sku.objects.filter(manufacturing_line__rate__ge=1.0)
-        related_query_name="manufacturing_line",
+        # This will enable related queries with "line". For example:
+        # >>> Sku.objects.filter(line__rate__ge=1.0)
+        related_query_name="line",
     )
-    manufacturing_line = models.ForeignKey(
+    line = models.ForeignKey(
         ManufacturingLine,
         on_delete=models.CASCADE,
         # This will create related object manager in ManufacturingLine as
@@ -397,11 +428,13 @@ class SkuManufacturingLine(
     def __repr__(self):
         return (
             f"<SkuMfgLine #{self.id}: {self.sku.name} <-> "
-            f"{self.manufacturing_line.shortname} ({self.rate})>"
+            f"{self.line.shortname} ({self.rate})>"
         )
 
+    __str__ = __repr__
+
     class Meta:
-        unique_together = (("sku", "manufacturing_line"),)
+        unique_together = (("sku", "line"),)
 
 
 class Goal(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutionMixin):
@@ -416,16 +449,39 @@ class Goal(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutio
     name = models.CharField(max_length=100, blank=False)
     save_time = models.DateTimeField(default=timezone.now, blank=True)
     deadline = models.DateField(verbose_name="Deadline", blank=False)
-    file = models.FileField(
-        upload_to=utils.UploadToPathAndRename("pk", "manufacturing_goal/")
-    )
+    is_enabled = models.BooleanField(verbose_name="Enabled", blank=False, default=False)
 
     def __repr__(self):
         return f"<Goal #{self.id}: {self.name}>"
 
+    def __str__(self):
+        return self.name
+
+    @property
+    def completion_time(self):
+        return max(
+            item.completion_time
+            for item in self.details.all()
+            if item.completion_time is not None
+        )
+
+    @property
+    def scheduled(self):
+        """A goal is scheduled if all of its items have been scheduled."""
+        return all(hasattr(item, "schedule") for item in self.details.all())
+
+    @classmethod
+    def get_sortable_fields(cls):
+        return [
+            ("-save_time", "Last Modified Time"),
+            ("name", "Name"),
+            ("user__first_name", "Creator Name"),
+            ("deadline", "Deadline")
+        ]
+
     class Meta:
         unique_together = (("user", "name", "save_time"),)
-        ordering = ["pk"]
+        ordering = ["-save_time"]
 
 
 class GoalItem(
@@ -458,5 +514,71 @@ class GoalItem(
             f"{self.sku.name} ({self.quantity})"
         )
 
+    @property
+    def completion_time(self):
+        return self.schedule.completion_time if hasattr(self, "schedule") else None
+
+    __str__ = __repr__
+
     class Meta:
         unique_together = (("goal", "sku"),)
+
+
+class GoalSchedule(
+    models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutionMixin
+):
+    compare_excluded_fields = ("id",)
+
+    goal_item = models.OneToOneField(
+        GoalItem, on_delete=models.CASCADE, related_name="schedule", blank=False
+    )
+    line = models.ForeignKey(
+        ManufacturingLine,
+        choices=None,
+        # So that we can query scheduled goal items on a particular manufacturing line
+        related_name="scheduled",
+        blank=False,
+        on_delete=models.CASCADE,
+    )
+    start_time = models.DateTimeField(verbose_name="Start time", blank=False)
+
+    def clean(self):
+        if self.line.pk not in self.goal_item.sku.skumanufacturingline_set.values_list(
+            "line", flat=True
+        ):
+            raise ValidationError(
+                "SKU '%(sku_name)s' cannot be manufactured on Line '%(line_name)s'",
+                params={
+                    "sku_name": self.goal_item.sku.verbose_name,
+                    "line_name": self.line.shortname,
+                },
+            )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def __repr__(self):
+        return (
+            f"<Schedule #{self.pk}: ({self.goal_item.goal.name}, "
+            f"{self.goal_item.sku.name}) @ "
+            f"{self.start_time.strftime('%Y-%m-%d %H:%M:%S')}>"
+        )
+
+    @property
+    def hours(self):
+        """Returns the number of hours to complete a scheduled goal item."""
+        return float(
+            self.goal_item.quantity
+            / self.goal_item.sku.skumanufacturingline_set.get(line=self.line).rate
+        )
+
+    @property
+    def completion_time(self):
+        return utils.compute_end_time(self.start_time, self.hours)
+
+    class Meta:
+        unique_together = (("goal_item", "line"),)
+
+    def __str__(self):
+        return f"{self.goal_item.goal.name} @ {self.start_time.strftime('%Y-%m-%d')}"

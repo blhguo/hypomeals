@@ -44,7 +44,7 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(max_length=100)),
                 ('save_time', models.DateTimeField(blank=True, default=django.utils.timezone.now)),
                 ('deadline', models.DateField(verbose_name='Deadline')),
-                ('file', models.FileField(upload_to=meals.utils.UploadToPathAndRename('pk', 'manufacturing_goal/'))),
+                ('file', models.FileField(upload_to=meals.utils.UploadToPathAndRename('pk', 'manufacturing_goal/'), blank=True)),
             ],
             options={
                 'ordering': ['pk'],

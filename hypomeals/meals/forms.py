@@ -13,14 +13,15 @@ from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, BLANK_CHOICE_DASH
 from django.forms import formset_factory
-from django.utils import timezone
+from django.urls import reverse_lazy
 
 from meals import bulk_import
 from meals import utils
-from meals.exceptions import CollisionOccurredException
-from meals.models import GoalItem, Goal
-from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor
+from meals.exceptions import CollisionOccurredException, IllegalArgumentsException
 from meals.models import FormulaIngredient
+from meals.models import Goal
+from meals.models import GoalSchedule, User
+from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor, Unit
 from meals.utils import BootstrapFormControlMixin, FilenameRegexValidator
 
 logger = logging.getLogger(__name__)
@@ -29,107 +30,36 @@ logger = logging.getLogger(__name__)
 COMMA_SPLIT_REGEX = re.compile(r",\s*")
 
 
-class SkuQuantityForm(forms.ModelForm):
-    name = forms.CharField(required=True)
+class AutocompletedCharField(forms.CharField):
+    """
+    An CharField with autocomplete built-in.
 
-    def __init__(self, *args, **kwargs):
+    This is nothing fancy. It simply adds the class "meals-autocomplete" to and an
+    extra attribute "data-autocomplete-url" to the input element, which are then used
+    by a hook in common.js to register autocomplete.
+
+    For example, to register an multiple field for ingredient names,
+    >>> from django.urls import reverse
+    >>> class MyForm(forms.Form):
+    ...     ingr = AutocompletedCharField(
+    ...         data_source=reverse("autocomplete-ingredient"),
+    ...         is_multiple=True,
+    ...     )
+    :param data_source: the url of an autocomplete view.
+    """
+
+    def __init__(self, *args, data_source, is_multiple=False, **kwargs):
+        self.data_source = data_source
+        self.is_multiple = is_multiple
         super().__init__(*args, **kwargs)
-        self.fields["name"].widget.attrs["class"] = "form-control"
-        if not args:
-            self.initial["name"] = ""
-            self.initial["save_time"] = timezone.now()
-            number = 1
-        else:
-            form_content = args[0]
-            self.initial["name"] = form_content["name"]
-            self.initial["save_time"] = timezone.now()
-            number = self.get_entry_number(args[0])
-        for i in range(number):
-            sku_name = "sku_%s" % (i,)
-            self.fields[sku_name] = forms.CharField(required=False)
-            self.fields[sku_name].widget.attrs["class"] = "form-control autocomplete"
-            self.fields[sku_name].widget.attrs["placeholder"] = "Sku"
-            quantity_name = "quantity_%s" % (i,)
-            self.fields[quantity_name] = forms.CharField(required=False)
-            self.fields[quantity_name].widget.attrs["class"] = "form-control"
-            self.fields[quantity_name].widget.attrs["placeholder"] = "Quantity"
-            if args:
-                self.initial[sku_name] = form_content[sku_name]
-                self.initial[quantity_name] = form_content[quantity_name]
-            else:
-                self.initial[sku_name] = ""
-                self.initial[quantity_name] = ""
 
-            if i == number - 1:
-                self.fields[sku_name].widget.attrs[
-                    "class"
-                ] = "sku-list-new form-control autocomplete"
-
-    def clean(self):
-        if self.is_valid():
-            skus = set()
-            quantities = set()
-            sku_quantity = []
-            i = 0
-            sku_name = "sku_%s" % (i,)
-            quantity_name = "quantity_%s" % (i,)
-            while self.cleaned_data.get(sku_name) or self.cleaned_data.get(
-                quantity_name
-            ):
-                sku = self.cleaned_data[sku_name]
-                quantity = self.cleaned_data[quantity_name]
-                print("DEBUG", sku, quantity)
-                if Sku.from_name(sku) is None:
-                    err_message = "This SKU %s is not a valid one!" % (sku,)
-                    self.add_error(sku_name, err_message)
-
-                if quantity == "":
-                    err_message = "Quantity is a required field"
-                    self.add_error(quantity_name, err_message)
-
-                if sku == "":
-                    err_message = "Sku is a required field"
-                    self.add_error(sku_name, err_message)
-
-                if sku in skus:
-                    self.add_error(sku_name, "Duplicate")
-                else:
-                    skus.add(sku)
-                    quantities.add(quantity)
-                    sku_quantity.append((sku, quantity))
-                i += 1
-                sku_name = "sku_%s" % (i,)
-                quantity_name = "quantity_%s" % (i,)
-            self.cleaned_data["sku_quantity"] = sku_quantity
-
-    def save_file(self, request, file):
-        if self.is_valid():
-            sq = self.instance
-            sq.name = self.cleaned_data["name"]
-            sq.user = request.user
-            sq.file.save("temp", file)
-            sq.save()
-            for sku, quantity in self.cleaned_data["sku_quantity"]:
-                GoalItem.objects.create(name=sq, sku=sku, quantity=quantity)
-        else:
-            print(self.errors)
-
-    def get_interest_fields(self):
-        for sku_name in self.fields:
-            if sku_name.startswith("sku_"):
-                sku_index = sku_name.split("_")[1]
-                quantity_name = "quantity_%s" % (sku_index,)
-                yield sku_index, self[sku_name], self[quantity_name]
-
-    def get_entry_number(self, request):
-        cnt = 0
-        while ("sku_" + str(cnt)) in request:
-            cnt += 1
-        return cnt
-
-    class Meta:
-        model = Goal
-        fields = ["name"]
+    def widget_attrs(self, widget):
+        attrs = super().widget_attrs(widget)
+        attrs["class"] = attrs.get("class", "") + " meals-autocomplete"
+        attrs["data-autocomplete-url"] = self.data_source
+        if self.is_multiple:
+            attrs["class"] += " meals-autocomplete-multiple"
+        return attrs
 
 
 class ImportForm(forms.Form, BootstrapFormControlMixin):
@@ -265,12 +195,25 @@ def get_sku_choices():
     return [(sku.number, sku.number) for sku in Sku.objects.all()]
 
 
-class CsvModelAttributeField(forms.CharField):
+def get_unit_choices():
+    return [(un.symbol, f"{un.symbol} ({un.verbose_name})")
+            for un in Unit.objects.all()]
+
+
+class CsvAutocompletedField(AutocompletedCharField):
 
     attr = "pk"
 
-    def __init__(self, model, *args, attr, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, model, *args, attr, data_source, return_qs=False, **kwargs):
+        """
+        Constructs a new instance of CsvAutocompletedField
+        :param model: the model to search for matches
+        :param attr: the attribute on the model to search for matches
+        :param data_source: an autocomplete data source. See AutocompletedCharField
+        :param return_qs: if True, the raw queryset (rather than the matches strings),
+            will be returned in the clean() method.
+        """
+        super().__init__(*args, data_source=data_source, is_multiple=True, **kwargs)
         try:
             model._meta.get_field(attr)
         except FieldDoesNotExist:
@@ -279,6 +222,7 @@ class CsvModelAttributeField(forms.CharField):
             )
         self.model = model
         self.attr = attr
+        self.return_qs = return_qs
 
     def clean(self, value):
         # Get rid of any empty values
@@ -286,7 +230,8 @@ class CsvModelAttributeField(forms.CharField):
         if not items:
             return items
         query = Q(**{f"{self.attr}__in": items})
-        found = set(self.model.objects.filter(query).values_list(self.attr, flat=True))
+        qs = self.model.objects.filter(query)
+        found = set(qs.values_list(self.attr, flat=True))
         not_found = items - found
         if not_found:
             errors = []
@@ -297,10 +242,10 @@ class CsvModelAttributeField(forms.CharField):
                     )
                 )
             raise ValidationError(errors)
-        return found
+        return qs if self.return_qs else found
 
 
-class Product_LineFilterForm(forms.Form):
+class ProductLineFilterForm(forms.Form):
     NUM_PER_PAGE_CHOICES = [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
 
     page_num = forms.IntegerField(
@@ -348,7 +293,7 @@ class Product_LineFilterForm(forms.Form):
         return Paginator(query.distinct(), num_per_page)
 
 
-class EditProduct_LineForm(forms.ModelForm):
+class EditProductLineForm(forms.ModelForm):
     name = forms.CharField(
         required=True,
         widget=forms.TextInput(attrs={"placeholder": "Enter a new name..."}),
@@ -478,6 +423,12 @@ class EditIngredientForm(forms.ModelForm):
         required=True,
     )
 
+    unit = forms.ChoiceField(
+        choices=lambda: BLANK_CHOICE_DASH
+        + get_unit_choices(),
+        required=True,
+    )
+
     class Meta:
         model = Ingredient
         fields = [
@@ -486,11 +437,12 @@ class EditIngredientForm(forms.ModelForm):
             "vendor",
             "custom_vendor",
             "size",
+            "unit",
             "cost",
             "comment",
         ]
         exclude = ["vendor"]
-        widgets = {"comment": forms.Textarea(attrs={"maxlength": 200})}
+        widgets = {"comment": forms.Textarea(attrs={"maxlength": 4000})}
         labels = {"number": "Ingr#"}
         help_texts = {
             "name": "Name of the new Ingredient.",
@@ -504,6 +456,7 @@ class EditIngredientForm(forms.ModelForm):
             instance = kwargs["instance"]
             if hasattr(instance, "pk") and instance.pk:
                 initial.update({"vendor": instance.vendor.info})
+                initial.update({"unit": instance.unit.symbol})
         super().__init__(*args, initial=initial, **kwargs)
         reordered_fields = OrderedDict()
         for field_name in self.Meta.fields:
@@ -521,7 +474,7 @@ class EditIngredientForm(forms.ModelForm):
 
     def clean(self):
         # The main thing to check for here is whether the user has supplied a custom
-        # Product Line, if "Custom" was chosen in the dropdown
+        # Vendor, if "Custom" was chosen in the dropdown
         data = super().clean()
         if "vendor" in data:
             if data["vendor"] == "custom":
@@ -533,6 +486,12 @@ class EditIngredientForm(forms.ModelForm):
                 data["vendor"] = data["custom_vendor"]
             qs = Vendor.objects.filter(info=data["vendor"])
             data["vendor"] = qs[0] if qs.exists() else Vendor(info=data["vendor"])
+        if "unit" not in data or not Unit.objects.filter(symbol=data["unit"]).exists():
+            raise ValidationError(
+                    "You must specify a Unit"
+            )
+        else:
+            data["unit"] = Unit.objects.filter(symbol=data["unit"])[0]
 
         return data
 
@@ -558,28 +517,26 @@ class SkuFilterForm(forms.Form, utils.BootstrapFormControlMixin):
     num_per_page = forms.ChoiceField(choices=NUM_PER_PAGE_CHOICES, required=True)
     sort_by = forms.ChoiceField(choices=Sku.get_sortable_fields, required=True)
     keyword = forms.CharField(required=False, max_length=100)
-    ingredients = CsvModelAttributeField(
+    ingredients = CsvAutocompletedField(
         model=Ingredient,
+        data_source=reverse_lazy("autocomplete_ingredients"),
         required=False,
         attr="name",
-        widget=forms.TextInput(attrs={"placeholder": "Start typing..."}),
         help_text="Enter ingredients separated by commas",
     )
-    product_lines = CsvModelAttributeField(
+    product_lines = CsvAutocompletedField(
         model=ProductLine,
         required=False,
         attr="name",
-        widget=forms.TextInput(attrs={"placeholder": "Start typing..."}),
+        data_source=reverse_lazy("autocomplete_product_lines"),
         help_text="Enter Product Lines separated by commas",
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        for field in self.fields.values():
-            field.widget.attrs["class"] = (
-                getattr(field.widget.attrs, "class", "") + " mb-2"
-            )
+        self.fields["ingredients"].widget.attrs["placeholder"] = "Start typing..."
+        self.fields["product_lines"].widget.attrs["placeholder"] = "Start typing..."
 
     def query(self) -> Paginator:
         # Generate the correct query, execute it, and return the requested page.
@@ -800,3 +757,150 @@ class FormulaFormsetBase(forms.BaseFormSet):
 FormulaFormset = formset_factory(
     FormulaForm, extra=0, can_delete=True, formset=FormulaFormsetBase
 )
+
+
+class GoalForm(forms.Form, utils.BootstrapFormControlMixin):
+
+    name = forms.CharField(
+        max_length=100,
+        strip=True,
+        required=True,
+        help_text="The name for this manufacturing goal",
+        widget=forms.TextInput(attrs={"placeholder": "Name"}),
+    )
+    deadline = forms.DateField(
+        required=True,
+        help_text="The deadline for this goal",
+        widget=forms.DateInput(attrs={"placeholder": "YYYY-MM-DD"}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["deadline"].widget.attrs["class"] = (
+            self.fields["deadline"].widget.attrs.get("class", "") + " datepicker-input"
+        )
+        self.fields["deadline"].widget.attrs["data-target"] = "#datepicker1"
+
+
+class SkuQuantityForm(forms.Form, utils.BootstrapFormControlMixin):
+
+    sku = AutocompletedCharField(
+        data_source=reverse_lazy("autocomplete_skus"),
+        required=True,
+        widget=forms.TextInput(attrs={"placeholder": "Start typing..."}),
+    )
+    quantity = forms.DecimalField(required=True, min_value=0.00001)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def clean_sku(self):
+        raw = self.cleaned_data["sku"]
+        sku = Sku.from_name(raw)
+        if not sku:
+            raise ValidationError("SKU '%(raw)s does not exist.", params={"raw": raw})
+        return sku
+
+
+class SkuQuantityFormsetBase(forms.BaseFormSet):
+    def clean(self):
+        # At this point SKUs should have been cleaned and are SKU instances.
+        if any(self.errors):
+            return
+        skus = {}  # (sku number -> row number)
+        errors = []
+        index = 0
+        for form in self.forms:
+            if "DELETE" not in form.cleaned_data or form.cleaned_data["DELETE"]:
+                # Form is either incorrect or deleted. Don't process
+                continue
+            index += 1
+            logger.info("Processing form-%d: %s", index, form.cleaned_data)
+            sku_number = form.cleaned_data["sku"].number
+            if sku_number in skus:
+                errors.append(
+                    ValidationError(
+                        "Row %(error_row)d: SKU '%(name)s' is already specified in "
+                        "row %(orig_row)d",
+                        params={
+                            "name": form.cleaned_data["sku"].verbose_name,
+                            "error_row": index,
+                            "orig_row": skus[sku_number],
+                        },
+                    )
+                )
+            else:
+                skus[sku_number] = index
+        if not skus:
+            raise ValidationError("You must specify at least one item.")
+        if errors:
+            raise ValidationError(errors)
+
+
+SkuQuantityFormset = formset_factory(
+    SkuQuantityForm, formset=SkuQuantityFormsetBase, can_delete=True, extra=1
+)
+
+
+class GoalFilterForm(forms.Form, utils.BootstrapFormControlMixin):
+
+    name = forms.CharField(max_length=100, required=False)
+    sort_by = forms.ChoiceField(choices=Goal.get_sortable_fields, required=True)
+    users = CsvAutocompletedField(
+        model=User,
+        attr="username",
+        data_source=reverse_lazy("autocomplete_users"),
+        required=False,
+        return_qs=True,
+        widget=forms.TextInput(attrs={"placeholder": "Start typing..."})
+    )
+
+    def query(self, user):
+        """
+        Queries the database for a set of goals.
+        :param user: the user viewing the goals. This is used to check whether user is
+            admin.
+        :return:
+        """
+        query = Q()
+        if self.cleaned_data["name"]:
+            query &= Q(name__icontains=self.cleaned_data["name"])
+        if not user.is_admin:
+            query &= Q(user=user)
+        else:
+            if self.cleaned_data["users"]:
+                query &= Q(user__in=self.cleaned_data["users"])
+
+        results = Goal.objects.filter(query)
+        if self.cleaned_data["sort_by"]:
+            results = results.order_by(self.cleaned_data["sort_by"])
+        return results.all()
+
+
+class GoalScheduleForm(forms.ModelForm):
+    """
+    This form is not to be filled in by hand. It is generated by formset and completed
+    by JavaScript using a timeline-scheduler
+    """
+
+    goal_item = forms.IntegerField(disabled=True)
+
+    class Meta:
+        fields = ["goal_item", "line", "start_time"]
+        model = GoalSchedule
+
+
+class GoalScheduleFormsetBase(forms.BaseFormSet):
+    def __init__(self, *args, goals, **kwargs):
+        self.goals = goals
+        initial = kwargs.pop("initial", [])
+        for goal in goals:
+            if not goal.is_enabled:
+                raise IllegalArgumentsException(
+                    f"Goal #{goal.pk} is not enabled and cannot be scheduled."
+                )
+            initial.extend({"goal_item": item.pk} for item in goal.details.all())
+        super().__init__(*args, initial=initial, **kwargs)
+
+
+GoalScheduleFormset = formset_factory(GoalScheduleForm, formset=GoalScheduleFormsetBase)

@@ -1,0 +1,42 @@
+{% extends 'meals/base.html' %}
+{% load staticfiles %}
+
+{% block title %}Login{% endblock %}
+
+{% block body %}
+<div class="container m-auto">
+<div class="row">
+<div class="col-sm my-4">
+    <div class="d-flex justify-content-center">
+    <div class="card" style="width: 36rem;">
+    <div class="card-body">
+    <h3 class="card-title">Processing</h3>
+        <div class="d-flex justify-content-start align-items-center">
+            <div class="spinner-border" role="status"></div>
+            <p class="card-text ml-4"> Please wait while we process your login...</p>
+        </div>
+    </div>
+    <div class="card-body">
+        <p class="card-text">
+            Click <a href="javascript: oauth_fix()">here</a>
+            if you are not redirected in 5 seconds.
+        </p>
+    </div>
+    </div>
+    </div>
+</div>
+</div>
+</div>
+
+<!-- Hidden div for template data -->
+<div style="display: none;">
+<a href="{% url 'sso' %}" id="ssoUrl"></a>
+<a href="{% url 'login' %}" id="loginUrl"></a>
+{% csrf_token %}
+</div>
+{% endblock %}
+
+{% block scriptend %}
+<script src="{% static 'meals/common.js' %}"></script>
+<script src="{% static 'meals/accounts/oauth_landing.js' %}"></script>
+{% endblock %}

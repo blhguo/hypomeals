@@ -1,0 +1,32 @@
+{% extends 'meals/base.html' %}
+{% load staticfiles %}
+
+{% block title %}Schedule{% endblock %}
+{% block manufacturing_active %}active{% endblock %}
+
+{% block head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block body %}
+<div class="container m-auto">
+<div class="row">
+<div class="col-sm-12 my-4">
+<div class="alert alert-success">
+    <h3>Manufacturing Schedule</h3>
+    <p class="mb-0">On this page, you may create a new manufacturing schedule.</p>
+</div>
+</div>
+</div>
+<div class="row">
+<div class="col-sm-12">
+    <div id="timelineDiv"></div>
+</div>
+</div>
+</div>
+{% endblock %}
+
+{% block scriptend %}
+<script src="{% static 'meals/goal/schedule.js' %}"></script>
+{% endblock %}
