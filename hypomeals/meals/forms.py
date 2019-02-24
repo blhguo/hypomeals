@@ -21,7 +21,7 @@ from meals import utils
 from meals.exceptions import CollisionOccurredException, IllegalArgumentsException
 from meals.models import FormulaIngredient
 from meals.models import Goal
-from meals.models import GoalSchedule, User, GoalItem
+from meals.models import GoalSchedule, User, GoalItem, Formula
 from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor, Unit
 from meals.models import FormulaIngredient, ManufacturingLine, SkuManufacturingLine
 from meals.utils import BootstrapFormControlMixin, FilenameRegexValidator

@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 def add_formula(request):
     in_flow = False
     if request.method == "POST":
+        print("POST Request Get")
         formset = FormulaFormset(request.POST)
         form = FormulaNameForm(request.POST)
         if form.is_valid() and formset.is_valid():
@@ -41,7 +42,16 @@ def add_formula(request):
     else:
         formset = FormulaFormset()
         form = FormulaNameForm()
-        print("Succeed")
+
+    form_html = render_to_string(
+        template_name="meals/formula/edit_formula_form.html",
+        context={"formset": formset, "form": form, "in_flow": in_flow, "edit": False},
+        request=request,
+    )
+
+    if request.is_ajax():
+        resp = {"error": "Invalid form", "resp": form_html}
+        return JsonResponse(resp)
 
     return render(
         request,

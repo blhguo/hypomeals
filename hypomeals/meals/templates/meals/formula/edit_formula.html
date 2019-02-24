@@ -58,9 +58,9 @@
 <div class="row">
 <div class="col-sm">
 {% if edit %}
-  <form action="{% url 'edit_formula' formula.number %}" method="post">
+  <form id="formulaForm" action="{% url 'edit_formula' formula.number %}" method="post">
 {% else %}
-  <form action="{% url 'add_formula' %}" method="post">
+  <form id="formulaForm" action="{% url 'add_formula' %}" method="post">
 {% endif %}
 {% csrf_token %}
 {{ formset.management_form }}
@@ -106,7 +106,6 @@ add another ingredient to this SKU.
 </div>
 </tbody>
 </table>
-
 <div class="btn-group">
 {% if in_flow %}
 <input type="submit" class="btn btn-success" value="Finish">

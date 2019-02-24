@@ -119,6 +119,7 @@ $(function() {
     }
     viewFormulaButtons.click(viewFormula);
 
+
     /************** Pagination ****************/
     $("#pageList").find("a").on("click", function() {
         let page = $(this).attr("page");
