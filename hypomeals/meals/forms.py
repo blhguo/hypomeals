@@ -14,14 +14,12 @@ from django.db import transaction
 from django.db.models import Q, BLANK_CHOICE_DASH
 from django.forms import formset_factory
 from django.urls import reverse_lazy
-from django.utils import timezone
 
 from meals import bulk_import
 from meals import utils
 from meals.exceptions import CollisionOccurredException, IllegalArgumentsException
-from meals.models import FormulaIngredient
 from meals.models import Goal
-from meals.models import GoalSchedule, User, GoalItem, Formula
+from meals.models import GoalSchedule, User, Formula
 from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor, Unit
 from meals.models import FormulaIngredient, ManufacturingLine, SkuManufacturingLine
 from meals.utils import BootstrapFormControlMixin, FilenameRegexValidator
