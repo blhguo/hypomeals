@@ -58,7 +58,10 @@
             <li class="nav-item {% block ingredient_active %}{% endblock %}">
                 <a class="nav-link" href="{% url 'ingredient' %}">Ingredients</a>
             </li>
-            <li class="nav-item dropdown {% block manufacturing_active %}{% endblock %}">
+          <li class="nav-item {% block formula_active %}{% endblock %}">
+              <a class="nav-link" href="{% url 'formula' %}">Formulas</a>
+          </li>
+          <li class="nav-item dropdown {% block manufacturing_active %}{% endblock %}">
               <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">
                 Manufacturing
               </a>

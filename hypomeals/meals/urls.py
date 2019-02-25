@@ -28,6 +28,11 @@ urlpatterns = [
         name="autocomplete_ingredients",
     ),
     path(
+        "ac-manufacturing-lines",
+        views.autocomplete_manufacturing_lines,
+        name="autocomplete_manufacturing_lines",
+    ),
+    path(
         "ac-product-lines",
         views.autocomplete_product_lines,
         name="autocomplete_product_lines",
@@ -42,8 +47,11 @@ urlpatterns = [
         name="edit_ingredient",
     ),
     path("ac-sku", views.autocomplete_skus, name="autocomplete_skus"),
-    path("edit-formula/<int:sku_number>", views.edit_formula, name="edit_formula"),
-    path("view-formula/<int:sku_number>", views.view_formula, name="view_formula"),
+    path("edit-formula/<int:formula_number>", views.edit_formula, name="edit_formula"),
+    path("add-formula", views.add_formula, name="add_formula"),
+    path("view-formula/<int:formula_number>", views.view_formula, name="view_formula"),
+    path("formula", views.formula, name="formula"),
+    path("remove_formulas", views.remove_formulas, name="remove_formulas"),
     # Import/export views
     path("import/", views.import_page, name="import"),
     path("import/success/", views.import_success, name="import_success"),

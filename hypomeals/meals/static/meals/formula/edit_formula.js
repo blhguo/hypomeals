@@ -8,11 +8,11 @@ $(function() {
     const addRowButton = $("#addRowButton");
     const emptyAlert = $("#emptyAlert");
     let totalFormCount = $("input[name=form-TOTAL_FORMS]");
-    let hasChangePerm = $("input#hasChangePerm").attr("checked");
-
-    if (!hasChangePerm) {
-        $("input").attr("disabled", true);
-    }
+    // let hasChangePerm = $("input#hasChangePerm").attr("checked");
+    //
+    // if (!hasChangePerm) {
+    //     $("input").attr("disabled", true);
+    // }
 
     let tableBody = $("#formsetTable");
     let currentRow = tableBody.find("tr").length - 1;
@@ -69,6 +69,7 @@ $(function() {
         tableBody.append(newRow);
         tableBody.trigger("table:changed");
     }
+    addRowButton.off("click");
     addRowButton.on("click", addRow);
 
     function handleTableChanged() {
@@ -108,7 +109,7 @@ $(function() {
             $(row).toggle(!deleted);
         })
     }
-
+    tableBody.off("table:changed");
     tableBody.on("table:changed", handleTableChanged).trigger("table:changed");
 
     /************* Create Ingredient Modal *************/

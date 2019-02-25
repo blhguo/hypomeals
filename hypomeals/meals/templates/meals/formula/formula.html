@@ -1,0 +1,255 @@
+{% extends "meals/base.html" %}
+{% load staticfiles %}
+
+{% block formula_active %}active{% endblock %}
+{% block title %}Formulas{% endblock %}
+
+{% block body %}
+<div class="container-fluid m-auto">
+<form method="post" action="{% url 'formula' %}" id="formulaFilterForm">
+{%  csrf_token %}
+<div class="row">
+<div class="col-sm-8">
+<nav>
+<ul class="pagination my-4" id="pageList">
+{% if formulas.has_previous %}
+    <li class="page-item">
+        <a class="page-link" page="{{  formulas.previous_page_number }}" href="#">
+            <span>&laquo;</span>
+        </a>
+    </li>
+{% else %}
+    <li class="page-item disabled">
+        <a class="page-link" href="#">
+            <span>&laquo;</span>
+        </a>
+    </li>
+{% endif %}
+
+{% for page in pages %}
+    {%  if current_page == forloop.counter %}
+        <li class="page-item active">
+    {% else %}
+        <li class="page-item">
+    {% endif %}
+        <a class="page-link" page="{{ forloop.counter }}" href="#">
+        {{ forloop.counter }}
+        </a>
+    </li>
+{% endfor %}
+
+{% if ingredients.has_next %}
+    <li class="page-item">
+    <a class="page-link" page="{{ formulas.next_page_number }}" href="#">
+        <span>&raquo;</span>
+    </a>
+    </li>
+{% else %}
+    <li class="page-item disabled">
+    <a class="page-link" href="#">
+        <span>&raquo;</span>
+    </a>
+    </li>
+{% endif %}
+</ul>
+</nav>
+</div>
+<div class="col-sm-4">
+    <div class="btn-group my-4" style="float:right;">
+        {% if perms.meals.add_ingredient %}
+        <a id="addFormulaButton"
+           href="{%  url 'add_formula' %}"
+           class="btn btn-primary">
+            <span class="fa fa-plus"></span> Add a new Formula
+        </a>
+        {% endif %}
+        {% if perms.meals.delete_ingredient %}
+        <button type="button"
+                class="btn btn-danger"
+                disabled
+                data-toggle="tooltip"
+                data-placement="top"
+                title="Select Formulas below to remove them."
+                id="removeFormulaButton">
+            <span class="fa fa-minus"></span> Remove Selected
+        </button>
+        {% endif %}
+    </div>
+</div>
+</div>
+<div class="row">
+<div class="col-sm-2">
+<h3>Search</h3>
+{%  if form.non_field_errors %}
+<div class="alert alert-danger">
+    <p>Please correct the following error</p>
+    {{  form.non_field_errors }}
+</div>
+{% endif %}
+{{ form.page_num }}
+<div class="form-group">
+    <label for="{{ form.num_per_page.id_for_label }}">Number per page:</label>
+    {{ form.num_per_page }}
+    {% if form.num_per_page.errors %}
+    <small>{{ form.num_per_page.errors }}</small>
+    {% endif %}
+</div>
+<div class="form-group">
+    <label for="{{ form.sort_by.id_for_label }}">Sort by:</label>
+    {{ form.sort_by }}
+    {% if form.sort_by.errors %}
+    <small>{{ form.sort_by.errors }}</small>
+    {% endif %}
+</div>
+<div class="form-group">
+    <label for="{{ form.keyword.id_for_label }}">Search:</label>
+    {{ form.keyword }}
+    {% if form.keyword.errors %}
+    <small>{{ form.keyword.errors }}</small>
+    {% endif %}
+</div>
+ <div class="form-group">
+    <label for="{{ form.formulas.id_for_label }}">SKUs that use this ingredient:</label>
+    {{ form.skus }}
+    {% if form.formulas.errors %}
+    <small>{{ form.formulas.errors }}</small>
+    {% endif %}
+</div>
+<div class="btn-group w-100" role="group">
+<button id="submitButton" class="btn btn-success w-100">
+    <span class="fas fa-filter"></span> Filter
+</button>
+<button id="resetAllButton" class="btn btn-danger w-100">
+    <span class="fas fa-trash-alt"></span> Reset
+</button>
+</div>
+
+<!-- Export controls -->
+<div class="w-100">
+<hr>
+<h3>Export</h3>
+<button class="btn btn-primary mb-2 w-100" id="exportButton">
+    <span class="fas fa-download"></span> Export Current Search
+</button>
+</div>
+<button class="btn btn-primary w-100" id="reportButton">
+    <span class="fas fa-file-pdf"></span> Dependency Report
+</button>
+</div>
+
+
+<!-- Table column -->
+<div class="col-sm-10">
+{% if messages %}
+<div class="alert alert-success" id="messagesDiv">
+{% for message in messages %}
+<p {% if message.tags %}class="{{ message.tags }}{% endif %}">{{ message }}</p>
+{% endfor %}
+</div>
+{% endif %}
+<table class="table">
+    <thead class="thead-light">
+    <tr>
+        {% if perms.meals.delete_ingredient %}
+        <th><input type="checkbox" id="selectAllCheckbox"> </th>
+        {% endif %}
+        <th>Formula#</th>
+        <th>Name</th>
+        <th>Ingredient Quantity Tuples</th>
+        <th>Comment</th>
+    </tr>
+    </thead>
+    <tbody class="table-striped">
+    {% for formula in formulas %}
+    <tr>
+        {% if perms.meals.delete_ingredient %}
+        <td><input type="checkbox" class="formula-checkbox" id="{{ formula.number }}"> </td>
+        {% endif %}
+        <td>{{ formula.number }}</td>
+        <td>
+            <a href="{% url "edit_formula" formula.number %}"
+               {% if perms.meals.change_ingredient %}
+               title="Click on the name to edit this formula."
+               {% else %}
+               title="You don't have permission to edit this formula."
+               {% endif %}
+               data-toggle="tooltip"
+               data-placement="right">
+                {{ formula.name }}
+            </a>
+        </td>
+        <td>
+            <div class="btn-group">
+            <a class="btn btn-link viewFormula"
+               href="#"
+               {% if not perms.meals.view_formulaingredient %}
+               disabled="disabled"
+               data-toggle="tooltip"
+               data-placement="left"
+               title="You don't have permission to view the formulas."
+               {% endif %}
+               data-toggle="modal"
+               data-target="#modalDiv"
+               id="{{ formula.number }}">
+                View
+            </a>
+            {% if perms.meals.change_skuingredient and perms.meals.add_skuingredient %}
+            <a class="btn btn-link" href="{% url 'edit_formula' formula.number %}">Edit</a>
+            {% endif %}
+            </div>
+        </td>
+        <td>{{ formula.comment|truncatewords:20 }}</td>
+    </tr>
+    {%  empty %}
+        <div class="alert alert-danger">
+            No results were found. Please modify your search parameters and try again.
+        </div>
+    {% endfor %}
+    </tbody>
+</table>
+<div>
+    <p>Found {{ formulas.paginator.count }} matches in {{ duration }} seconds</p>
+</div>
+</div>
+</div>
+</form>
+<div class="modal" tabindex="-1" role="dialog" id="modalDiv">
+<div class="modal-dialog modal-lg" role="document">
+<div class="modal-content">
+    <div class="modal-header">
+        <h5 class="modal-title"></h5>
+        <button type="button" class="close" data-dismiss="modal">
+            <span class="fas fa-times"></span>
+        </button>
+    </div>
+    <div class="modal-body" id="modalBody">
+        <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status" id="loadingSpinner">
+            <span class="sr-only">Loading...</span>
+        </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button"
+                class="btn btn-secondary"
+                data-dismiss="modal">Close</button>
+    </div>
+</div>
+</div>
+<!-- Hidden div for template data -->
+<div style="display: none;">
+<a href="{% url 'remove_formulas' %}" id="removeFormulasUrl"></a>
+<a href="{% url 'formula' %}" id="formulaUrl"></a>
+<a href="{% url 'view_formula' 0 %}" id="viewFormulaUrl"></a>
+<a href="{% url 'autocomplete_skus' %}" id="acSkusUrl"></a>
+<input id="pageNumInputId" value="{{ form.page_num.id_for_label }}">
+<input id="skusInputId" value="{{ form.formulas.id_for_label }}">
+
+</div>
+{% endblock %}
+
+{% block scriptend %}
+<script src="{% static 'meals/common.js' %}"></script>
+<script lang="javascript" src="{% static 'meals/sku/sku.js' %}"></script>
+<script src="{% static 'meals/formula/formula.js' %}"></script>
+{%  endblock %}

@@ -4,6 +4,7 @@
     <table class="table">
     <thead class="thead-light">
     <tr>
+        <th>Formula Name</th>
         <th>Ingredient</th>
         <th>Quantity</th>
     </tr>
@@ -12,7 +13,10 @@
     {% for formula in formulas %}
     <tr>
         <td class="align-middle">
-            {{ formula.ingredient_number.name }}
+            {{ formula.formula.name }}
+        </td>
+        <td class="align-middle">
+            {{ formula.ingredient }}
         </td>
         <td class="align-middle">
             {{ formula.quantity }}
