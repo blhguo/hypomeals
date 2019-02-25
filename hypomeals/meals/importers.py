@@ -297,38 +297,35 @@ class IngredientImporter(Importer):
 class FormulaImporter(Importer):
 
     file_type = "formulas"
-    header = ["SKU#", "Ingr#", "Quantity"]
+    header = ["Formula#", "Name", "Ingr#", "Quantity", "Comment"]
     field_dict = {
-        "sku_number": "SKU#",
-        "ingredient_number": "Ingr#",
-        "quantity": "Quantity",
+        "name": "Name",
+        "number": "Formula#",
+        "ingredients": "Ingr#",
+        "comment": "Comment",
     }
-    model = FormulaIngredient
+    model = Formula
     model_name = "Formula"
 
+    def _construct_instance(self, row, line_num=None):
+        instance = self.model()
+        for field_name in self.fields:
+            if field_name is not "number":
+                setattr(instance, field_name, row[self.field_dict[field_name]])
+            elif not Formula.objects.get(number=row['Formula#']):
+                setattr(instance, field_name, row[self.field_dict[field_name]])
+
+        FI = row["ingredient"]
+        newFormulaIngredient = FormulaIngredient.objects.create(formula=self, ingredient=Ingredient.objects.get(number=FI), quantity=row["Quantity"])
+        newFormulaIngredient.save()
+        return instance
+
     def _process_row(self, row, line_num=None):
-        sku = Sku.objects.filter(number=row["SKU#"])
-        if not sku.exists():
-            raise IntegrityException(
-                message="Cannot import Formula",
-                line_num=line_num,
-                referring_name="Formula",
-                referred_name="SKU",
-                fk_name="SKU#",
-                fk_value=row["SKU#"],
-            )
-        row["SKU#"] = sku[0]
-        ingr = Ingredient.objects.filter(number=row["Ingr#"])
-        if not ingr.exists():
-            raise IntegrityException(
-                message="Cannot import Formula",
-                line_num=line_num,
-                referring_name="Formula",
-                referred_name="Ingredient",
-                fk_name="Ingr#",
-                fk_value=row["Ingr#"],
-            )
-        row["Ingr#"] = ingr[0]
+        db_formula = Formula.objects.filter(number=row["Formula#"])
+        if db_formula.exists():
+            FormulaIngredient.objects.filter(formula=db_formula).delete()
+            #add code to blow away current DB entry, I think this removes the dependent FormulaIngredients, but not the Ingredients themselves.
+            #I'm not sure how that interacts with SKUs, should be fine
         return row
 
     def _save(self, instance, filename, line_num):
