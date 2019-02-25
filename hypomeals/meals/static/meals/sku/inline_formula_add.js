@@ -3,9 +3,9 @@ $(function() {
   const addFormulaUrl = $("#addFormulaUrl").attr("href");
   let addFormulaButton = $("#addFormulaButton");
   let loadingSpinner = $("#loadingSpinner");
-  let modalDiv = $("#modalDiv");
-  let modalBody = $("#modalBody");
-  let modalSaveButton = $("#modalSaveButton");
+  let modalDiv = $("#formulaDiv");
+  let modalBody = $("#formulaBody");
+  let modalSaveButton = $("#formulaSaveButton");
   let modalForm = undefined;
 
   function modalSaveButtonClicked() {
@@ -23,12 +23,17 @@ $(function() {
                       alert(data.alert);
                   }
                   modalDiv.modal("hide");
+                  let name = data.name;
+                  let formulaSelector = $("#id_formula");
+                  let newOption = $("<option>").text(name)
+                                               .attr("value", name)
+                                               .appendTo(formulaSelector);
               }
               modalBody.trigger("modal:change", [$(data.resp)]);
           },
       })
   }
-
+  modalBody.off("modal:change");
   modalBody.on("modal:change", modalChanged);
   function modalChanged(_, newContent) {
       let container = modalBody.find("div.container");
@@ -59,6 +64,6 @@ $(function() {
               modalDiv.modal("hide");
           })
   });
-
+  modalSaveButton.off("click");
   modalSaveButton.click(modalSaveButtonClicked);
 });

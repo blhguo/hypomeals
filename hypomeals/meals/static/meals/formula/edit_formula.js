@@ -69,6 +69,7 @@ $(function() {
         tableBody.append(newRow);
         tableBody.trigger("table:changed");
     }
+    addRowButton.off("click");
     addRowButton.on("click", addRow);
 
     function handleTableChanged() {
@@ -108,7 +109,7 @@ $(function() {
             $(row).toggle(!deleted);
         })
     }
-
+    tableBody.off("table:changed");
     tableBody.on("table:changed", handleTableChanged).trigger("table:changed");
 
     /************* Create Ingredient Modal *************/

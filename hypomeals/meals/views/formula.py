@@ -24,13 +24,12 @@ logger = logging.getLogger(__name__)
 def add_formula(request):
     in_flow = False
     if request.method == "POST":
-        print("POST Request Get")
         formset = FormulaFormset(request.POST)
         form = FormulaNameForm(request.POST)
         if form.is_valid() and formset.is_valid():
             saved = []
-            instance = form.save()
             with transaction.atomic():
+                instance = form.save()
                 for form, data in zip(formset.forms, formset.cleaned_data):
                     if "DELETE" not in data or data["DELETE"]:
                         continue
@@ -38,6 +37,10 @@ def add_formula(request):
                 if saved:
                     FormulaIngredient.objects.bulk_create(saved)
             messages.info(request, f"Successfully inserted {len(saved)} ingredients.")
+            message = f"Formula '{instance.name}' added successfully"
+            if request.is_ajax():
+                resp = {"error": None, "resp": None, "success": True, "alert": message, "name": "test"}
+                return JsonResponse(resp)
             return redirect("formula")
     else:
         formset = FormulaFormset()
