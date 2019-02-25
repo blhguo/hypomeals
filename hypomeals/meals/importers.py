@@ -16,7 +16,8 @@ from meals.exceptions import (
 )
 from meals.models import Sku, Formula, ProductLine, Upc, \
     Vendor, Ingredient, FormulaIngredient, \
-    ManufacturingLine, SkuManufacturingLine
+    ManufacturingLine, SkuManufacturingLine, Unit
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -291,6 +292,32 @@ class IngredientImporter(Importer):
             row["Vendor Info"] = Vendor.objects.create(info=row["Vendor Info"])
         if row["Comment"] is None:
             row["Comment"] = ""
+        if row["Size"]:
+            strToParse = row["Size"]
+            try:
+                numbers = re.search('^(\d*\.?\d+)\s*(\D.*|)$', strToParse).group(1)
+                units = re.search('^(\d*\.?\d+)\s*(\D.*|)$', strToParse).group(2)
+                if not (numbers or units):
+                    raise IntegrityException(
+                        message=f"Cannot import Ingredient #{row['Ingr#']}",
+                        line_num=line_num,
+                        referring_name="Ingredient",
+                        referred_name="Units",
+                        fk_name="Unit",
+                        fk_value=row["Size"],
+                    )
+                else:
+                    row["Size"] = numbers
+                    row["Unit"] = Unit.objects.get(symbol=units)
+            except AttributeError:
+                raise IntegrityException(
+                    message=f"Cannot import Ingredient #{row['Ingr#']}",
+                    line_num=line_num,
+                    referring_name="Ingredient",
+                    referred_name="Units",
+                    fk_name="Unit",
+                    fk_value=row["Size"],
+                )
         return row
 
 
