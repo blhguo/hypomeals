@@ -19,9 +19,11 @@ from meals import auth
 from meals import utils
 from meals.constants import WORK_HOURS_END, ADMINS_GROUP
 from meals.forms import (
+    SkuQuantityFormset,
+    GoalForm,
+    GoalFilterForm,
     GoalScheduleFormset,
 )
-from meals.forms import SkuQuantityFormset, GoalForm, GoalFilterForm
 from meals.models import Sku, ProductLine, Goal, GoalItem, GoalSchedule
 from meals.utils import SortedDefaultDict
 

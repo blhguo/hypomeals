@@ -82,7 +82,6 @@ urlpatterns = [
         name="export_calculation_csv",
     ),
     path("goals/schedule", views.schedule, name="schedule"),
-    path("goals/completion_time", views.completion_time, name="completion_time"),
     path("filter_skus/", views.filter_skus, name="filter_skus"),
     # Account management views
     path(

@@ -17,12 +17,22 @@ from django.urls import reverse_lazy
 
 from meals import bulk_import
 from meals import utils
-from meals.exceptions import CollisionOccurredException, IllegalArgumentsException
-from meals.models import FormulaIngredient, SkuManufacturingLine, ManufacturingLine, \
-    Formula
-from meals.models import Goal
-from meals.models import GoalSchedule, User
-from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor, Unit
+from meals.exceptions import CollisionOccurredException
+from meals.models import (
+    FormulaIngredient,
+    SkuManufacturingLine,
+    ManufacturingLine,
+    Formula,
+    Goal,
+    GoalSchedule,
+    User,
+    Sku,
+    Ingredient,
+    ProductLine,
+    Upc,
+    Vendor,
+    Unit,
+)
 from meals.utils import BootstrapFormControlMixin, FilenameRegexValidator
 
 logger = logging.getLogger(__name__)
@@ -701,10 +711,7 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
                     sku=instance
                 )
                 manufacturing_lines = ", ".join(
-                    [
-                        instance.line.shortname
-                        for instance in sku_manufacturing_lines
-                    ]
+                    [instance.line.shortname for instance in sku_manufacturing_lines]
                 )
                 initial.update(
                     {
@@ -804,9 +811,7 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
         manufacturing_lines = self.cleaned_data["manufacturing_lines"]
         SkuManufacturingLine.objects.filter(sku=instance).delete()
         for manufacturing_line in manufacturing_lines:
-            SkuManufacturingLine.objects.create(
-                sku=instance, line=manufacturing_line
-            )
+            SkuManufacturingLine.objects.create(sku=instance, line=manufacturing_line)
         instance.save()
         self.save_m2m()
         return instance

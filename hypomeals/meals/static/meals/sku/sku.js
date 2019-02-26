@@ -213,6 +213,7 @@ $(function () {
                 alert(`Error loading content: ${errorThrown}`);
                 bulkModalDiv.modal("hide");
             })
+
     });
     $("#resetAllButton").click(refreshPage);
 });
