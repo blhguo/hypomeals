@@ -68,6 +68,10 @@ urlpatterns = [
     path("goals/schedule", views.schedule, name="schedule"),
     path("filter_skus/", views.filter_skus, name="filter_skus"),
     # Account management views
+    path("accounts/", views.users, name="users"),
+    path("accounts/add/", views.add_user, name="add_user"),
+    path("accounts/remove/", views.remove_users, name="remove_users"),
+    path("accounts/edit/<int:username>", views.edit_user, name="edit_user"),
     path(
         "accounts/login/",
         auth_views.LoginView.as_view(template_name="meals/accounts/login.html"),

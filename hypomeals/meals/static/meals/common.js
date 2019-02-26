@@ -1,3 +1,5 @@
+let templateData = new Map();
+
 /************** Autocomplete **************/
 // Adapted from https://jqueryui.com/autocomplete/#multiple-remote
 
@@ -75,7 +77,31 @@ $(function() {
         let isMultiple = element.attr("class")
             .search("meals-autocomplete-multiple") !== -1;
         registerAutocomplete(element, url, isMultiple);
-    })
+    });
+
+    let templateDataDiv = $("div#hiddenData");
+    if (templateDataDiv.length > 0) {
+        templateDataDiv.children().each(function(i, el) {
+            el = $(el);
+            if (el.is("a")) {
+                templateData.set(el.attr("id"), el.attr("href"));
+            } else if (el.is("input")) {
+                templateData.set(el.attr("id"), el.val());
+            } else {
+                let data = {};
+                let found = false;
+                $.each(el[0].attributes, function(_, att) {
+                    if (att.name.startsWith("data")) {
+                        data[att.name] = att.value;
+                        found = true;
+                    }
+                });
+                if (found) {
+                    templateData.set(el.attr("id"), data);
+                }
+            }
+        });
+    }
 });
 
 /**

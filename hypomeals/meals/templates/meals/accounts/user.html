@@ -1,0 +1,115 @@
+{% extends 'meals/base.html' %}
+{% load static %}
+{% block title %}Users{% endblock %}
+
+{% block users_active %}active{% endblock %}
+
+{% block body %}
+<div class="container m-auto">
+{% if messages %}
+<div class="row mt-3">
+<div class="col-sm-12">
+    <div class="alert alert-success" id="messagesDiv">
+    {% for message in messages %}
+    <p class="{% if message.tags %}{{ message.tags }}{% endif %}{% if forloop.counter == messages|length %} mb-0{% endif %}">
+        {{ message }}
+    </p>
+    {% endfor %}
+    </div>
+</div>
+</div>
+{% endif %}
+
+<div class="row mt-3">
+<div class="col-sm-12 d-flex justify-content-end">
+    <div class="btn-group">
+        <a class="btn btn-success" href="{% url 'add_user' %}">
+            <span class="fas fa-plus"></span> Add a new User
+        </a>
+        <button class="btn btn-primary dropdown-toggle"
+                type="button"
+                id="actionsToggleButton"
+                data-toggle="dropdown"
+                disabled>
+            Actions
+        </button>
+        <div class="dropdown-menu">
+        <a class="dropdown-item" id="removeUserButton" href="#">
+            <span class="fas fa-minus"></span> Remove selected
+        </a>
+        <a href="#" class="dropdown-item" id="makeAdminButton">
+            <span class="fab fa-superpowers"></span> Make admin
+        </a>
+        <a href="#" class="dropdown-item" id="unadminButton">
+            <span class="fas fa-times"></span> Unadmin
+        </a>
+        </div>
+    </div>
+</div>
+</div>
+
+<div class="row mt-3">
+<div class="col-sm-12">
+
+<table class="table">
+<thead class="thead-light">
+<tr>
+    <th>
+        <div class="custom-control custom-checkbox">
+        <input type="checkbox"
+               id="selectAllCheckbox"
+               class="custom-control-input">
+        <label for="selectAllCheckbox" class="custom-control-label"></label>
+        </div>
+    </th>
+    <th>Username</th>
+    <th>First Name</th>
+    <th>Last Name</th>
+    <th>Email</th>
+    <th>Admin?</th>
+    <th>NetID</th>
+</tr>
+</thead>
+
+<tbody>
+{% for user in users %}
+<tr>
+    <td>
+        <div class="custom-control custom-checkbox">
+        <input type="checkbox" data-user-id="{{ user.pk }}"
+               id="checkbox-{{ user.pk }}"
+               class="custom-control-input selectUserCheckboxes">
+        <label for="checkbox-{{ user.pk }}" class="custom-control-label"></label>
+        </div>
+    </td>
+    <td>{{ user.username }}</td>
+    <td>{{ user.first_name }}</td>
+    <td>{{ user.last_name }}</td>
+    <td>{{ user.email }}</td>
+    <td class="d-flex justify-content-start">
+        {% if user.is_admin %}
+            <span class="fas fa-check"></span>
+        {% else %}
+            <span class="fas fa-times"></span>
+        {% endif %}
+    </td>
+    <td>{% if user.netid %}{{ user.netid }}{% else %}N&#47;A{% endif %}</td>
+</tr>
+{% endfor %}
+</tbody>
+
+</table>
+
+</div>
+</div>
+</div>
+
+<div id="hiddenData">
+<a href="{% url 'remove_users' %}" id="removeUsersUrl"></a>
+</div>
+{% endblock %}
+
+{% block scriptend %}
+<script src="{% static 'meals/common.js' %}"></script>
+<script src="{% static 'meals/accounts/user.js' %}"></script>
+{% endblock %}

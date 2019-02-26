@@ -9,12 +9,15 @@ from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.middleware import csrf
-from django.shortcuts import render, redirect, resolve_url
+from django.shortcuts import render, redirect, resolve_url, get_list_or_404
 from django.urls import reverse
 from django.utils.http import is_safe_url
 from django.views.decorators.debug import sensitive_post_parameters
 
+from meals import auth, utils
 from meals.auth import sign_in_netid_user
+from meals.exceptions import UserFacingException
+from meals.models import User
 
 logger = logging.getLogger(__name__)
 
@@ -116,3 +119,58 @@ def sso_landing(request):
         return JsonResponse({"error": None, "resp": resolve_url("error")})
 
     return render(request, template_name="meals/accounts/oauth_landing.html")
+
+
+def _find_users_by_id(user_ids):
+    user_objs = User.objects.filter(pk__in=user_ids)
+    found = set(user_objs.values_list("pk", flat=True))
+    missing = user_ids - found
+    if missing:
+        raise UserFacingException(
+            f"The following user IDs cannot be found: {', '.join(map(str, missing))}"
+        )
+    return user_objs
+
+
+@login_required
+@auth.user_is_admin_ajax(msg="Only an administrator may view user information.")
+def users(request):
+    user_objs = get_list_or_404(User)
+    return render(
+        request, template_name="meals/accounts/user.html", context={"users": user_objs}
+    )
+
+
+@login_required
+@auth.user_is_admin_ajax(msg="Only an administrator may add new users.")
+def add_user(request):
+    pass
+
+
+@login_required
+@auth.user_is_admin_ajax(msg="Only an administrator may edit user information.")
+def edit_user(request, username):
+    pass
+
+
+@login_required
+@auth.user_is_admin_ajax(msg="Only an administrator may remove users.")
+@utils.ajax_view
+def remove_users(request):
+    user_ids = set(map(int, json.loads(request.GET.get("u", "[]"))))
+    if not user_ids:
+        return "No user was selected."
+    user_objs = _find_users_by_id(user_ids)
+    superusers = user_objs.filter(is_superuser=True)
+    if superusers.exists():
+        raise UserFacingException(
+            f"User '{superusers[0].username}' is reserved and cannot be removed."
+        )
+    num_deleted, _ = user_objs.delete()
+    return f"Successfully deleted {num_deleted} users."
+
+
+def make_admin(request):
+    user_ids = set(map(int, json.loads(request.GET.get("u", "[]"))))
+    if not user_ids:
+        return "No user was selected."
