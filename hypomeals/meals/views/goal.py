@@ -1,4 +1,5 @@
 import csv
+import itertools
 import json
 import logging
 import operator
@@ -14,10 +15,15 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils.datetime_safe import datetime
 
-from meals import auth
+from meals import auth, utils
 from meals.constants import WORK_HOURS_END, ADMINS_GROUP
-from meals.forms import SkuQuantityFormset, GoalForm, GoalFilterForm
-from meals.models import Sku, ProductLine, Goal, GoalItem
+from meals.forms import (
+    SkuQuantityFormset,
+    GoalForm,
+    GoalFilterForm,
+    GoalScheduleFormset,
+)
+from meals.models import Sku, ProductLine, Goal, GoalItem, GoalSchedule
 from meals.utils import SortedDefaultDict
 
 logger = logging.getLogger(__name__)
@@ -32,7 +38,10 @@ def _get_goal(request, goal_id):
         it. Raises PermissionDenied otherwise.
     """
     goal = get_object_or_404(Goal, pk=goal_id)
-    if request.user.is_superuser or request.user.groups.filter(name=ADMINS_GROUP).exists():
+    if (
+        request.user.is_superuser
+        or request.user.groups.filter(name=ADMINS_GROUP).exists()
+    ):
         # User is admin, grant access
         logger.info("Granting admin access for goal %d", goal_id)
         return goal
@@ -277,13 +286,67 @@ def disable_goals(request):
 
 
 @login_required
+@auth.user_is_admin_ajax(msg="Only administrators may create a manufacturing schedule.")
 def schedule(request):
-    if not request.user.is_admin:
+    goal_objs = Goal.objects.filter(is_enabled=True)
+    if goal_objs.count() == 0:
         messages.error(
-            request, "You don't have permission to edit the manufacturing schedule."
+            request,
+            "No goal was enabled. You must enable at least one goal"
+            "before creating a manufacturing schedule.",
         )
-        raise PermissionDenied
+        return redirect("error")
+    goal_items = list(
+        itertools.chain.from_iterable(goal.details.all() for goal in goal_objs)
+    )
+    if request.method == "POST":
+        formset = GoalScheduleFormset(request.POST, goal_items=goal_items)
+        if formset.is_valid():
+            with transaction.atomic():
+                instances = []
+                deleted = 0
+                for form in formset:
+                    if form.cleaned_data:
+                        instances.append(form.save(commit=True))
+                    else:
+                        # Unschedule this goal item
+                        num_deleted, _ = GoalSchedule.objects.filter(
+                            goal_item=form.item
+                        ).delete()
+                        deleted += num_deleted
+            msg = (
+                f"Successfully scheduled {len(instances)} and "
+                f"unscheduled {deleted} goals."
+            )
+            messages.info(request, msg)
+            logger.info(msg)
+            return redirect("goals")
+    else:
+        formset = GoalScheduleFormset(goal_items=goal_items)
 
     return render(
-        request, template_name="meals/goal/schedule.html", context={"goals": None}
+        request,
+        template_name="meals/goal/schedule.html",
+        context={"formset": formset, "goals": goal_objs, "goal_items": goal_items},
     )
+
+
+@login_required
+def completion_time(request):
+    start_time = request.GET.get("start", "")
+    hours = request.GET.get("hours", "")
+    try:
+        start_time = datetime.fromisoformat(start_time)
+    except ValueError:
+        return JsonResponse(
+            {"error": "Invalid start time format. Expected ISO format.", "resp": None}
+        )
+
+    try:
+        hours = int(hours)
+    except ValueError:
+        return JsonResponse(
+            {"error": "Invalid number of hours. Expected an integer.", "resp": None}
+        )
+    end_time = utils.compute_end_time(start_time, hours)
+    return JsonResponse({"error": None, "resp": end_time.isoformat()})

@@ -2,7 +2,7 @@
 import logging
 import re
 import zipfile
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from pathlib import Path
 
 from django import forms
@@ -18,7 +18,7 @@ from django.urls import reverse_lazy
 from meals import bulk_import
 from meals import utils
 from meals.exceptions import CollisionOccurredException, IllegalArgumentsException
-from meals.models import FormulaIngredient
+from meals.models import FormulaIngredient, SkuManufacturingLine, ManufacturingLine
 from meals.models import Goal
 from meals.models import GoalSchedule, User
 from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor, Unit
@@ -196,8 +196,9 @@ def get_sku_choices():
 
 
 def get_unit_choices():
-    return [(un.symbol, f"{un.symbol} ({un.verbose_name})")
-            for un in Unit.objects.all()]
+    return [
+        (un.symbol, f"{un.symbol} ({un.verbose_name})") for un in Unit.objects.all()
+    ]
 
 
 class CsvAutocompletedField(AutocompletedCharField):
@@ -302,12 +303,8 @@ class EditProductLineForm(forms.ModelForm):
 
     class Meta:
         model = ProductLine
-        fields = [
-            "name",
-        ]
-        help_texts = {
-            "name": "Name of the new Product Line",
-        }
+        fields = ["name"]
+        help_texts = {"name": "Name of the new Product Line"}
 
     def __init__(self, *args, **kwargs):
         initial = {}
@@ -329,9 +326,7 @@ class EditProductLineForm(forms.ModelForm):
         data = super().clean()
         if "name" in data:
             if data["name"] is None:
-                raise ValidationError(
-                        "You must specify a name"
-                )
+                raise ValidationError("You must specify a name")
         return data
 
     @transaction.atomic
@@ -424,9 +419,7 @@ class EditIngredientForm(forms.ModelForm):
     )
 
     unit = forms.ChoiceField(
-        choices=lambda: BLANK_CHOICE_DASH
-        + get_unit_choices(),
-        required=True,
+        choices=lambda: BLANK_CHOICE_DASH + get_unit_choices(), required=True
     )
 
     class Meta:
@@ -487,9 +480,7 @@ class EditIngredientForm(forms.ModelForm):
             qs = Vendor.objects.filter(info=data["vendor"])
             data["vendor"] = qs[0] if qs.exists() else Vendor(info=data["vendor"])
         if "unit" not in data or not Unit.objects.filter(symbol=data["unit"]).exists():
-            raise ValidationError(
-                    "You must specify a Unit"
-            )
+            raise ValidationError("You must specify a Unit")
         else:
             data["unit"] = Unit.objects.filter(symbol=data["unit"])[0]
 
@@ -852,7 +843,7 @@ class GoalFilterForm(forms.Form, utils.BootstrapFormControlMixin):
         data_source=reverse_lazy("autocomplete_users"),
         required=False,
         return_qs=True,
-        widget=forms.TextInput(attrs={"placeholder": "Start typing..."})
+        widget=forms.TextInput(attrs={"placeholder": "Start typing..."}),
     )
 
     def query(self, user):
@@ -884,23 +875,110 @@ class GoalScheduleForm(forms.ModelForm):
     """
 
     goal_item = forms.IntegerField(disabled=True)
+    start_time = forms.DateTimeField(
+        input_formats=["%Y-%m-%dT%H:%M:%S.%fZ"], required=False
+    )
+
+    def clean_line(self):
+        if not self.cleaned_data["line"]:
+            return None
+        qs = ManufacturingLine.objects.filter(shortname=self.cleaned_data["line"])
+        if not qs.exists():
+            raise ValidationError(
+                "Manufacturing Line '%(line)s' does not exist.",
+                params={"line": self.cleaned_data["line"]},
+            )
+        if not SkuManufacturingLine.objects.filter(
+            sku=self.item.sku, line=qs[0]
+        ).exists():
+            raise ValidationError(
+                "Manufacturing Line '%(line)s' cannot produce SKU #%(sku_number)d",
+                code="invalid",
+                params={
+                    "line": self.cleaned_data["line"],
+                    "sku_number": self.item.sku.number,
+                },
+            )
+        logger.info("Found line %s for goal item %d", qs[0].pk, self.item.pk)
+        return qs[0]
+
+    def clean(self):
+        if "line" in self.cleaned_data:
+            if not self.cleaned_data["start_time"]:
+                raise ValidationError(
+                    "Form tampering detected: Goal Item %(item)d has manufacturing "
+                    "line but not start time.",
+                    params={"item": self.item.pk},
+                )
+        return super().clean()
+
+    def __init__(self, *args, item, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.item = item
+        self.fields["goal_item"].widget.attrs["data-goal-item-id"] = item.pk
+        lines = item.sku.line_choices
+        self.fields["line"] = forms.ChoiceField(choices=lines, required=False)
 
     class Meta:
         fields = ["goal_item", "line", "start_time"]
+        error_messages = {"start_time": {"invalid": "Start time is not a valid time."}}
         model = GoalSchedule
 
 
 class GoalScheduleFormsetBase(forms.BaseFormSet):
-    def __init__(self, *args, goals, **kwargs):
-        self.goals = goals
+    def __init__(self, *args, goal_items, **kwargs):
+        self.goal_items = goal_items
         initial = kwargs.pop("initial", [])
-        for goal in goals:
-            if not goal.is_enabled:
-                raise IllegalArgumentsException(
-                    f"Goal #{goal.pk} is not enabled and cannot be scheduled."
-                )
-            initial.extend({"goal_item": item.pk} for item in goal.details.all())
+        for item in goal_items:
+            data = {"goal_item": item.pk}
+            if item.scheduled:
+                data["line"] = item.schedule.line.shortname
+                data["start_time"] = item.schedule.start_time
+            initial.append(data)
         super().__init__(*args, initial=initial, **kwargs)
 
+        for form in self.forms:
+            form.empty_permitted = True
 
-GoalScheduleFormset = formset_factory(GoalScheduleForm, formset=GoalScheduleFormsetBase)
+    def get_form_kwargs(self, index):
+        kwargs = super().get_form_kwargs(index)
+        kwargs["item"] = self.goal_items[index]
+        if hasattr(self.goal_items[index], "schedule"):
+            kwargs["instance"] = self.goal_items[index].schedule
+        return kwargs
+
+    def _check_overlap(self):
+        lines = defaultdict(list)
+        for form in self.forms:
+            if form.cleaned_data:
+                lines[form.cleaned_data["line"].shortname].append(form)
+
+        for line, _forms in lines.items():  # "forms" is in outer scope
+            if len(_forms) == 1:
+                continue
+            _forms.sort(key=lambda f: f.cleaned_data["start_time"])
+            for i in range(len(_forms) - 1):
+                end_time = utils.compute_end_time(
+                    _forms[i].cleaned_data["start_time"], _forms[i].item.hours
+                )
+                if _forms[i + 1].cleaned_data["start_time"] < end_time:
+                    raise ValidationError(
+                        "Overlap detected on Manufacturing Line '%(line)s' between "
+                        "item '%(item1)d' and '%(item2)d'.",
+                        code="invalid",
+                        params={
+                            "line": line,
+                            "item1": _forms[i].item.pk,
+                            "item2": _forms[i + 1].item.pk,
+                        },
+                    )
+
+    def clean(self):
+        super_cleaned = super().clean()
+        self._check_overlap()
+        return super_cleaned
+
+
+GoalScheduleFormset = formset_factory(
+    GoalScheduleForm, formset=GoalScheduleFormsetBase, extra=0
+)

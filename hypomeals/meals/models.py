@@ -6,6 +6,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import BLANK_CHOICE_DASH
 from django.utils import timezone
 from django.utils.text import Truncator
 
@@ -153,10 +154,13 @@ class Ingredient(
     )
 
     cost = models.DecimalField(
-        blank=False, max_digits=12, decimal_places=2, verbose_name="Cost",  validators=[
-            MinValueValidator(
-                limit_value=0.01, message="Cost must be positive."
-            )]
+        blank=False,
+        max_digits=12,
+        decimal_places=2,
+        verbose_name="Cost",
+        validators=[
+            MinValueValidator(limit_value=0.01, message="Cost must be positive.")
+        ],
     )
     comment = models.CharField(max_length=4000, blank=True, verbose_name="Comment")
 
@@ -273,6 +277,22 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
     @property
     def verbose_name(self):
         return f"{self.name}: {self.unit_size} * {self.count}"
+
+    @property
+    def line_shortnames(self):
+        return self.skumanufacturingline_set.values_list("line__shortname", flat=True)
+
+    @property
+    def line_choices(self):
+        return BLANK_CHOICE_DASH + [
+            (shortname, shortname) for shortname in self.line_shortnames
+        ]
+
+    @property
+    def rate(self):
+        if self.skumanufacturingline_set.all():
+            return self.skumanufacturingline_set.all()[0].rate
+        return None
 
     def __repr__(self):
         return f"<SKU #{self.number}: {self.name}>"
@@ -468,7 +488,7 @@ class Goal(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutio
     @property
     def scheduled(self):
         """A goal is scheduled if all of its items have been scheduled."""
-        return all(hasattr(item, "schedule") for item in self.details.all())
+        return all(item.scheduled for item in self.details.all())
 
     @classmethod
     def get_sortable_fields(cls):
@@ -476,7 +496,7 @@ class Goal(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutio
             ("-save_time", "Last Modified Time"),
             ("name", "Name"),
             ("user__first_name", "Creator Name"),
-            ("deadline", "Deadline")
+            ("deadline", "Deadline"),
         ]
 
     class Meta:
@@ -518,6 +538,16 @@ class GoalItem(
     def completion_time(self):
         return self.schedule.completion_time if hasattr(self, "schedule") else None
 
+    @property
+    def hours(self):
+        if self.sku.rate:
+            return float(self.quantity / self.sku.rate)
+        return None
+
+    @property
+    def scheduled(self):
+        return hasattr(self, "schedule")
+
     __str__ = __repr__
 
     class Meta:
@@ -543,16 +573,20 @@ class GoalSchedule(
     start_time = models.DateTimeField(verbose_name="Start time", blank=False)
 
     def clean(self):
-        if self.line.pk not in self.goal_item.sku.skumanufacturingline_set.values_list(
-            "line", flat=True
-        ):
-            raise ValidationError(
-                "SKU '%(sku_name)s' cannot be manufactured on Line '%(line_name)s'",
-                params={
-                    "sku_name": self.goal_item.sku.verbose_name,
-                    "line_name": self.line.shortname,
-                },
-            )
+        if self.line:
+            if (
+                self.line.pk
+                not in self.goal_item.sku.skumanufacturingline_set.values_list(
+                    "line", flat=True
+                )
+            ):
+                raise ValidationError(
+                    "SKU '%(sku_name)s' cannot be manufactured on Line '%(line_name)s'",
+                    params={
+                        "sku_name": self.goal_item.sku.verbose_name,
+                        "line_name": self.line.shortname,
+                    },
+                )
 
     def save(self, *args, **kwargs):
         self.full_clean()

@@ -19,7 +19,7 @@ from django.db.models import Max
 from django.db.models.fields.related import ForeignKey
 from django.shortcuts import redirect
 from django.template.defaultfilters import filesizeformat
-from django.utils import six as django_six
+from django.utils import six as django_six, timezone
 from django.utils.crypto import salted_hmac
 from django.utils.deconstruct import deconstructible
 from django.utils.http import int_to_base36
@@ -466,12 +466,14 @@ def compute_end_time(start_time: datetime, num_hours: float) -> datetime:
     :param num_hours: total number of hours to complete production on a MfgLine
     :return: the datetime at which production is scheduled to complete
     """
+    if start_time.tzinfo is None:
+        start_time = start_time.replace(tzinfo=timezone.get_current_timezone())
     num_days = int(num_hours / WORK_HOURS_PER_DAY)
     remaining_hours = num_hours % WORK_HOURS_PER_DAY
     if remaining_hours == 0:
         num_days -= 1
         remaining_hours = WORK_HOURS_PER_DAY
-    if WORK_HOURS_END >= start_time.time() >= WORK_HOURS_START:
+    if WORK_HOURS_END >= start_time.timetz() >= WORK_HOURS_START:
         first_day_end = datetime.combine(start_time.date(), WORK_HOURS_END)
         remaining_hours -= (
             first_day_end - start_time
