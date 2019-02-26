@@ -1,6 +1,7 @@
 #pylint: disable-msg=protected-access,unused-argument,not-callable
 import copy
 import logging
+import re
 from abc import ABC
 from collections import defaultdict
 from typing import List, Dict, Any, Tuple
@@ -14,7 +15,8 @@ from meals.exceptions import (
     CollisionException,
     DuplicateException,
 )
-from meals.models import Sku, ProductLine, Upc, Vendor, Ingredient, FormulaIngredient
+from meals.models import Sku, ProductLine, Upc, Vendor, Ingredient, FormulaIngredient, \
+    ManufacturingLine, Formula
 
 logger = logging.getLogger(__name__)
 
@@ -52,31 +54,7 @@ class Importer(ABC):
         for line_num, row in enumerate(reader, start=2):
             converted_row = self._process_row(copy.copy(row), line_num)
             instance = self._construct_instance(converted_row)
-            for unique_keys in self.unique_fields:
-                values = tuple(
-                    converted_row[self.field_dict[unique_key]]
-                    for unique_key in unique_keys
-                )
-                if values in self.unique_dict[unique_keys]:
-                    key_name = tuple(
-                        self.fields[field].verbose_name for field in unique_keys
-                    )
-                    raw_values = tuple(
-                        row[self.field_dict[unique_key]] for unique_key in unique_keys
-                    )
-                    previous_line_num = self.unique_dict[unique_keys][values]
-                    raise DuplicateException(
-                        f"{filename}:{line_num}: "
-                        f"Cannot import {self.file_type} with {key_name} = "
-                        f"'{raw_values}'.",
-                        model_name=self.model_name,
-                        key=key_name,
-                        value=raw_values,
-                        line_num=previous_line_num,
-                    )
-
-                self.unique_dict[unique_keys][values] = line_num
-
+            self._check_duplicates(row, converted_row, filename, line_num)
             try:
                 instance = self._save(instance, filename, line_num)
             except CollisionException as e:
@@ -95,6 +73,32 @@ class Importer(ABC):
         if not self.collisions:
             self._post_process()
         return self.instances, self.collisions
+
+    def _check_duplicates(self, raw, converted, filename, line_num):
+        for unique_keys in self.unique_fields:
+            values = tuple(
+                converted[self.field_dict[unique_key]]
+                for unique_key in unique_keys
+            )
+            if values in self.unique_dict[unique_keys]:
+                key_name = tuple(
+                    self.fields[field].verbose_name for field in unique_keys
+                )
+                raw_values = tuple(
+                    raw[self.field_dict[unique_key]] for unique_key in unique_keys
+                )
+                previous_line_num = self.unique_dict[unique_keys][values]
+                raise DuplicateException(
+                    f"{filename}:{line_num}: "
+                    f"Cannot import {self.file_type} with {key_name} = "
+                    f"'{raw_values}'.",
+                    model_name=self.model_name,
+                    key=key_name,
+                    value=raw_values,
+                    line_num=previous_line_num,
+                )
+
+            self.unique_dict[unique_keys][values] = line_num
 
     def _process_row(self, row, line_num=None):
         return row
@@ -178,6 +182,10 @@ class SkuImporter(Importer):
         "Unit size",
         "Count per case",
         "Product Line Name",
+        "Formula#",
+        "Formula factor",
+        "ML Shortnames",
+        "Rate",
         "Comment",
     ]
     primary_key = Sku._meta.get_field("number")
@@ -191,14 +199,34 @@ class SkuImporter(Importer):
         "unit_upc": "Unit UPC",
         "unit_size": "Unit size",
         "count": "Count per case",
-        "product_line": "Product Line Name",
+        "product_line": "PL Name",
+        "formula": "Formula#",
+        "formula_scale": "Formula factor",
+        "manufacturing_lines": "ML Shortnames",
         "comment": "Comment",
     }
 
     def _process_row(self, row, line_num=None):
+        raw_formula = row["Formula#"]
+
+        formula_qs = Formula.objects.filter(number=raw_formula)
+        if formula_qs.exists():
+            row["Formula#"] = formula_qs[0]
+        else:
+            raise IntegrityException(
+                message=f"Cannot import SKU #{row['SKU#']}",
+                line_num=line_num,
+                referring_name="SKU",
+                referred_name="Product Line",
+                fk_name="Formula",
+                fk_value=row["Formula#"],
+            )
         raw_case_upc = row["Case UPC"]
+        print(utils.is_valid_upc(raw_case_upc))
         if utils.is_valid_upc(raw_case_upc):
+            print("made it")
             row["Case UPC"] = Upc.objects.get_or_create(upc_number=raw_case_upc)[0]
+            print(row['Case UPC'])
         raw_unit_upc = row["Unit UPC"]
         if utils.is_valid_upc(raw_unit_upc):
             row["Unit UPC"] = Upc.objects.get_or_create(upc_number=raw_unit_upc)[0]
@@ -216,6 +244,24 @@ class SkuImporter(Importer):
                 fk_name="Product Line Name",
                 fk_value=row["Product Line Name"],
             )
+
+        # Duplicated shortnames are ignored
+        raw_ml = set(re.split(r",\s*", row["ML Shortnames"]))
+        ml_objs = ManufacturingLine.objects.filter(shortname__in=raw_ml)
+        found = set(ml_objs.values_list("shortname", flat=True))
+        missing = raw_ml - found
+        if missing:
+            raise IntegrityException(
+                message=f"Cannot import SKU #{row['SKU#']}: "
+                "manufacturing line(s) do not exist.",
+                line_num=line_num,
+                referring_name="SKU",
+                referred_name="Manufacturing Line",
+                fk_name="ML Shortnames",
+                fk_value=", ".join(missing),
+            )
+
+        row["ML Shortnames"] = ml_objs
         return row
 
 
