@@ -1,4 +1,4 @@
-$(function() {
+$(function () {
     const emptyFormDiv = $("#emptyFormDiv");
     const ingredientInputTemplate = emptyFormDiv
         .find("input[name=form-__prefix__-ingredient]")[0];
@@ -8,11 +8,11 @@ $(function() {
     const addRowButton = $("#addRowButton");
     const emptyAlert = $("#emptyAlert");
     let totalFormCount = $("input[name=form-TOTAL_FORMS]");
-    let hasChangePerm = $("input#hasChangePerm").attr("checked");
-
-    if (!hasChangePerm) {
-        $("input").attr("disabled", true);
-    }
+    // let hasChangePerm = $("input#hasChangePerm").attr("checked");
+    //
+    // if (!hasChangePerm) {
+    //     $("input").attr("disabled", true);
+    // }
 
     let tableBody = $("#formsetTable");
     let currentRow = tableBody.find("tr").length - 1;
@@ -69,6 +69,8 @@ $(function() {
         tableBody.append(newRow);
         tableBody.trigger("table:changed");
     }
+
+    addRowButton.off("click");
     addRowButton.on("click", addRow);
 
     function handleTableChanged() {
@@ -91,11 +93,11 @@ $(function() {
                         term: request.term,
                     }, response);
                 },
-                focus: function() {
+                focus: function () {
                     return false;
                 }
             })
-            .on("keydown", function(ev) {
+            .on("keydown", function (ev) {
                 if (ev.keyCode === $.ui.keyCode.TAB
                     && $(this).autocomplete("instance").menu.active) {
                     ev.preventDefault();
@@ -103,12 +105,13 @@ $(function() {
             });
         $(".deleteButton").on("click", deleteButtonClicked);
 
-        tableBody.find("tr").each(function(i, row) {
+        tableBody.find("tr").each(function (i, row) {
             const deleted = $(row).find("input[name*=DELETE]").attr("checked");
             $(row).toggle(!deleted);
         })
     }
 
+    tableBody.off("table:changed");
     tableBody.on("table:changed", handleTableChanged).trigger("table:changed");
 
     /************* Create Ingredient Modal *************/
@@ -127,7 +130,7 @@ $(function() {
         }
         modalSaveButton.attr("disabled", true);
         modalForm.ajaxSubmit({
-            success: function(data, textStatus) {
+            success: function (data, textStatus) {
                 if (!showNetworkError(data, textStatus)) {
                     return;
                 }
@@ -143,6 +146,7 @@ $(function() {
     }
 
     modalBody.on("modal:change", modalChanged);
+
     function modalChanged(_, newContent) {
         let container = modalBody.find("div.container");
         if (container.length > 0) {
@@ -162,14 +166,83 @@ $(function() {
         modalBody.trigger("modal:change", [$(data.resp)]);
     }
 
-    createIngrButton.click(function() {
+    createIngrButton.click(function () {
         $.getJSON(addIngredientUrl, {})
             .done(ajaxDone)
-            .fail(function(_, __, errorThrown) {
+            .fail(function (_, __, errorThrown) {
                 alert(`Error loading content: ${errorThrown}`);
                 modalDiv.modal("hide");
             })
     });
 
     modalSaveButton.click(modalSaveButtonClicked);
+
+    const addFormulaUrl = $("#addFormulaUrl").attr("href");
+    let addFormulaButton = $("#addFormulaButton");
+    let formulaModalDiv = $("#formulaDiv");
+    let formulaModalBody = $("#formulaBody");
+    let formulaModalSaveButton = $("#formulaSaveButton");
+    let formulaModalForm = undefined;
+    formulaModalBody.off("modal:change");
+    formulaModalBody.on("modal:change", modalChanged);
+
+    function modalChanged(_, newContent) {
+        let container = formulaModalBody.find("div.container");
+        if (container.length > 0) {
+            container.remove();
+        }
+        newContent.appendTo(formulaModalBody);
+        formulaModalForm = newContent.find("form");
+        formulaModalBody.find("#formSubmitBtnGroup").toggle("false");
+        formulaModalSaveButton.attr("disabled", false);
+        let buttons = $("#oldButton")
+        buttons.remove()
+    }
+
+    function ajaxDone(data, textStatus) {
+        if (!showNetworkError(data, textStatus)) {
+            return;
+        }
+        loadingSpinner.toggle(false);
+        formulaModalBody.trigger("modal:change", [$(data.resp)]);
+    }
+
+    addFormulaButton.click(function () {
+        $.getJSON(addFormulaUrl, {})
+            .done(ajaxDone)
+            .fail(function (_, __, errorThrown) {
+                alert(`Error loading content: ${errorThrown}`);
+                formulaModalDiv.modal("hide");
+            })
+    });
+
+    function modalSaveButtonClicked() {
+      if (formulaModalForm === undefined) {
+          return;
+      }
+      formulaModalSaveButton.attr("disabled", true);
+      formulaModalForm.ajaxSubmit({
+          success: function(data, textStatus) {
+              if (!showNetworkError(data, textStatus)) {
+                  return;
+              }
+              if ("success" in data && data.success === true) {
+                  if ("alert" in data) {
+                      alert(data.alert);
+                  }
+                  fomrulaModalDiv.modal("hide");
+                  let name = data.name;
+                  let formulaSelector = $("#id_formula");
+                  let newOption = $("<option>").text(name)
+                                               .attr("value", name)
+                                               .appendTo(formulaSelector);
+              }
+              modalBody.trigger("modal:change", [$(data.resp)]);
+          },
+      })
+  }
+
+  formulaModalSaveButton.off("click");
+  formulaModalSaveButton.click(modalSaveButtonClicked);
+
 });

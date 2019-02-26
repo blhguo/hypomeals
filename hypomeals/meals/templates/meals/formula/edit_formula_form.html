@@ -1,0 +1,81 @@
+{% load staticfiles %}
+<div class="container">
+  <div class="row">
+  <div class="col-sm mb-4">
+      <div class="btn-group float-right" role="group">
+      {% if perms.meals.add_skuingredient %}
+      <button type="button"
+              id="addRowButton"
+              class="btn btn-primary">
+          <span class="fa fa-plus"></span> Add row
+      </button>
+      {% endif %}
+      </div>
+  </div>
+  </div>
+  {% if edit %}
+    <form id="formulaForm" action="{% url 'edit_formula' formula.number %}" method="post">
+  {% else %}
+    <form id="formulaForm" action="{% url 'add_formula' %}" method="post">
+  {% endif %}
+  {% csrf_token %}
+  {{ formset.management_form }}
+  {% if formset.non_form_errors %}
+  <div class="alert alert-danger">
+  Please correct the following error(s):
+  {{ formset.non_form_errors }}
+  </div>
+  {% endif %}
+  {{ form }}
+  <table class="table">
+  <thead class="thead-light">
+  <tr>
+      <th>Ingredient</th>
+      <th>Quantity</th>
+      <th>Action</th>
+  </tr>
+  </thead>
+  <tbody id="formsetTable">
+  {% for form in formset %}
+  <tr>
+      <td class="align-middle">
+          {{ form.ingredient }}
+          {% if form.ingredient.errors %}
+          <small>{{ form.ingredient.errors }}</small>
+          {% endif %}
+      </td>
+      <td class="align-middle">
+          {{ form.quantity }}
+          {% if form.quantity.errors %}
+          <small>{{ form.quantity.errors }}</small>
+          {% endif %}
+      </td>
+      <td class="align-middle">
+          {{ form.DELETE }}
+          <a href="#" class="deleteButton">Delete</a>
+      </td>
+  </tr>
+  {% endfor %}
+  <div class="alert alert-danger" id="emptyAlert" style="display: none;">
+  There is no ingredient in this formula. Click on "Add row" to
+  add another ingredient to this SKU.
+  </div>
+  </tbody>
+  </table>
+  <div class="btn-group" id="oldButton">
+  {% if in_flow %}
+  <input type="submit" class="btn btn-success" value="Finish">
+  {% else %}
+  <input type="submit" class="btn btn-success" value="Apply Changes">
+  <a href="{% url 'formula' %}" class="btn btn-secondary">Cancel</a>
+  {% endif %}
+  </div>
+  </form>
+
+{#Render an empty form to be picked up by JavaScript#}
+<div style="display: none;" id="emptyFormDiv">
+{{ formset.empty_form }}
+</div>
+<script src="{% static 'meals/formula/edit_formula.js' %}"></script>
+<script src="{% static 'meals/sku/inline_formula_add.js' %}"></script>
+</div>

@@ -20,22 +20,29 @@ FILE_TYPE_TO_FIELDS = {
         "unit_upc.upc_number": "Unit UPC",
         "unit_size": "Unit size",
         "count": "Count per case",
-        "product_line.name": "Product Line Name",
+        "product_line.name": "PL Name",
         "comment": "Comment",
+        "formula.number": "Formula#",
+        "formula_scale": "Formula factor",
+        "manufacturing_lines": "ML Shortnames",
+        "manufacturing_rate": "Rate",
     },
     "ingredients": {
         "number": "Ingr#",
         "name": "Name",
         "vendor.info": "Vendor Info",
         "size": "Size",
+        "unit.symbol": "Unit",
         "cost": "Cost",
         "comment": "Comment",
     },
     "product_lines": {"name": "Name"},
     "formulas": {
-        "sku_number.number": "SKU#",
-        "ingredient_number.number": "Ingr#",
+        "formula.name": "Name",
+        "formula.number": "Formula#",
+        "ingredient.number": "Ingr#",
         "quantity": "Quantity",
+        "formula.comment": "Comment",
     },
 }
 FILE_TYPE_TO_FIELDS_REV = {}
@@ -50,12 +57,16 @@ HEADERS = {
         "Unit UPC",
         "Unit size",
         "Count per case",
-        "Product Line Name",
+        "PL Name",
+        "Formula#",
+        "Formula factor",
+        "ML Shortnames",
+        "Rate",
         "Comment",
     ],
     "ingredients": ["Ingr#", "Name", "Vendor Info", "Size", "Cost", "Comment"],
     "product_lines": ["Name"],
-    "formulas": ["SKU#", "Ingr#", "Quantity"],
+    "formulas": ["Formula#", "Name", "Ingr#", "Quantity", "Comment"],
 }
 
 FILE_TYPES = {
@@ -123,8 +134,9 @@ def export_skus(skus, include_formulas=False, include_product_lines=False):
     logger.info("Exported %d SKU records", len(skus))
     exported_files = [sku_file]
     if include_formulas:
-        formulas = FormulaIngredient.objects.filter(sku_number__in=skus).order_by(
-            "sku_number__number"
+        formulas = [sku.formula for sku in skus]
+        formulas = FormulaIngredient.objects.filter(formula__in=formulas).order_by(
+            "formula__number"
         )
         formula_file = directory / FILE_TYPE_TO_FILENAME["formulas"]
         formula_file.touch(exist_ok=True)
@@ -189,19 +201,41 @@ def generate_ingredient_dependency_report(ingredients):
     writer = csv.writer(stream)
     writer.writerow(["Ingr#", "Ingredient Name", "SKU#", "SKU Name"])
     for ingredient in ingredients:
-        formulas = FormulaIngredient.objects.filter(ingredient_number=ingredient)
+        formulas = FormulaIngredient.objects.filter(ingredient_id=ingredient)
         for formula in formulas:
-            writer.writerow(
-                [
-                    ingredient.number,
-                    ingredient.name,
-                    formula.sku_number.number,
-                    formula.sku_number.name,
-                ]
-            )
+            skus = Sku.objects.filter(formula=formula.formula)
+            for sku in skus:
+                writer.writerow(
+                    [
+                        ingredient.number,
+                        ingredient.name,
+                        sku.number,
+                        sku.name,
+                    ]
+                )
 
     stream.seek(0)
     response = HttpResponse(stream.read())
     response["content_type"] = "text/csv"
     response["Content-Disposition"] = "attachment;filename=report.csv"
+    return response
+
+def export_formulas(formulas):
+    """
+    Exports a list of ingredients as a temporary CSV file
+    :param formulas: the list of ingredients to be exported
+    :return: an HttpResponse containing the exported CSV file
+    """
+    directory = TEMPDIR / utils.make_token_with_timestamp("formulas")
+    directory.mkdir(parents=True, exist_ok=True)
+    logger.info("Will use directory %s", directory)
+    formulas = FormulaIngredient.objects.filter(formula__in=formulas).order_by(
+        "formula__number"
+    )
+    formula_file = directory / FILE_TYPE_TO_FILENAME["formulas"]
+    formula_file.touch(exist_ok=True)
+    formula_data = formula_file.open("r+")
+    data = _export_objs(formula_data, "formulas", formulas)
+    response = HttpResponse(data.read(), content_type="text/csv")
+    response["Content-Disposition"] = "attachment; filename=formulas.csv"
     return response
