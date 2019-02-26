@@ -241,7 +241,7 @@
            id="{{ sku.formula.number }}">
             View
         </a>
-        {% if perms.meals.change_skuingredient and perms.meals.add_skuingredient %}
+        {% if perms.meals.change_skuingredient and perms.meals.add_skuingredient and sku.formula.number %}
         <a class="btn btn-link" href="{% url 'edit_formula' sku.formula.number %}">Edit</a>
         {% endif %}
         </div>

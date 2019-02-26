@@ -205,22 +205,13 @@ class SkuImporter(Importer):
         "comment": "Comment",
     }
 
-    def _construct_instance(self, row, line_num=None):
-        instance = self.model()
-        for field_name in self.fields:
-            setattr(instance, field_name, row[self.field_dict[field_name]])
-        #setattr(instance, "manufacturing_lines", row["ML Shortnames"])
-        for ML_obj in row["ML Shortnames"]:
-            SML = SkuManufacturingLine(sku=instance,
-                                       line=ML_obj,
-                                       rate=row["Rate"])
-            SML.save()
-        return instance
-
     def _process_row(self, row, line_num=None):
         raw_formula = row["Formula#"]
-        row["Formula#"] = Formula.objects.get(number=raw_formula)
-        if not row["Formula#"]:
+
+        formula_qs = Formula.objects.filter(number=raw_formula)
+        if formula_qs.exists():
+            row["Formula#"] = formula_qs[0]
+        else:
             raise IntegrityException(
                 message=f"Cannot import SKU #{row['SKU#']}",
                 line_num=line_num,
@@ -230,8 +221,11 @@ class SkuImporter(Importer):
                 fk_value=row["Formula#"],
             )
         raw_case_upc = row["Case UPC"]
+        print(utils.is_valid_upc(raw_case_upc))
         if utils.is_valid_upc(raw_case_upc):
+            print("made it")
             row["Case UPC"] = Upc.objects.get_or_create(upc_number=raw_case_upc)[0]
+            print(row['Case UPC'])
         raw_unit_upc = row["Unit UPC"]
         if utils.is_valid_upc(raw_unit_upc):
             row["Unit UPC"] = Upc.objects.get_or_create(upc_number=raw_unit_upc)[0]
@@ -267,6 +261,18 @@ class SkuImporter(Importer):
             row["ML Shortnames"] = ml_short
         return row
 
+    def _construct_instance(self, row, line_num=None):
+        instance = self.model()
+        for field_name in self.fields:
+            setattr(instance, field_name, row[self.field_dict[field_name]])
+        #setattr(instance, "manufacturing_lines", row["ML Shortnames"])
+        for ML_obj in row["ML Shortnames"]:
+            SML = SkuManufacturingLine(sku=instance,
+                                       line=ML_obj,
+                                       rate=row["Rate"])
+            SML.save()
+        return instance
+
 
 class IngredientImporter(Importer):
 
@@ -280,6 +286,7 @@ class IngredientImporter(Importer):
         "name": "Name",
         "vendor": "Vendor Info",
         "size": "Size",
+        "unit": "Unit",
         "cost": "Cost",
         "comment": "Comment",
     }
@@ -308,7 +315,9 @@ class IngredientImporter(Importer):
                     )
                 else:
                     row["Size"] = numbers
+                    print(units)
                     row["Unit"] = Unit.objects.get(symbol=units)
+                    print(row["Unit"])
             except AttributeError:
                 raise IntegrityException(
                     message=f"Cannot import Ingredient #{row['Ingr#']}",
