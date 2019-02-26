@@ -252,54 +252,6 @@ class CsvAutocompletedField(AutocompletedCharField):
         return qs if self.return_qs else found
 
 
-class ProductLineFilterForm(forms.Form):
-    NUM_PER_PAGE_CHOICES = [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
-
-    page_num = forms.IntegerField(
-        widget=forms.HiddenInput(), initial=1, min_value=1, required=False
-    )
-    num_per_page = forms.ChoiceField(choices=NUM_PER_PAGE_CHOICES, required=True)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        for field in self.fields.values():
-            field.widget.attrs["class"] = "form-control mb-2"
-
-    def clean_skus(self):
-        value = self.cleaned_data["skus"]
-        items = {item.strip() for item in COMMA_SPLIT_REGEX.split(value)} - {""}
-        if not items:
-            return items
-        found = set()
-        not_found = []
-        for item in items:
-            sku = Sku.from_name(item)
-            if sku is None:
-                not_found.append(item)
-            else:
-                found.add(sku)
-        if not_found:
-            errors = []
-            for item in not_found:
-                errors.append(
-                    ValidationError(
-                        "'%(item)s' cannot be found.", params={"item": item}
-                    )
-                )
-            raise ValidationError(errors)
-        return found
-
-    def query(self) -> Paginator:
-        params = self.cleaned_data
-        logger.info("Querying Product Lines with parameters %s", params)
-        num_per_page = int(params.get("num_per_page", 50))
-        query = ProductLine.objects.all()
-        if num_per_page == -1:
-            num_per_page = query.count()
-        return Paginator(query.distinct(), num_per_page)
-
-
 class EditProductLineForm(forms.ModelForm):
     name = forms.CharField(
         required=True,

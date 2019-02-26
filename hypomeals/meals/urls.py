@@ -13,9 +13,9 @@ urlpatterns = [
     path("remove-product-lines",
          views.remove_product_lines, name="remove_product_lines"),
     path("add-product-line", views.add_product_line, name="add_product_line"),
-    path("edit-product-line/<str:product_line_name>",
+    path("edit-product-line/<int:pk>",
          views.edit_product_line, name="edit_product_line"),
-    path("view-pl-skus/<str:product_line_name>",
+    path("view-pl-skus/<int:pk>",
          views.view_pl_skus, name="view_pl_skus"),
     # SKU views
     path("sku", views.sku, name="sku"),
