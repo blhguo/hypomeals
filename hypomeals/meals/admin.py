@@ -10,7 +10,12 @@ from .models import (
     FormulaIngredient,
     Goal,
     GoalItem,
-    Formula, SkuManufacturingLine, ManufacturingLine, Unit)
+    Formula,
+    SkuManufacturingLine,
+    ManufacturingLine,
+    Unit,
+    GoalSchedule,
+)
 
 # Register your models here.
 admin.site.register(User)
@@ -26,3 +31,4 @@ admin.site.register(Formula)
 admin.site.register(SkuManufacturingLine)
 admin.site.register(ManufacturingLine)
 admin.site.register(Unit)
+admin.site.register(GoalSchedule)
