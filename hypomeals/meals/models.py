@@ -103,7 +103,7 @@ class Unit(models.Model):
         decimal_places=6,
         validators=[
             MinValueValidator(
-                limit_value=0.000001, message="Formula scale factor must be positive."
+                limit_value=0.000001, message="Unit scale factor must be positive."
             )
         ],
     )
@@ -255,6 +255,19 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
         "ManufacturingLine",
         verbose_name="Manufacturing Lines",
         through="SkuManufacturingLine",
+    )
+    manufacturing_rate = models.DecimalField(
+        verbose_name="Manufacturing Rate",
+        max_digits=12,
+        decimal_places=6,
+        default=1.0,
+        blank=False,
+        help_text="Manufacturing rate for this SKU in cases per hour",
+        validators=[
+            MinValueValidator(
+                limit_value=0.000001, message="The manufacturing rate must be positive."
+            )
+        ],
     )
     comment = models.CharField(max_length=4000, verbose_name="Comment", blank=True)
 
@@ -433,23 +446,9 @@ class SkuManufacturingLine(
         # >>> ManufacturingLine.objects.filter(sku__name__icontains="vegetable")
         related_query_name="sku",
     )
-    rate = models.DecimalField(
-        verbose_name="Manufacturing Rate",
-        default=1.0,
-        max_digits=12,
-        decimal_places=6,
-        validators=[
-            MinValueValidator(
-                limit_value=0.000001, message="The manufacturing rate must be positive"
-            )
-        ],
-    )
 
     def __repr__(self):
-        return (
-            f"<SkuMfgLine #{self.id}: {self.sku.name} <-> "
-            f"{self.line.shortname} ({self.rate})>"
-        )
+        return f"<SkuMfgLine #{self.id}: {self.sku.name} <-> " f"{self.line.shortname}>"
 
     __str__ = __repr__
 
@@ -571,6 +570,7 @@ class GoalSchedule(
         on_delete=models.CASCADE,
     )
     start_time = models.DateTimeField(verbose_name="Start time", blank=False)
+    end_time = models.DateTimeField(verbose_name="End time", blank=True, null=True)
 
     def clean(self):
         if self.line:
@@ -602,14 +602,11 @@ class GoalSchedule(
     @property
     def hours(self):
         """Returns the number of hours to complete a scheduled goal item."""
-        return float(
-            self.goal_item.quantity
-            / self.goal_item.sku.skumanufacturingline_set.get(line=self.line).rate
-        )
+        return float(self.goal_item.quantity / self.goal_item.sku.manufacturing_rate)
 
     @property
     def completion_time(self):
-        return utils.compute_end_time(self.start_time, self.hours)
+        return self.end_time or utils.compute_end_time(self.start_time, self.hours)
 
     class Meta:
         unique_together = (("goal_item", "line"),)
