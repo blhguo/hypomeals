@@ -1,4 +1,5 @@
 {% extends 'meals/base.html' %}
+{% load staticfiles %}
 
 {% block title %}
     {% if editing %}Edit SKU #{{ sku_number }}{% else %}Add SKU{% endif %}
@@ -50,6 +51,15 @@
     {% endfor %}
     </form>
     <div class="btn-group">
+    <a class="btn btn-link"
+       id="addFormulaButton"
+       href="#"
+       data-toggle="modal"
+       data-target="#formulaDiv">
+        Add a Formula Inline
+    </a>
+    </div>
+    <div class="btn-group">
     {% if editing %}
         <a href="#" id="nextButton" class="btn btn-success">Apply Changes</a>
         <a href="{% url 'sku' %}" class="btn btn-secondary">Cancel</a>
@@ -72,6 +82,41 @@
     </div>
     </div>
 </div>
+</div>
+<!-- Modal -->
+
+<div class="modal" tabindex="-1" role="dialog" id="formulaDiv">
+<div class="modal-dialog modal-lg" role="document">
+<div class="modal-content">
+    <div class="modal-header">
+        <h5 class="modal-title"></h5>
+        <button type="button" class="close" data-dismiss="modal">
+            <span class="fas fa-times"></span>
+        </button>
+    </div>
+    <div class="modal-body" id="formulaBody">
+        <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status" id="loadingSpinner">
+            <span class="sr-only">Loading...</span>
+        </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button"
+                class="btn btn-secondary"
+                data-dismiss="modal">Close</button>
+        <button type="button"
+                class="btn btn-success"
+                disabled="disabled"
+                id="formulaSaveButton">Save Ingredient</button>
+    </div>
+</div>
+</div>
+</div>
+
+</div>
+<div style="display: none;">
+  <a href="{% url 'add_formula' %}" id="addFormulaUrl"></a>
 </div>
 {% endblock %}
 
@@ -111,6 +156,8 @@ $(function() {
     })
 });
 </script>
+<script src="{% static 'meals/common.js' %}"></script>
+<script src="{% static 'meals/formula/edit_formula.js' %}"></script>
 {% endblock %}
 
 {% block sku_active %}active{% endblock %}

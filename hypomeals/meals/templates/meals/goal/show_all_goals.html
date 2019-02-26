@@ -1,0 +1,21 @@
+{% extends 'meals/base.html' %}
+
+{% block body %}
+<table class="table">
+  <thead>
+    <tr>
+      <th scope="cols">Modified Time</th>
+      <th scope="cols">Form Name</th>
+  </thead>
+  <tbody>
+    {% for goal in all_goals %}
+      <tr>
+        <td>{{ goal.save_time }}</td>
+        <td><a href = "{% url 'show_one_goal' goal.pk%}">{{ goal.form_name }}</a></td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
+
+{% block dashboard_active %} active{% endblock %}
