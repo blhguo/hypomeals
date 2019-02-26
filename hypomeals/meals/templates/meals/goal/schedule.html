@@ -159,7 +159,7 @@ ul.errorlist {
        data-goal-id="{{ goal.pk }}"
        data-goal-item-id="{{ item.pk }}"
        data-lines="{{ lines|join:',' }}"
-       data-sku-rate="{{ item.sku.rate }}"
+       data-sku-rate="{{ item.sku.manufacturing_rate }}"
        data-hours="{{ item.hours }}"
        data-quantity="{{ item.quantity }}"
        {% endif %}

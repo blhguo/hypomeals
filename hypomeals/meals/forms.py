@@ -878,6 +878,9 @@ class GoalScheduleForm(forms.ModelForm):
     start_time = forms.DateTimeField(
         input_formats=["%Y-%m-%dT%H:%M:%S.%fZ"], required=False
     )
+    end_time = forms.DateTimeField(
+        input_formats=["%Y-%m-%dT%H:%M:%S.%fZ"], required=False
+    )
 
     def clean_line(self):
         if not self.cleaned_data["line"]:
@@ -920,7 +923,7 @@ class GoalScheduleForm(forms.ModelForm):
         self.fields["line"] = forms.ChoiceField(choices=lines, required=False)
 
     class Meta:
-        fields = ["goal_item", "line", "start_time"]
+        fields = ["goal_item", "line", "start_time", "end_time"]
         error_messages = {"start_time": {"invalid": "Start time is not a valid time."}}
         model = GoalSchedule
 

@@ -301,12 +301,6 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
             (shortname, shortname) for shortname in self.line_shortnames
         ]
 
-    @property
-    def rate(self):
-        if self.skumanufacturingline_set.all():
-            return self.skumanufacturingline_set.all()[0].rate
-        return None
-
     def __repr__(self):
         return f"<SKU #{self.number}: {self.name}>"
 
@@ -539,9 +533,7 @@ class GoalItem(
 
     @property
     def hours(self):
-        if self.sku.rate:
-            return float(self.quantity / self.sku.rate)
-        return None
+        return float(self.quantity / self.sku.manufacturing_rate)
 
     @property
     def scheduled(self):
@@ -574,12 +566,9 @@ class GoalSchedule(
 
     def clean(self):
         if self.line:
-            if (
-                self.line.pk
-                not in self.goal_item.sku.skumanufacturingline_set.values_list(
-                    "line", flat=True
-                )
-            ):
+            if not SkuManufacturingLine.objects.filter(
+                sku=self.goal_item.sku, line=self.line
+            ).exists():
                 raise ValidationError(
                     "SKU '%(sku_name)s' cannot be manufactured on Line '%(line_name)s'",
                     params={
