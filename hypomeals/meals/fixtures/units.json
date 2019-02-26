@@ -1,0 +1,145 @@
+[
+  {
+    "model": "meals.unit",
+    "pk": 1,
+    "fields": {
+      "symbol": "kg",
+      "verbose_name": "Kilogram",
+      "scale_factor": "1.000000",
+      "is_base": true,
+      "unit_type": "mass"
+    }
+  },
+  {
+    "model": "meals.unit",
+    "pk": 2,
+    "fields": {
+      "symbol": "g",
+      "verbose_name": "Gram",
+      "scale_factor": "0.001000",
+      "is_base": false,
+      "unit_type": "mass"
+    }
+  },
+  {
+    "model": "meals.unit",
+    "pk": 3,
+    "fields": {
+      "symbol": "lb.",
+      "verbose_name": "Pound",
+      "scale_factor": "0.453592",
+      "is_base": false,
+      "unit_type": "mass"
+    }
+  },
+  {
+    "model": "meals.unit",
+    "pk": 4,
+    "fields": {
+      "symbol": "oz.",
+      "verbose_name": "Ounce",
+      "scale_factor": "0.028350",
+      "is_base": false,
+      "unit_type": "mass"
+    }
+  },
+  {
+    "model": "meals.unit",
+    "pk": 5,
+    "fields": {
+      "symbol": "ton",
+      "verbose_name": "Imperial Ton",
+      "scale_factor": "1016.046080",
+      "is_base": false,
+      "unit_type": "mass"
+    }
+  },
+  {
+    "model": "meals.unit",
+    "pk": 6,
+    "fields": {
+      "symbol": "fl. oz.",
+      "verbose_name": "Fluid Ounce",
+      "scale_factor": "0.000030",
+      "is_base": false,
+      "unit_type": "volume"
+    }
+  },
+  {
+    "model": "meals.unit",
+    "pk": 7,
+    "fields": {
+      "symbol": "pt.",
+      "verbose_name": "Pint",
+      "scale_factor": "0.000473",
+      "is_base": false,
+      "unit_type": "volume"
+    }
+  },
+  {
+    "model": "meals.unit",
+    "pk": 8,
+    "fields": {
+      "symbol": "qt.",
+      "verbose_name": "Quart",
+      "scale_factor": "0.000946",
+      "is_base": false,
+      "unit_type": "volume"
+    }
+  },
+  {
+    "model": "meals.unit",
+    "pk": 9,
+    "fields": {
+      "symbol": "gal.",
+      "verbose_name": "U.S. Liquid Gallon",
+      "scale_factor": "0.003785",
+      "is_base": false,
+      "unit_type": "volume"
+    }
+  },
+  {
+    "model": "meals.unit",
+    "pk": 10,
+    "fields": {
+      "symbol": "mL",
+      "verbose_name": "Milliliter",
+      "scale_factor": "0.000001",
+      "is_base": false,
+      "unit_type": "volume"
+    }
+  },
+  {
+    "model": "meals.unit",
+    "pk": 11,
+    "fields": {
+      "symbol": "L",
+      "verbose_name": "Liter",
+      "scale_factor": "0.001000",
+      "is_base": false,
+      "unit_type": "volume"
+    }
+  },
+  {
+    "model": "meals.unit",
+    "pk": 12,
+    "fields": {
+      "symbol": "m3",
+      "verbose_name": "Cubic meter",
+      "scale_factor": "1.000000",
+      "is_base": true,
+      "unit_type": "volume"
+    }
+  },
+  {
+    "model": "meals.unit",
+    "pk": 13,
+    "fields": {
+      "symbol": "ct",
+      "verbose_name": "Count",
+      "scale_factor": "1.000000",
+      "is_base": true,
+      "unit_type": "count"
+    }
+  }
+]

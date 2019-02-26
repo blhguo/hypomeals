@@ -10,13 +10,18 @@ urlpatterns = [
     path("error", TemplateView.as_view(template_name="meals/error.html"), name="error"),
     # Product Line Views
     path("product-lines", views.product_line, name="product_line"),
-    path("remove-product-lines",
-         views.remove_product_lines, name="remove_product_lines"),
+    path(
+        "remove-product-lines", views.remove_product_lines, name="remove_product_lines"
+    ),
     path("add-product-line", views.add_product_line, name="add_product_line"),
-    path("edit-product-line/<str:product_line_name>",
-         views.edit_product_line, name="edit_product_line"),
-    path("view-pl-skus/<str:product_line_name>",
-         views.view_pl_skus, name="view_pl_skus"),
+    path(
+        "edit-product-line/<str:product_line_name>",
+        views.edit_product_line,
+        name="edit_product_line",
+    ),
+    path(
+        "view-pl-skus/<str:product_line_name>", views.view_pl_skus, name="view_pl_skus"
+    ),
     # SKU views
     path("sku", views.sku, name="sku"),
     path("remove-skus", views.remove_skus, name="remove_skus"),
@@ -28,10 +33,16 @@ urlpatterns = [
         name="autocomplete_ingredients",
     ),
     path(
+        "ac-manufacturing-lines",
+        views.autocomplete_manufacturing_lines,
+        name="autocomplete_manufacturing_lines",
+    ),
+    path(
         "ac-product-lines",
         views.autocomplete_product_lines,
         name="autocomplete_product_lines",
     ),
+    path("ac-formulas", views.autocomplete_formulas, name="autocomplete_formulas"),
     path("ac-users", views.autocomplete_users, name="autocomplete_users"),
     path("ingredient", views.ingredient, name="ingredient"),
     path("remove-ingredient", views.remove_ingredients, name="remove_ingredients"),
@@ -42,8 +53,13 @@ urlpatterns = [
         name="edit_ingredient",
     ),
     path("ac-sku", views.autocomplete_skus, name="autocomplete_skus"),
-    path("edit-formula/<int:sku_number>", views.edit_formula, name="edit_formula"),
-    path("view-formula/<int:sku_number>", views.view_formula, name="view_formula"),
+    path("edit-formula/<int:formula_number>", views.edit_formula, name="edit_formula"),
+    path("add-formula", views.add_formula, name="add_formula"),
+    path("view-formula/<int:formula_number>", views.view_formula, name="view_formula"),
+    path("formula", views.formula, name="formula"),
+    path("remove-formulas", views.remove_formulas, name="remove_formulas"),
+    path("view-lines", views.view_lines, name="view_lines"),
+    path("edit-lines", views.edit_lines, name="edit_lines"),
     # Import/export views
     path("import/", views.import_page, name="import"),
     path("import/success/", views.import_success, name="import_success"),

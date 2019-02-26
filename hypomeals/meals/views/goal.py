@@ -15,14 +15,13 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils.datetime_safe import datetime
 
-from meals import auth, utils
+from meals import auth
+from meals import utils
 from meals.constants import WORK_HOURS_END, ADMINS_GROUP
 from meals.forms import (
-    SkuQuantityFormset,
-    GoalForm,
-    GoalFilterForm,
     GoalScheduleFormset,
 )
+from meals.forms import SkuQuantityFormset, GoalForm, GoalFilterForm
 from meals.models import Sku, ProductLine, Goal, GoalItem, GoalSchedule
 from meals.utils import SortedDefaultDict
 

@@ -1,6 +1,7 @@
 """
 This file defines some constants (e.g., units) used throughout the project
 """
+import re
 from datetime import time
 
 from django.utils import timezone
@@ -84,6 +85,24 @@ UNITS = {
     "volume": VOLUME_BASED_UNITS,
     "count": COUNT_BASED_UNITS,
 }
+
+UNIT_ACCEPTED_FORMS = {
+    "oz.": {"ounce", "oz"},
+    "lb.": {"pound", "lb"},
+    "ton": {"ton"},
+    "g": {"gram", "g"},
+    "kg": {"kilogram", "kg"},
+    "fl. oz.": {"fluidounce", "floz"},
+    "pt.": {"pint", "pt"},
+    "qt.": {"quart", "qt"},
+    "gal.": {"gallon", "gal"},
+    "mL": {"milliliter", "ml"},
+    "m3": {"metercubed", "m3", "meter3", "cubicmeter"},
+    "L": {"liter", "l"},
+    "ct": {"count", "ct"},
+}
+
+MIX_UNIT_EXP_REGEX = re.compile(r"^(\d*\.?\d+)\s*(\D.*|)$")
 
 WORK_HOURS_START = time(hour=8, tzinfo=timezone.get_current_timezone())
 WORK_HOURS_END = time(hour=18, tzinfo=timezone.get_current_timezone())

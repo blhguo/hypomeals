@@ -19,6 +19,7 @@ def multiply(a, b, decimal_places=2):
 def quantize(x, decimal_places=2):
     return x.quantize(Decimal(10) ** -decimal_places)
 
+
 @register.filter
 def any_bool(iterable):
     return any(iterable)
