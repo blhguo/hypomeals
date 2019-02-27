@@ -164,14 +164,14 @@ def add_user(request):
 def edit_user(request, pk):
     instance = User.objects.filter(pk=pk)[0]
     if request.method == "POST":
-        initial_data = {"is_admin": instance.is_admin}
+        initial_data = {"is_admin": instance.is_admin, "password": instance.password}
         form = EditUserForm(request.POST, instance=instance, initial=initial_data)
         if form.is_valid():
             instance = form.save()
             messages.info(request, f"Successfully saved User '{instance.username}'")
             return redirect("users")
     else:
-        initial_data = {"is_admin": instance.is_admin}
+        initial_data = {"is_admin": instance.is_admin, "password": instance.password}
         form = EditUserForm(instance=instance, initial=initial_data)
     return render(
         request,
