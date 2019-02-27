@@ -238,7 +238,7 @@ class Ingredient(
 class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutionMixin):
     compare_excluded_fields = ("number",)
 
-    NAME_REGEX = re.compile(r"(?P<name>.+):\s*(?P<size>.+)\s*\*\s*(?P<count>\d+)")
+    NAME_REGEX = re.compile(r"(?P<name>.+):\s*(?P<size>.+)\s*\*\s*(?P<count>\d+)\s*\(#(?P<id>\d+)\)")  # noqa
 
     name = models.CharField(max_length=32, verbose_name="Name", blank=False)
 
@@ -328,7 +328,7 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
 
     @property
     def verbose_name(self):
-        return f"{self.name}: {self.unit_size} * {self.count}"
+        return f"{self.name}: {self.unit_size} * {self.count} (#{self.number})"
 
     def __repr__(self):
         return f"<SKU #{self.number}: {self.name}>"

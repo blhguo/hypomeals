@@ -252,6 +252,22 @@ class CsvAutocompletedField(AutocompletedCharField):
         return qs if self.return_qs else found
 
 
+class SkuAutocompletedField(CsvAutocompletedField):
+    def clean(self, value):
+        items = {item.strip() for item in COMMA_SPLIT_REGEX.split(value)} - {""}
+        if not items:
+            return items
+        results = []
+        for item in items:
+            sku = Sku.from_name(item)
+            if sku is None:
+                raise ValidationError(
+                    "'%(item)s' cannot be found.", params={"item": item}
+                )
+            results.append(sku)
+        return results if self.return_qs else items
+
+
 class EditProductLineForm(forms.ModelForm):
     name = forms.CharField(
         required=True,
@@ -652,10 +668,7 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
                     sku=instance
                 )
                 manufacturing_lines = ", ".join(
-                    [
-                        instance.line.shortname
-                        for instance in sku_manufacturing_lines
-                    ]
+                    [instance.line.shortname for instance in sku_manufacturing_lines]
                 )
                 initial.update(
                     {
@@ -755,12 +768,55 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
         manufacturing_lines = self.cleaned_data["manufacturing_lines"]
         SkuManufacturingLine.objects.filter(sku=instance).delete()
         for manufacturing_line in manufacturing_lines:
-            SkuManufacturingLine.objects.create(
-                sku=instance, line=manufacturing_line
-            )
+            SkuManufacturingLine.objects.create(sku=instance, line=manufacturing_line)
         instance.save()
         self.save_m2m()
         return instance
+
+
+class ManufacturingLineForm(forms.ModelForm, utils.BootstrapFormControlMixin):
+
+    skus = SkuAutocompletedField(
+        Sku,
+        data_source=reverse_lazy("autocomplete_skus"),
+        attr="name",
+        return_qs=True,
+        required=False,
+        label="SKUs",
+        help_text="Optionally specify a comma-separated list of SKUs that "
+        "this manufacturing line produces.",
+        widget=forms.TextInput(attrs={"placeholder": "Start typing..."}),
+    )
+    comment = forms.CharField(
+        required=False, widget=forms.Textarea(attrs={"maxlength": 4000})
+    )
+
+    def __init__(self, *args, **kwargs):
+        instance = kwargs.pop("instance", None)
+        initial = kwargs.pop("initial", {})
+        if instance:
+            initial["skus"] = ", ".join(
+                line.sku.verbose_name for line in instance.skus.all()
+            )
+        super().__init__(*args, instance=instance, initial=initial, **kwargs)
+
+    @transaction.atomic
+    def save(self, commit=False):
+        instance = super().save(commit=commit)
+        sku_line_objs = []
+        if self.cleaned_data["skus"]:
+            sku_line_objs = [
+                SkuManufacturingLine(sku=sku, line=instance)
+                for sku in self.cleaned_data["skus"]
+            ]
+            if commit:
+                SkuManufacturingLine.objects.filter(line=instance).delete()
+                SkuManufacturingLine.objects.bulk_create(sku_line_objs)
+        return instance, sku_line_objs
+
+    class Meta:
+        model = ManufacturingLine
+        fields = ["name", "shortname", "comment"]
 
 
 class FormulaNameForm(forms.ModelForm, utils.BootstrapFormControlMixin):
@@ -784,7 +840,7 @@ class FormulaNameForm(forms.ModelForm, utils.BootstrapFormControlMixin):
     class Meta:
         model = Formula
         fields = ["name", "number", "comment"]
-        widgets = {"comment": forms.Textarea(attrs={"maxlength": 200})}
+        widgets = {"comment": forms.Textarea(attrs={"maxlength": 4000})}
         labels = {"number": "Formula#"}
 
 
