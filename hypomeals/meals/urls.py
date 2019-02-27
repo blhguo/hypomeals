@@ -10,13 +10,14 @@ urlpatterns = [
     path("error", TemplateView.as_view(template_name="meals/error.html"), name="error"),
     # Product Line Views
     path("product-lines", views.product_line, name="product_line"),
-    path("remove-product-lines",
-         views.remove_product_lines, name="remove_product_lines"),
+    path(
+        "remove-product-lines", views.remove_product_lines, name="remove_product_lines"
+    ),
     path("add-product-line", views.add_product_line, name="add_product_line"),
-    path("edit-product-line/<int:pk>",
-         views.edit_product_line, name="edit_product_line"),
-    path("view-pl-skus/<int:pk>",
-         views.view_pl_skus, name="view_pl_skus"),
+    path(
+        "edit-product-line/<int:pk>", views.edit_product_line, name="edit_product_line"
+    ),
+    path("view-pl-skus/<int:pk>", views.view_pl_skus, name="view_pl_skus"),
     # SKU views
     path("sku", views.sku, name="sku"),
     path("remove-skus", views.remove_skus, name="remove_skus"),
@@ -37,11 +38,7 @@ urlpatterns = [
         views.autocomplete_product_lines,
         name="autocomplete_product_lines",
     ),
-    path(
-        "ac-formulas",
-        views.autocomplete_formulas,
-        name="autocomplete_formulas",
-    ),
+    path("ac-formulas", views.autocomplete_formulas, name="autocomplete_formulas"),
     path("ac-users", views.autocomplete_users, name="autocomplete_users"),
     path("ingredient", views.ingredient, name="ingredient"),
     path("remove-ingredient", views.remove_ingredients, name="remove_ingredients"),
@@ -88,6 +85,10 @@ urlpatterns = [
     path("lines/add/", views.add_line, name="add_line"),
     path("lines/remove", views.remove_lines, name="remove_lines"),
     # Account management views
+    path("accounts/", views.users, name="users"),
+    path("accounts/add/", views.add_user, name="add_user"),
+    path("accounts/remove/", views.remove_users, name="remove_users"),
+    path("accounts/edit/<int:pk>", views.edit_user, name="edit_user"),
     path(
         "accounts/login/",
         auth_views.LoginView.as_view(template_name="meals/accounts/login.html"),
