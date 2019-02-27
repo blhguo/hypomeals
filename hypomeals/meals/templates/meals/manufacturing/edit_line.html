@@ -1,0 +1,51 @@
+<div class="container m-auto" id="formContainer">
+<div class="row">
+    <div class="col-sm">
+        <div class="alert alert-success my-4">
+            {% if editing %}
+            <h3>Editing Manufacturing Line #{{ line.pk }}: {{ line.name }}</h3>
+            <p>
+                Modify the manufacturing line using the form below.
+            </p>
+            {% else %}
+            <h3>Add a new Manufacturing Line</h3>
+            <p class="mb-0">Enter the information about a new manufacturing line below.
+                All fields are required except the Comment.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<div class="row mb-4">
+    <div class="col-sm">
+    {% if editing %}
+    <form method="post" action="{% url 'edit_line' line.pk %}" id="editLineForm">
+    {% else %}
+    <form method="post" action="{% url 'add_line' %}" id="editLineForm">
+    {% endif %}
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger">
+    <h5 style="color: red">Please correct the following errors before proceeding:</h5>
+    {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+    {% for field in form %}
+        <div class="form-group">
+        {{ field.label_tag }}
+        {{ field }}
+        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+        {% if field.errors %}{{ field.errors }}{% endif %}
+        </div>
+    {% endfor %}
+    </form>
+    <div class="btn-group" id="formSubmitBtnGroup">
+    {% if editing %}
+    <a href="#" id="submitButton" class="btn btn-success">Apply Changes</a>
+    {% else %}
+    <a href="#" id="submitButton" class="btn btn-success">Save</a>
+    {% endif %}
+    <a href="{% url 'lines' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+    </div>
+</div>
+</div>
