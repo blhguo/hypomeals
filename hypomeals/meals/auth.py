@@ -39,15 +39,17 @@ def permission_required_ajax(func, perm):
 
 
 @utils.parameterized
-def user_is_admin_ajax(func, msg):
+def user_is_admin_ajax(
+    func, msg, reason="You do not have permission to perform this action,"
+):
     @functools.wraps(func)
     def wrapper(request, *args, **kwargs):
         if not request.user.is_admin:
             if not request.is_ajax():
                 messages.error(request, msg)
-                raise PermissionDenied(msg)
+                raise PermissionDenied(reason)
             return JsonResponse(
-                {"error": "Permission Denied", "resp": msg, "alert": msg}
+                {"error": "Permission Denied", "resp": reason, "alert": msg}
             )
         return func(request, *args, **kwargs)
 

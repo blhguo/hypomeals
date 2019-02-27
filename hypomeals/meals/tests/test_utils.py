@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from django.utils import timezone
+
 from meals import utils
 from .test_base import BaseTestCase
 
@@ -66,47 +68,54 @@ class UtilsTest(BaseTestCase):
             utils.next_alphanumeric_str("HelloWorld!")
 
     def test_compute_end_time(self):
-        test_cases = (
+        test_cases = [
             (
-                (datetime(2019, 2, 21, 9, 0, 0), 1),
-                datetime(2019, 2, 21, 10, 0, 0),
-                "9AM, 1 hour, 10AM",
-            ),
-            (
-                (datetime(2019, 2, 21, 9, 0, 0), 10),
-                datetime(2019, 2, 22, 9, 0, 0),
-                "9AM, 10 hours, 9AM next day",
-            ),
-            (
-                (datetime(2019, 2, 21, 9, 0, 0), 24),
-                datetime(2019, 2, 23, 13, 0, 0),
-                "9AM, 24 hours, 1PM two days later",
-            ),
-            (
-                (datetime(2019, 2, 21, 20, 0, 0), 11),
-                datetime(2019, 2, 23, 9, 0, 0),
-                "8PM, 11 hours, 9AM two days later (no work first day)",
-            ),
-            (
-                (datetime(2019, 2, 21, 18, 0, 0), 10),
-                datetime(2019, 2, 22, 18, 0, 0),
-                "6PM, 10 hours, 6PM next day",
-            ),
-            (
-                (datetime(2019, 2, 21, 8, 0, 0), 10),
-                datetime(2019, 2, 21, 18, 0, 0),
-                "8AM, 10 hours, 6PM",
-            ),
-            (
-                (datetime(2019, 2, 21, 8, 0, 0), 0.5),
-                datetime(2019, 2, 21, 8, 30, 0),
-                "8AM, 30 minutes, 8:30AM",
-            ),
-            (
-                (datetime(2019, 2, 21, 8, 0, 0), 10.5),
-                datetime(2019, 2, 22, 8, 30, 0),
-                "8AM, 10.5 hours, 8:30AM next day",
-            ),
-        )
+                (timezone.make_aware(start_time), hours),
+                timezone.make_aware(end_time),
+                msg,
+            )
+            for (start_time, hours), end_time, msg in (
+                (
+                    (datetime(2019, 2, 21, 9, 0, 0), 1),
+                    datetime(2019, 2, 21, 10, 0, 0),
+                    "9AM, 1 hour, 10AM",
+                ),
+                (
+                    (datetime(2019, 2, 21, 9, 0, 0), 10),
+                    datetime(2019, 2, 22, 9, 0, 0),
+                    "9AM, 10 hours, 9AM next day",
+                ),
+                (
+                    (datetime(2019, 2, 21, 9, 0, 0), 24),
+                    datetime(2019, 2, 23, 13, 0, 0),
+                    "9AM, 24 hours, 1PM two days later",
+                ),
+                (
+                    (datetime(2019, 2, 21, 20, 0, 0), 11),
+                    datetime(2019, 2, 23, 9, 0, 0),
+                    "8PM, 11 hours, 9AM two days later (no work first day)",
+                ),
+                (
+                    (datetime(2019, 2, 21, 18, 0, 0), 10),
+                    datetime(2019, 2, 22, 18, 0, 0),
+                    "6PM, 10 hours, 6PM next day",
+                ),
+                (
+                    (datetime(2019, 2, 21, 8, 0, 0), 10),
+                    datetime(2019, 2, 21, 18, 0, 0),
+                    "8AM, 10 hours, 6PM",
+                ),
+                (
+                    (datetime(2019, 2, 21, 8, 0, 0), 0.5),
+                    datetime(2019, 2, 21, 8, 30, 0),
+                    "8AM, 30 minutes, 8:30AM",
+                ),
+                (
+                    (datetime(2019, 2, 21, 8, 0, 0), 10.5),
+                    datetime(2019, 2, 22, 8, 30, 0),
+                    "8AM, 10.5 hours, 8:30AM next day",
+                ),
+            )
+        ]
         for (start_time, hours), expected, msg in test_cases:
             self.assertEqual(utils.compute_end_time(start_time, hours), expected, msg)

@@ -3,6 +3,7 @@ $(function() {
     function refreshPage() {
         window.location.href = pageUrl;
     }
+    $("[data-toggle='tooltip']").tooltip();
 
     Mousetrap.bind(["command+a", "ctrl+a"], function(ev) {
         ev.preventDefault();

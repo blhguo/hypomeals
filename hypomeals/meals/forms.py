@@ -2,10 +2,11 @@
 import logging
 import re
 import zipfile
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from pathlib import Path
 
 from django import forms
+from django.contrib.auth.models import Group
 from django.core.exceptions import FieldDoesNotExist
 from django.core.exceptions import ValidationError
 from django.core.files import File
@@ -17,11 +18,23 @@ from django.urls import reverse_lazy
 
 from meals import bulk_import
 from meals import utils
-from meals.exceptions import CollisionOccurredException, IllegalArgumentsException
-from meals.models import Goal
-from meals.models import GoalSchedule, User, Formula
-from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor, Unit
-from meals.models import FormulaIngredient, ManufacturingLine, SkuManufacturingLine
+from meals.constants import ADMINS_GROUP, USERS_GROUP
+from meals.exceptions import CollisionOccurredException
+from meals.models import (
+    FormulaIngredient,
+    SkuManufacturingLine,
+    ManufacturingLine,
+    Formula,
+    Goal,
+    GoalSchedule,
+    User,
+    Sku,
+    Ingredient,
+    ProductLine,
+    Upc,
+    Vendor,
+    Unit,
+)
 from meals.utils import BootstrapFormControlMixin, FilenameRegexValidator
 
 logger = logging.getLogger(__name__)
@@ -368,7 +381,9 @@ class IngredientFilterForm(forms.Form):
         sort_by = params.get("sort_by", "")
         query_filter = Q()
         if params["keyword"]:
-            query_filter &= Q(name__icontains=params["keyword"])
+            query_filter &= Q(name__icontains=params["keyword"]) | Q(
+                number__icontains=params["keyword"]
+            )
         if params["skus"]:
             query_filter |= Q(sku__in=params["skus"])
         query = Ingredient.objects.filter(query_filter)
@@ -410,12 +425,13 @@ class FormulaFilterForm(forms.Form):
         sort_by = params.get("sort_by", "")
         query_filter = Q()
         if params["keyword"]:
-            query_filter &= Q(name__icontains=params["keyword"])
+            query_filter &= Q(name__icontains=params["keyword"]) | Q(
+                number__icontains=params["keyword"]
+            )
         if params["ingredients"]:
             query_filter &= Q(
                 formulaingredient__ingredient__name__in=params["ingredients"]
             )
-        print(params["ingredients"])
         query = Formula.objects.filter(query_filter)
         if sort_by:
             query = query.order_by(sort_by)
@@ -555,6 +571,7 @@ class SkuFilterForm(forms.Form, utils.BootstrapFormControlMixin):
 
         self.fields["ingredients"].widget.attrs["placeholder"] = "Start typing..."
         self.fields["product_lines"].widget.attrs["placeholder"] = "Start typing..."
+        self.fields["formulas"].widget.attrs["placeholder"] = "Start typing..."
 
     def add_formula_name(self, name):
         self.cleaned_data["formulas"] = name
@@ -568,7 +585,12 @@ class SkuFilterForm(forms.Form, utils.BootstrapFormControlMixin):
         sort_by = params.get("sort_by", "")
         query_filter = Q()
         if params["keyword"]:
-            query_filter &= Q(name__icontains=params["keyword"])
+            query_filter &= (
+                Q(name__icontains=params["keyword"])
+                | Q(number__icontains=params["keyword"])
+                | Q(unit_upc__upc_number__icontains=params["keyword"])
+                | Q(case_upc__upc_number__icontains=params["keyword"])
+            )
         if params["ingredients"]:
             query_filter &= Q(formula__ingredients__name__in=params["ingredients"])
         if params["product_lines"]:
@@ -849,6 +871,9 @@ class FormulaForm(forms.Form, utils.BootstrapFormControlMixin):
         required=True, widget=forms.TextInput(attrs={"placeholder": "Start typing..."})
     )
     quantity = forms.DecimalField(required=True, min_value=0.00001)
+    unit = forms.ChoiceField(
+        choices=lambda: BLANK_CHOICE_DASH + get_unit_choices(), required=True
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -867,6 +892,7 @@ class FormulaForm(forms.Form, utils.BootstrapFormControlMixin):
             formula=formula,
             ingredient=self.cleaned_data["ingredient"],
             quantity=self.cleaned_data["quantity"],
+            unit=Unit.objects.filter(symbol=self.cleaned_data["unit"])[0],
         )
         if commit:
             instance.save()
@@ -874,6 +900,7 @@ class FormulaForm(forms.Form, utils.BootstrapFormControlMixin):
 
 
 class FormulaFormsetBase(forms.BaseFormSet):
+
     def clean(self):
         if any(self.errors):
             return
@@ -1030,23 +1057,157 @@ class GoalScheduleForm(forms.ModelForm):
     """
 
     goal_item = forms.IntegerField(disabled=True)
+    start_time = forms.DateTimeField(
+        input_formats=["%Y-%m-%dT%H:%M:%S.%fZ"], required=False
+    )
+    end_time = forms.DateTimeField(
+        input_formats=["%Y-%m-%dT%H:%M:%S.%fZ"], required=False
+    )
+
+    def clean_line(self):
+        if not self.cleaned_data["line"]:
+            return None
+        qs = ManufacturingLine.objects.filter(shortname=self.cleaned_data["line"])
+        if not qs.exists():
+            raise ValidationError(
+                "Manufacturing Line '%(line)s' does not exist.",
+                params={"line": self.cleaned_data["line"]},
+            )
+        if not SkuManufacturingLine.objects.filter(
+            sku=self.item.sku, line=qs[0]
+        ).exists():
+            raise ValidationError(
+                "Manufacturing Line '%(line)s' cannot produce SKU #%(sku_number)d",
+                code="invalid",
+                params={
+                    "line": self.cleaned_data["line"],
+                    "sku_number": self.item.sku.number,
+                },
+            )
+        logger.info("Found line %s for goal item %d", qs[0].pk, self.item.pk)
+        return qs[0]
+
+    def should_delete(self):
+        return any(
+            [
+                "start_time" not in self.cleaned_data,
+                not self.cleaned_data["start_time"],
+                "line" not in self.cleaned_data,
+                not self.cleaned_data["line"],
+                "end_time" not in self.cleaned_data,
+                not self.cleaned_data["end_time"],
+            ]
+        )
+
+    def clean(self):
+        if "line" in self.cleaned_data and self.cleaned_data["line"]:
+            if (
+                "start_time" not in self.cleaned_data
+                or not self.cleaned_data["start_time"]
+            ):
+                raise ValidationError(
+                    "Form tampering detected: Goal Item %(item)d has manufacturing "
+                    "line but not start time.",
+                    params={"item": self.item.pk},
+                )
+        return super().clean()
+
+    def __init__(self, *args, item, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.item = item
+        self.fields["goal_item"].widget.attrs["data-goal-item-id"] = item.pk
+        lines = item.sku.line_choices
+        self.fields["line"] = forms.ChoiceField(choices=lines, required=False)
 
     class Meta:
-        fields = ["goal_item", "line", "start_time"]
+        fields = ["goal_item", "line", "start_time", "end_time"]
+        error_messages = {"start_time": {"invalid": "Start time is not a valid time."}}
         model = GoalSchedule
 
 
 class GoalScheduleFormsetBase(forms.BaseFormSet):
-    def __init__(self, *args, goals, **kwargs):
-        self.goals = goals
+    def __init__(self, *args, goal_items, **kwargs):
+        self.goal_items = goal_items
         initial = kwargs.pop("initial", [])
-        for goal in goals:
-            if not goal.is_enabled:
-                raise IllegalArgumentsException(
-                    f"Goal #{goal.pk} is not enabled and cannot be scheduled."
-                )
-            initial.extend({"goal_item": item.pk} for item in goal.details.all())
+        for item in goal_items:
+            data = {"goal_item": item.pk}
+            if item.scheduled:
+                data["line"] = item.schedule.line.shortname
+                data["start_time"] = item.schedule.start_time
+            initial.append(data)
         super().__init__(*args, initial=initial, **kwargs)
 
+        for form in self.forms:
+            form.empty_permitted = True
 
-GoalScheduleFormset = formset_factory(GoalScheduleForm, formset=GoalScheduleFormsetBase)
+    def get_form_kwargs(self, index):
+        kwargs = super().get_form_kwargs(index)
+        kwargs["item"] = self.goal_items[index]
+        if hasattr(self.goal_items[index], "schedule"):
+            kwargs["instance"] = self.goal_items[index].schedule
+        return kwargs
+
+    def _check_overlap(self):
+        lines = defaultdict(list)
+        for form in self.forms:
+            if form.is_valid() and form.cleaned_data and form.cleaned_data["line"]:
+                logger.info(form.cleaned_data)
+                lines[form.cleaned_data["line"].shortname].append(form)
+
+        for line, _forms in lines.items():  # "forms" is in outer scope
+            if len(_forms) == 1:
+                continue
+            _forms.sort(key=lambda f: f.cleaned_data["start_time"])
+            for i in range(len(_forms) - 1):
+                end_time = utils.compute_end_time(
+                    _forms[i].cleaned_data["start_time"], _forms[i].item.hours
+                )
+                if _forms[i + 1].cleaned_data["start_time"] < end_time:
+                    raise ValidationError(
+                        "Overlap detected on Manufacturing Line '%(line)s' between "
+                        "item '%(item1)d' and '%(item2)d'.",
+                        code="invalid",
+                        params={
+                            "line": line,
+                            "item1": _forms[i].item.pk,
+                            "item2": _forms[i + 1].item.pk,
+                        },
+                    )
+
+    def clean(self):
+        super().clean()
+        self._check_overlap()
+
+
+GoalScheduleFormset = formset_factory(
+    GoalScheduleForm, formset=GoalScheduleFormsetBase, extra=0
+)
+
+
+class EditUserForm(forms.ModelForm, utils.BootstrapFormControlMixin):
+    is_admin = forms.BooleanField(required=False)
+
+    class Meta:
+        model = User
+        fields = ["username", "first_name", "last_name", "email", "netid"]
+        labels = {"number": "Ingr#"}
+
+    def __init__(self, *args, **kwargs):
+        instance = kwargs.pop("instance", None)
+        initial = kwargs.pop("initial", {})
+        super().__init__(*args, instance=instance, initial=initial, **kwargs)
+
+    def save(self, commit=False):
+        instance = super().save(commit)
+
+        users_group = Group.objects.get(name=USERS_GROUP)
+        users_group.user_set.remove(instance)
+        admin_group = Group.objects.get(name=ADMINS_GROUP)
+        admin_group.user_set.remove(instance)
+
+        instance.save()
+
+        instance.groups.add(users_group)
+        if self.cleaned_data["is_admin"]:
+            instance.groups.add(admin_group)
+        return instance

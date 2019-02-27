@@ -2,7 +2,8 @@ $(function() {
     let selectAllCheckbox = $("#selectAllCheckbox");
     Mousetrap.bind(["command+a", "ctrl+a"], function(e) {
         e.preventDefault();
-        selectAllCheckbox.prop("checked", true).trigger("change");
+        selectAllCheckbox.prop("checked",
+            !selectAllCheckbox.prop("checked")).trigger("change");
     });
 
     Mousetrap.bind(["command+e", "ctrl+e"], function(e) {

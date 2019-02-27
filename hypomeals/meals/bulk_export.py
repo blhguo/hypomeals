@@ -8,7 +8,13 @@ from pathlib import Path
 from django.http import HttpResponse
 
 from meals import utils
-from .models import Sku, Ingredient, ProductLine, FormulaIngredient
+from .models import (
+    Sku,
+    Ingredient,
+    ProductLine,
+    FormulaIngredient,
+    SkuManufacturingLine,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -105,10 +111,35 @@ def _export_objs(stream, file_type, objects):
     headers = HEADERS[file_type]
     writer = csv.DictWriter(stream, fieldnames=headers)
     writer.writeheader()
-    writer.writerows(
-        {header: getattr(obj, field_dict[header]) for header in headers}
-        for obj in objects
-    )
+    for obj in objects:
+        row = {}
+        for header in headers:
+            if header == "ML Shortnames":
+                ml_lines = SkuManufacturingLine.objects.filter(sku=obj)
+                result = ""
+                for ml_line in ml_lines:
+                    result += str(ml_line.line.shortname) + ","
+            elif header == "Quantity":
+                result = (
+                    str(getattr(obj, field_dict[header]))
+                    + " "
+                    + str(getattr(obj, "unit.symbol"))
+                )
+            elif header == "Size":
+                result = (
+                    str(getattr(obj, field_dict[header]))
+                    + " "
+                    + str(getattr(obj, "unit.symbol"))
+                )
+            else:
+                result = getattr(obj, field_dict[header])
+            row[header] = result
+        writer.writerow(row)
+    #
+    # writer.writerows(
+    #     {header: getattr(obj, field_dict[header]) for header in headers}
+    #     for obj in objects
+    # )
     stream.seek(0)
     return stream
 
@@ -206,12 +237,7 @@ def generate_ingredient_dependency_report(ingredients):
             skus = Sku.objects.filter(formula=formula.formula)
             for sku in skus:
                 writer.writerow(
-                    [
-                        ingredient.number,
-                        ingredient.name,
-                        sku.number,
-                        sku.name,
-                    ]
+                    [ingredient.number, ingredient.name, sku.number, sku.name]
                 )
 
     stream.seek(0)
@@ -219,6 +245,7 @@ def generate_ingredient_dependency_report(ingredients):
     response["content_type"] = "text/csv"
     response["Content-Disposition"] = "attachment;filename=report.csv"
     return response
+
 
 def export_formulas(formulas):
     """

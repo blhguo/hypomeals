@@ -39,7 +39,16 @@ def sku(request):
         else:
             skus = Paginator(Sku.objects.all(), 50)
     else:
-        params = {"key_word": "", "ingredients": "", "product_lines": "", "formulas": "", "page_num": 1, "num_per_page": 50, "sort_by": "name", "keyword": ""}
+        params = {
+            "key_word": "",
+            "ingredients": "",
+            "product_lines": "",
+            "formulas": "",
+            "page_num": 1,
+            "num_per_page": 50,
+            "sort_by": "name",
+            "keyword": "",
+        }
         if "formula" in request.GET:
             formula_name = request.GET["formula"]
             params["formulas"] = formula_name
@@ -136,6 +145,7 @@ def remove_skus(request):
     except DatabaseError as e:
         return JsonResponse({"error": str(e), "resp": "Not removed"})
 
+
 @login_required
 @auth.permission_required_ajax(perm="meals.delete_sku")
 def view_lines(request):
@@ -160,7 +170,12 @@ def view_lines(request):
     form_html = render_to_string(
         request=request,
         template_name="meals/sku/bulk_edit.html",
-        context={"all_set": all_set, "partial_set": partial_set, "none_set": none_set, "sku_number": len(skus)}
+        context={
+            "all_set": all_set,
+            "partial_set": partial_set,
+            "none_set": none_set,
+            "sku_number": len(skus),
+        },
     )
 
     if request.is_ajax():
@@ -170,7 +185,12 @@ def view_lines(request):
     return render(
         request,
         template_name="meals/sku/bulk_edit.html",
-        context={"all_set": all_set, "partial_set": partial_set, "none_set": none_set, "sku_number": len(skus)}
+        context={
+            "all_set": all_set,
+            "partial_set": partial_set,
+            "none_set": none_set,
+            "sku_number": len(skus),
+        },
     )
 
 
@@ -185,19 +205,15 @@ def edit_lines(request):
     deleted = 0
     for sku_number in skus:
         sku = Sku.objects.filter(number=sku_number)[0]
-        rate = sku.manufacturing_rate
         for ml_sn in checked:
             ml = ManufacturingLine.objects.filter(shortname=ml_sn)[0]
             exist = SkuManufacturingLine.objects.filter(sku=sku, line=ml).exists()
             if not exist:
                 created += 1
-                SkuManufacturingLine.objects.create(sku=sku, line=ml, rate=rate)
-        for ml_sn in unchecked:
-            ml = ManufacturingLine.objects.filter(shortname=ml_sn)[0]
-            exist = SkuManufacturingLine.objects.filter(sku=sku, line=ml).exists()
-            if exist:
-                deleted += 1
-                SkuManufacturingLine.objects.filter(sku=sku, line=ml).delete()
+                SkuManufacturingLine.objects.create(sku=sku, line=ml)
+        deleted, _ = SkuManufacturingLine.objects.filter(line__in=unchecked).delete()
 
-    resp = {"error": f"Success in creating {created} new mappings, deleting {deleted} old mappings"}
+    resp = {
+        "error": f"Success in creating {created} new mappings, deleting {deleted} old mappings"
+    }
     return JsonResponse(resp)

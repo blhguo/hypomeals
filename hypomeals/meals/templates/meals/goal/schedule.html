@@ -1,5 +1,6 @@
 {% extends 'meals/base.html' %}
 {% load staticfiles %}
+{% load meals_extras %}
 
 {% block title %}Schedule{% endblock %}
 {% block manufacturing_active %}active{% endblock %}
@@ -7,26 +8,257 @@
 {% block head %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.0.1/css/tempusdominus-bootstrap-4.min.css" />
+{% endblock %}
+
+{% block style %}
+ul.errorlist {
+    margin-bottom: 0px;
+}
 {% endblock %}
 
 {% block body %}
 <div class="container m-auto">
-<div class="row">
-<div class="col-sm-12 my-4">
+<div class="row mt-4" style="display: none;" id="helpDiv">
+<div class="col-sm-12">
 <div class="alert alert-success">
     <h3>Manufacturing Schedule</h3>
-    <p class="mb-0">On this page, you may create a new manufacturing schedule.</p>
+    <p>On this page, you may create a new manufacturing schedule. Goals that are
+        enabled are shown as cards below. Each entry in a card represents one
+        item.
+    </p>
+    <p>
+        Start by dragging unscheduled items from the boxes below to the timeline,
+        under the desired manufacturing line. Once an item is scheduled,
+        it becomes greyed out.
+    </p>
+    <p>
+        You may only schedule each item once. Hover over the item to view the
+        manufacturing lines they may be produced on. Once you start dragging,
+        compatible manufacturing lines will become highlighted.
+    </p>
+    <p class="mb-0">
+        <b>Timeline controls:</b> You may zoom with a scroll wheel, or click on
+        the "Fit" options to quickly zoom to a desired timespan. Clicking on
+        a scheduled item to focus on it.
+    </p>
 </div>
 </div>
 </div>
+
+{% if formset.errors|any_bool %}
+<div class="row mt-3">
+<div class="col-sm-12">
+    <div class="alert alert-danger">
+    <p>Please correct the following error(s):</p>
+    {% if formset.non_form_errors %}
+    {{ formset.non_form_errors }}
+    {% endif %}
+    {% for form in formset.forms %}
+    {% if form.errors %}
+    {% ifchanged %}<p class="mb-0">For Goal '{{ form.item.goal.name }}':</p>{% endifchanged %}
+    {{ form.non_field_errors }}
+        {% for field in form %}
+        {{ field.errors }}
+        {% endfor %}
+    {% endif %}
+    {% endfor %}
+    </div>
+</div>
+</div>
+{% endif %}
+
+{% if messages %}
+<div class="row mt-3">
+<div class="col-sm-12">
+    <div class="alert alert-success" id="messagesDiv">
+    {% for message in messages %}
+    <p class="{% if message.tags %}{{ message.tags }}{% endif %}{% if forloop.counter == messages|length %} mb-0{% endif %}">
+        {{ message }}
+    </p>
+    {% endfor %}
+    </div>
+</div>
+</div>
+{% endif %}
+
+<div class="row my-3">
+<div class="col-sm-12">
+<div class="btn-toolbar d-flex justify-content-end align-items-baseline" role="toolbar">
+<div class="custom-control custom-checkbox mr-2">
+    <input type="checkbox" class="custom-control-input" id="suppressWarningCheckbox">
+    <label class="custom-control-label"
+           for="suppressWarningCheckbox">
+        Suppress all warnings
+    </label>
+</div>
+<div class="input-group date mr-2">
+        <div class="input-group-prepend">
+            <label class="input-group-text" for="dateInput">
+                <span class="fas fa-calendar"></span>
+            </label>
+        </div>
+        <input type="date" class="form-control" id="dateInput">
+    </div>
+<div class="btn-group">
+    <button class="btn btn-success" id="showHelpButton">
+        <span class="fas fa-question-circle"></span> Help
+    </button>
+    <button class="btn btn-primary dropdown-toggle"
+            data-toggle="dropdown">
+        <span class="fas fa-search-plus"></span> Fit
+    </button>
+    <div class="dropdown-menu">
+        <a href="#" class="dropdown-item" id="currentMonthButton">Month</a>
+        <a href="#" class="dropdown-item" id="currentQuarterButton">Quarter</a>
+        <a href="#" class="dropdown-item" id="currentYearButton">Year</a>
+        <a href="#" class="dropdown-item" id="fitAllButton">Visible</a>
+    </div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="row mt-3" id="warningDiv" style="display: none;">
+<div class="col-sm">
+    <div class="alert alert-warning">
+        <h4>Warning</h4>
+        <ul class="mb-0" id="warningUl">
+
+        </ul>
+    </div>
+</div>
+</div>
+
+<div class="row mb-4">
+<div class="col-sm-12">
+    <div id="timelineDiv">
+
+    </div>
+</div>
+</div>
+
+<div class="row px-3 mb-4">
+<div id="goalItemList">
+<div class="card-columns">
+{% for goal in goals %}
+{% with goal.details.all as details %}
+{% if details %}  {# if the goal has any items to schedule #}
+<div class="card mb-4">
+<div class="card-body">
+<h5 class="card-title d-flex justify-content-between align-items-center">
+    {{ goal.name }}
+    <span class="badge badge-primary badge-pill">
+        {{ details|length }}
+    </span>
+</h5>
+<a class="card-subtitle text-muted">
+{{ goal.user.get_full_name }}
+</a>
+<p class="card-text">Deadline: {{ goal.deadline|date:"N d, Y" }}</p>
+</div>
+<ul class="list-group list-group-flush">
+{% for item in details %}
+    {% with item.sku.line_shortnames as lines %}
+    <a class="list-group-item d-flex justify-content-between goalItems
+        align-items-center {% if not lines %}text-muted{% endif %}"
+       data-toggle="tooltip"
+       data-placement="bottom"
+       {% if not lines %}
+       data-schedulable="false"
+       title="This item cannot be scheduled because
+        no manufacturing line produces SKU #{{ item.sku.pk }}"
+       disabled="disabled"
+       {% else %}
+       title="Compatible manufacturing lines: {{ lines|join:', ' }}"
+       draggable="true"
+       style="cursor: pointer"
+       data-schedulable="true"
+       {% endif %}
+       data-goal-item-id="{{ item.id }}"
+       data-sku-id="{{ item.sku.pk }}">
+        {{ item.sku }}
+        <span class="badge badge-pill badge-info">{{ item.quantity|quantize:2 }}</span>
+    </a>
+    {% endwith %}
+{% endfor %}
+</ul>
+<div class="card-footer d-flex justify-content-end">
+    Total: {{ details|length }} item{{ details|pluralize }}
+</div>
+</div>
+{% endif %}
+{% endwith %}
+{% endfor %}
+</div>
+</div>
+
 <div class="row">
 <div class="col-sm-12">
-    <div id="timelineDiv"></div>
+<div class="formsetDiv">
+<form method="post" action="{% url 'schedule' %}">
+<div style="display: none;">
+    {% csrf_token %}
+    {{ formset.management_form }}
+    {% for form in formset %}
+    {% with goal=form.item.goal lines=form.item.sku.line_shortnames item=form.item %}
+    <div class="goalItems"
+         data-goal-item-id="{{ item.pk }}"
+         {% if form.item.scheduled %}
+         data-is-scheduled="true"
+         {% else %}
+         data-is-scheduled="false"
+         {% endif %}
+         data-is-orphaned="{% if item.orphaned %}true{% else %}false{% endif %}"
+         data-sku-verbose-name="{{ item.sku.verbose_name }}"
+         data-goal-deadline="{{ goal.deadline|date:"c" }}"
+         data-goal-id="{{ goal.pk }}"
+         data-goal-item-id="{{ item.pk }}"
+         data-sku-id="{{ item.sku.number }}"
+         data-lines="{{ lines|join:',' }}"
+         data-sku-rate="{{ item.sku.manufacturing_rate }}"
+         data-hours="{{ item.hours }}"
+         data-quantity="{{ item.quantity }}">
+    {% endwith %}
+    {{ form }}
+    </div>
+    {% endfor %}
+</div>
+</form>
+
+<div class="btn-group">
+    <button class="btn btn-success" id="submitButton">Apply Changes</button>
+    <a class="btn btn-secondary" href="{% url 'goals' %}">Back to Goals</a>
 </div>
 </div>
+</div>
+</div>
+
+<div style="display: none;">
+<table class="table mt-3" id="confirmationTable">
+<thead class="thead-light">
+    <tr>
+        <th>Item</th>
+        <th>Line</th>
+        <th>Start Time</th>
+        <th>Estimated Completion</th>
+    </tr>
+</thead>
+<tbody>
+</tbody>
+</table>
+</div>
+
+</div>
+</div>
+
+<!-- Hidden div with template data -->
+<div style="display: none;">
 </div>
 {% endblock %}
 
 {% block scriptend %}
+<script src="{% static 'meals/common.js' %}"></script>
+<script src="https://momentjs.com/downloads/moment.js"></script>
 <script src="{% static 'meals/goal/schedule.js' %}"></script>
 {% endblock %}

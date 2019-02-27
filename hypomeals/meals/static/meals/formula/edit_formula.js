@@ -4,6 +4,8 @@ $(function () {
         .find("input[name=form-__prefix__-ingredient]")[0];
     const quantityInputTemplate = emptyFormDiv
         .find("input[name=form-__prefix__-quantity]")[0];
+    const unitInputTemplate = emptyFormDiv
+        .find("select[name=form-__prefix__-unit]")[0];
     const deleteTemplate = emptyFormDiv.find("input[id*=DELETE]")[0];
     const addRowButton = $("#addRowButton");
     const emptyAlert = $("#emptyAlert");
@@ -31,6 +33,12 @@ $(function () {
 
     function getQuantityInput(index) {
         let newInput = quantityInputTemplate.cloneNode(true);
+        replacePrefix(newInput, index);
+        return newInput;
+    }
+
+    function getUnitInput(index) {
+        let newInput = unitInputTemplate.cloneNode(true);
         replacePrefix(newInput, index);
         return newInput;
     }
@@ -63,6 +71,7 @@ $(function () {
         let newRow = $("<tr>")
             .append($("<td>").append(getIngredientInput(currentRow)))
             .append($("<td>").append(getQuantityInput(currentRow)))
+            .append($("<td>").append(getUnitInput(currentRow)))
             .append($("<td>")
                 .append(getDeleteInput(currentRow))
                 .append(getDeleteButton(currentRow)));
@@ -184,9 +193,9 @@ $(function () {
     let formulaModalSaveButton = $("#formulaSaveButton");
     let formulaModalForm = undefined;
     formulaModalBody.off("modal:change");
-    formulaModalBody.on("modal:change", modalChanged);
+    formulaModalBody.on("modal:change", formulaModalChanged);
 
-    function modalChanged(_, newContent) {
+    function formulaModalChanged(_, newContent) {
         let container = formulaModalBody.find("div.container");
         if (container.length > 0) {
             container.remove();
@@ -199,7 +208,7 @@ $(function () {
         buttons.remove()
     }
 
-    function ajaxDone(data, textStatus) {
+    function formulaAjaxDone(data, textStatus) {
         if (!showNetworkError(data, textStatus)) {
             return;
         }
@@ -209,14 +218,14 @@ $(function () {
 
     addFormulaButton.click(function () {
         $.getJSON(addFormulaUrl, {})
-            .done(ajaxDone)
+            .done(formulaAjaxDone)
             .fail(function (_, __, errorThrown) {
                 alert(`Error loading content: ${errorThrown}`);
                 formulaModalDiv.modal("hide");
             })
     });
 
-    function modalSaveButtonClicked() {
+    function formulaModalSaveButtonClicked() {
       if (formulaModalForm === undefined) {
           return;
       }
@@ -243,6 +252,6 @@ $(function () {
   }
 
   formulaModalSaveButton.off("click");
-  formulaModalSaveButton.click(modalSaveButtonClicked);
+  formulaModalSaveButton.click(formulaModalSaveButtonClicked);
 
 });

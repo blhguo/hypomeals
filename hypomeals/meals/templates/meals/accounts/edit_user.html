@@ -1,0 +1,65 @@
+{% extends "meals/base.html" %}
+{% load staticfiles %}
+
+{% block user_active %}active{% endblock %}
+{% block title %}Edit Users{% endblock %}
+
+
+{%  block body %}
+<div class="container m-auto">
+<div class="row">
+<div class="col-sm">
+<div class="alert alert-success my-4">
+    {% if editing %}
+    <h3>Editing User {{ user.username }}</h3>
+    <p>
+        Modify the User using the form below. Note that you cannot change
+        some of the fields.
+    </p>
+    {% else %}
+    <h3>Add a new User</h3>
+    <p>Enter the information about a new user below. All fields are required unless otherwise specified.</p>
+    {% endif %}
+</div>
+</div>
+</div>
+<div class="row mb-4">
+    <div class="col-sm">
+    {% if edit %}
+    <form method="post" action="{% url 'edit_user' user.pk %}" id="editUserForm">
+    {% else %}
+    <form method="post" action="{% url 'add_user' %}" id="editUserForm">
+    {% endif %}
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger">
+    <h5 style="color: red">Please correct the following errors before proceeding:</h5>
+    {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+    {% for field in form %}
+        <div class="form-group">
+        {{ field.label_tag }}
+        {{ field }}
+        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+        {% if field.errors %}{{ field.errors }}{% endif %}
+        </div>
+    {% endfor %}
+    <input type="submit" id="editUserSubmitButton" style="display: none;">
+    </form>
+    <div class="btn-group" id="formSubmitBtnGroup">
+        {% if editing %}
+        <a href="#" id="nextButton" class="btn btn-success">Apply Changes</a>
+        {% else %}
+        <a href="#" id="nextButton" class="btn btn-success">Save</a>
+        {% endif %}
+        <a href="{% url 'users' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+    </div>
+</div>
+</div>
+{% endblock %}
+
+{% block scriptend %}
+<script src="{% static 'meals/accounts/edit_user.js' %}"></script>
+{% endblock %}
