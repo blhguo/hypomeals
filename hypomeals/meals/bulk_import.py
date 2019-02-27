@@ -1,17 +1,15 @@
 # pylint: disable-msg=protected-access
 
-import csv
 import logging
 import time
 from collections import defaultdict
 
 from cachetools import TTLCache
-from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models.fields.related import RelatedField
 
 from meals import utils
-from meals.exceptions import CollisionOccurredException, UserFacingException
+from meals.exceptions import CollisionOccurredException
 from meals.importers import IMPORTERS
 from .models import Sku, FormulaIngredient, ProductLine, Ingredient
 

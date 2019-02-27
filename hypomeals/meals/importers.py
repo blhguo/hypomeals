@@ -8,7 +8,6 @@ from collections import defaultdict
 from decimal import Decimal, InvalidOperation
 from typing import List, Dict, Any, Tuple
 
-from django.core.exceptions import ValidationError
 from django.db.models import Model, AutoField, Field
 
 from meals import utils
@@ -386,9 +385,6 @@ class FormulaImporter(Importer):
     model = Formula
     model_name = "Formula"
     primary_key = Formula._meta.get_field("number")
-
-    def __init__(self):
-        super().__init__()
 
     def do_import(self, lines, filename=None):
         lines_copy = copy.copy(lines)
