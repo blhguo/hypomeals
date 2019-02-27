@@ -24,7 +24,7 @@ from meals.models import Sku, Ingredient, ProductLine, Upc, Vendor, Unit
 from meals.models import FormulaIngredient, ManufacturingLine, SkuManufacturingLine
 from meals.utils import BootstrapFormControlMixin, FilenameRegexValidator
 from django.contrib.auth.models import Group
-
+from meals.constants import ADMINS_GROUP, USERS_GROUP
 
 logger = logging.getLogger(__name__)
 
@@ -743,7 +743,7 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
         ### Remember to Solve the Inline Editing Latter
         if "formula" in data:
             try:
-                data["formula"] = Formula.objects.filter(name=data["formula"])[0]
+                data["formula"] = Formula.objects.get(name=data["formula"])
             except Formula.DoesNotExist:
                 data["formula"] = Formula(name=data["formula"])
 
@@ -1074,7 +1074,6 @@ class EditUserForm(forms.ModelForm, utils.BootstrapFormControlMixin):
         model = User
         fields = ["username", "first_name", "last_name", "email", "netid"]
         labels = {"number": "Ingr#"}
-        help_texts = {"username": "Name of the new User."}
 
     def __init__(self, *args, **kwargs):
         instance = kwargs.pop("instance", None)
@@ -1084,9 +1083,9 @@ class EditUserForm(forms.ModelForm, utils.BootstrapFormControlMixin):
     def save(self, commit=False):
         instance = super().save(commit)
 
-        users_group = Group.objects.get(name="Users")
+        users_group = Group.objects.get(name=USERS_GROUP)
         users_group.user_set.remove(instance)
-        admin_group = Group.objects.get(name="Admins")
+        admin_group = Group.objects.get(name=ADMINS_GROUP)
         admin_group.user_set.remove(instance)
 
         instance.save()

@@ -161,14 +161,14 @@ def add_user(request):
 
 @login_required
 @auth.user_is_admin_ajax(msg="Only an administrator may edit user information.")
-def edit_user(request, username):
-    instance = User.objects.filter(pk=username)[0]
+def edit_user(request, pk):
+    instance = User.objects.filter(pk=pk)[0]
     if request.method == "POST":
         initial_data = {"is_admin": instance.is_admin}
         form = EditUserForm(request.POST, instance=instance, initial=initial_data)
         if form.is_valid():
             instance = form.save()
-            messages.info(request, f"Successfully saved User {instance.username}")
+            messages.info(request, f"Successfully saved User '{instance.username}'")
             return redirect("users")
     else:
         initial_data = {"is_admin": instance.is_admin}
@@ -195,9 +195,3 @@ def remove_users(request):
         )
     num_deleted, _ = user_objs.delete()
     return f"Successfully deleted {num_deleted} users."
-
-
-def make_admin(request):
-    user_ids = set(map(int, json.loads(request.GET.get("u", "[]"))))
-    if not user_ids:
-        return "No user was selected."

@@ -205,19 +205,13 @@ def edit_lines(request):
     deleted = 0
     for sku_number in skus:
         sku = Sku.objects.filter(number=sku_number)[0]
-        rate = sku.manufacturing_rate
         for ml_sn in checked:
             ml = ManufacturingLine.objects.filter(shortname=ml_sn)[0]
             exist = SkuManufacturingLine.objects.filter(sku=sku, line=ml).exists()
             if not exist:
                 created += 1
                 SkuManufacturingLine.objects.create(sku=sku, line=ml)
-        for ml_sn in unchecked:
-            ml = ManufacturingLine.objects.filter(shortname=ml_sn)[0]
-            exist = SkuManufacturingLine.objects.filter(sku=sku, line=ml).exists()
-            if exist:
-                deleted += 1
-                SkuManufacturingLine.objects.filter(sku=sku, line=ml).delete()
+        deleted, _ = SkuManufacturingLine.objects.filter(line__in=unchecked).delete()
 
     resp = {
         "error": f"Success in creating {created} new mappings, deleting {deleted} old mappings"
