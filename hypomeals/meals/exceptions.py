@@ -12,7 +12,14 @@ class UserFacingException(Exception):
     Other exceptions should not cause user-visible effects, and if one does, the generic
     Service Unavailable (500) message will be displayed.
     """
-    pass
+    def __init__(self, msg):
+        self.message = msg
+
+    def __str__(self):
+        return self.message
+
+    def __repr__(self):
+        return f"<UserFacingException: {self.message}>"
 
 
 class DuplicateException(UserFacingException):
@@ -112,10 +119,7 @@ class IntegrityException(UserFacingException):
 
     @utils.method_memoize_forever
     def __str__(self):
-        result = ""
-        if self.line_num:
-            result += f"Line {self.line_num}: "
-        result += self.message
+        result = self.message
         if (
             self.referring_name is not None
             and self.referred_name is not None
@@ -194,4 +198,9 @@ class IllegalArgumentsException(UserFacingException):
     Raised when the user attempts to override arguments (possibly bypassing front-end
     validation) that might result in an inconsistent state.
     """
+    pass
+
+
+class Skip(Exception):
+    """Used in Importers to signal that a particular row should be skipped"""
     pass

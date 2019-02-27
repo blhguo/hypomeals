@@ -8,11 +8,10 @@ from collections import defaultdict
 from cachetools import TTLCache
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models.fields.related import RelatedField
 
 from meals import utils
-from meals.exceptions import (
-    CollisionOccurredException,
-)
+from meals.exceptions import CollisionOccurredException, UserFacingException
 from meals.importers import IMPORTERS
 from .models import Sku, FormulaIngredient, ProductLine, Ingredient
 
@@ -26,25 +25,9 @@ FILE_TYPES = {
     "formulas": FormulaIngredient,
 }
 MODEL_TO_FILE_TYPES = {v: k for k, v in FILE_TYPES.items()}
-HEADERS = {
-    "skus": "SKU#,Name,Case UPC,Unit UPC,Unit size,"
-    "Count per case,Product Line Name,Comment",
-    "ingredients": "Ingr#,Name,Vendor Info,Size,Cost,Comment",
-    "product_lines": "Name",
-    "formulas": "SKU#,Ingr#,Quantity",
-}
 TOPOLOGICAL_ORDER = ["product_lines", "ingredients", "skus", "formulas"]
 # A self expiring cache for 30 minutes
 TRANSACTION_CACHE = TTLCache(maxsize=10, ttl=1800)
-
-
-def _get_reader(stream, file_type):
-    header_format = HEADERS[file_type]
-    lines = stream.read().decode("UTF-8").splitlines()
-    if lines[0] == header_format:
-        return csv.DictReader(lines)
-    logger.error(f"File {stream.name} of type {file_type} does not have a valid header")
-    raise RuntimeError("Header format mismatch")
 
 
 @transaction.atomic
@@ -58,13 +41,8 @@ def process_csv_files(files, session_key):
                 continue
             importer = IMPORTERS[file_type]()
             logger.info("Processing %s: %s", file_type, stream)
-            try:
-                reader = _get_reader(stream, file_type)
-            except Exception:
-                raise ValidationError(
-                    "Cannot parse file %(filename)s.", params={"filename": stream.name}
-                )
-            instances, collisions = importer.do_import(reader, filename=stream.name)
+            lines = stream.read().decode("UTF-8").splitlines()
+            instances, collisions = importer.do_import(lines, filename=stream.name)
             inserted[file_type] = len(instances)
             if collisions:
                 if session_key not in TRANSACTION_CACHE:
@@ -75,6 +53,21 @@ def process_csv_files(files, session_key):
     return inserted
 
 
+def _save_instance(instance):
+    """
+    Saves an instance with ForeignKey objects that are potentially not committed to
+    DB.
+    :param instance: an instance to save
+    """
+    for field in instance._meta.fields:
+        if isinstance(field, RelatedField):
+            fk = getattr(instance, field.name)
+            fk.save()
+            setattr(instance, field.name, fk)
+            logger.info("Saved fk %s (#%d) %s", field.name, fk.pk, str(fk))
+    instance.save()
+
+
 @transaction.atomic
 def _force_save(tx):
     start = time.time()
@@ -82,13 +75,13 @@ def _force_save(tx):
     updated = defaultdict(lambda: 0)
     for instances, collisions in tx.values():
         for instance in instances:
-            instance.save()
+            _save_instance(instance)
             file_type = MODEL_TO_FILE_TYPES[instance._meta.model]
             inserted[file_type] += 1
         for collision in collisions:
             old, new = collision.old_record, collision.new_record
             old.delete()
-            new.save()
+            _save_instance(new)
             file_type = MODEL_TO_FILE_TYPES[old._meta.model]
             updated[file_type] += 1
     end = time.time()
