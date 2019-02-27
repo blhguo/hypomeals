@@ -238,7 +238,7 @@ $(function() {
             return moment(a.start) - moment(b.start);
         });
         for (let i = 0; i < itemsInGroup.length - 1; i++) {
-            if (moment(itemsInGroup[i + 1].start) < moment(itemsInGroup[i].end)) {
+            if (moment(itemsInGroup[i + 1].start) <= moment(itemsInGroup[i].end)) {
                 return true;
             }
         }
