@@ -86,6 +86,10 @@ urlpatterns = [
     path("lines/add/", views.add_line, name="add_line"),
     path("lines/remove", views.remove_lines, name="remove_lines"),
     # Account management views
+    path("accounts/", views.users, name="users"),
+    path("accounts/add/", views.add_user, name="add_user"),
+    path("accounts/remove/", views.remove_users, name="remove_users"),
+    path("accounts/edit/<int:pk>", views.edit_user, name="edit_user"),
     path(
         "accounts/login/",
         auth_views.LoginView.as_view(template_name="meals/accounts/login.html"),

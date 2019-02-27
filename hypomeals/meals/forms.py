@@ -6,6 +6,7 @@ from collections import OrderedDict, defaultdict
 from pathlib import Path
 
 from django import forms
+from django.contrib.auth.models import Group
 from django.core.exceptions import FieldDoesNotExist
 from django.core.exceptions import ValidationError
 from django.core.files import File
@@ -17,6 +18,7 @@ from django.urls import reverse_lazy
 
 from meals import bulk_import
 from meals import utils
+from meals.constants import ADMINS_GROUP, USERS_GROUP
 from meals.exceptions import CollisionOccurredException
 from meals.models import (
     FormulaIngredient,
@@ -379,7 +381,9 @@ class IngredientFilterForm(forms.Form):
         sort_by = params.get("sort_by", "")
         query_filter = Q()
         if params["keyword"]:
-            query_filter &= Q(name__icontains=params["keyword"])
+            query_filter &= Q(name__icontains=params["keyword"]) | Q(
+                number__icontains=params["keyword"]
+            )
         if params["skus"]:
             query_filter |= Q(sku__in=params["skus"])
         query = Ingredient.objects.filter(query_filter)
@@ -421,12 +425,13 @@ class FormulaFilterForm(forms.Form):
         sort_by = params.get("sort_by", "")
         query_filter = Q()
         if params["keyword"]:
-            query_filter &= Q(name__icontains=params["keyword"])
+            query_filter &= Q(name__icontains=params["keyword"]) | Q(
+                number__icontains=params["keyword"]
+            )
         if params["ingredients"]:
             query_filter &= Q(
                 formulaingredient__ingredient__name__in=params["ingredients"]
             )
-        print(params["ingredients"])
         query = Formula.objects.filter(query_filter)
         if sort_by:
             query = query.order_by(sort_by)
@@ -566,6 +571,7 @@ class SkuFilterForm(forms.Form, utils.BootstrapFormControlMixin):
 
         self.fields["ingredients"].widget.attrs["placeholder"] = "Start typing..."
         self.fields["product_lines"].widget.attrs["placeholder"] = "Start typing..."
+        self.fields["formulas"].widget.attrs["placeholder"] = "Start typing..."
 
     def add_formula_name(self, name):
         self.cleaned_data["formulas"] = name
@@ -579,7 +585,12 @@ class SkuFilterForm(forms.Form, utils.BootstrapFormControlMixin):
         sort_by = params.get("sort_by", "")
         query_filter = Q()
         if params["keyword"]:
-            query_filter &= Q(name__icontains=params["keyword"])
+            query_filter &= (
+                Q(name__icontains=params["keyword"])
+                | Q(number__icontains=params["keyword"])
+                | Q(unit_upc__upc_number__icontains=params["keyword"])
+                | Q(case_upc__upc_number__icontains=params["keyword"])
+            )
         if params["ingredients"]:
             query_filter &= Q(formula__ingredients__name__in=params["ingredients"])
         if params["product_lines"]:
@@ -860,6 +871,9 @@ class FormulaForm(forms.Form, utils.BootstrapFormControlMixin):
         required=True, widget=forms.TextInput(attrs={"placeholder": "Start typing..."})
     )
     quantity = forms.DecimalField(required=True, min_value=0.00001)
+    unit = forms.ChoiceField(
+        choices=lambda: BLANK_CHOICE_DASH + get_unit_choices(), required=True
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -878,6 +892,7 @@ class FormulaForm(forms.Form, utils.BootstrapFormControlMixin):
             formula=formula,
             ingredient=self.cleaned_data["ingredient"],
             quantity=self.cleaned_data["quantity"],
+            unit=Unit.objects.filter(symbol=self.cleaned_data["unit"])[0],
         )
         if commit:
             instance.save()
@@ -1167,3 +1182,32 @@ class GoalScheduleFormsetBase(forms.BaseFormSet):
 GoalScheduleFormset = formset_factory(
     GoalScheduleForm, formset=GoalScheduleFormsetBase, extra=0
 )
+
+
+class EditUserForm(forms.ModelForm, utils.BootstrapFormControlMixin):
+    is_admin = forms.BooleanField(required=False)
+
+    class Meta:
+        model = User
+        fields = ["username", "first_name", "last_name", "email", "netid"]
+        labels = {"number": "Ingr#"}
+
+    def __init__(self, *args, **kwargs):
+        instance = kwargs.pop("instance", None)
+        initial = kwargs.pop("initial", {})
+        super().__init__(*args, instance=instance, initial=initial, **kwargs)
+
+    def save(self, commit=False):
+        instance = super().save(commit)
+
+        users_group = Group.objects.get(name=USERS_GROUP)
+        users_group.user_set.remove(instance)
+        admin_group = Group.objects.get(name=ADMINS_GROUP)
+        admin_group.user_set.remove(instance)
+
+        instance.save()
+
+        instance.groups.add(users_group)
+        if self.cleaned_data["is_admin"]:
+            instance.groups.add(admin_group)
+        return instance
