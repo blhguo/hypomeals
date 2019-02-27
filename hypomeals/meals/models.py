@@ -6,11 +6,17 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import BLANK_CHOICE_DASH
 from django.utils import timezone
 from django.utils.text import Truncator
 
 from meals import utils
-from meals.constants import ADMINS_GROUP, MIX_UNIT_EXP_REGEX, UNIT_ACCEPTED_FORMS
+from meals.constants import (
+    ADMINS_GROUP,
+    MIX_UNIT_EXP_REGEX,
+    UNIT_ACCEPTED_FORMS,
+    SECONDS_PER_HOUR,
+)
 from meals.validators import validate_alphanumeric, validate_netid
 
 logger = logging.getLogger(__name__)
@@ -330,6 +336,16 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
     def verbose_name(self):
         return f"{self.name}: {self.unit_size} * {self.count} (#{self.number})"
 
+    @property
+    def line_shortnames(self):
+        return self.skumanufacturingline_set.values_list("line__shortname", flat=True)
+
+    @property
+    def line_choices(self):
+        return BLANK_CHOICE_DASH + [
+            (shortname, shortname) for shortname in self.line_shortnames
+        ]
+
     def __repr__(self):
         return f"<SKU #{self.number}: {self.name}>"
 
@@ -384,10 +400,7 @@ class Formula(
 
     @classmethod
     def get_sortable_fields(cls):
-        return [
-            ("number", "Number"),
-            ("name", "Name"),
-        ]
+        return [("number", "Number"), ("name", "Name")]
 
     def save(self, *args, **kwargs):
         if not self.number:
@@ -518,7 +531,7 @@ class Goal(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutio
     @property
     def scheduled(self):
         """A goal is scheduled if all of its items have been scheduled."""
-        return all(hasattr(item, "schedule") for item in self.details.all())
+        return all(item.scheduled for item in self.details.all())
 
     @classmethod
     def get_sortable_fields(cls):
@@ -568,6 +581,18 @@ class GoalItem(
     def completion_time(self):
         return self.schedule.completion_time if hasattr(self, "schedule") else None
 
+    @property
+    def hours(self):
+        return float(self.quantity / self.sku.manufacturing_rate)
+
+    @property
+    def scheduled(self):
+        return hasattr(self, "schedule")
+
+    @property
+    def orphaned(self):
+        return not self.goal.is_enabled
+
     __str__ = __repr__
 
     class Meta:
@@ -594,16 +619,17 @@ class GoalSchedule(
     end_time = models.DateTimeField(verbose_name="End time", blank=True, null=True)
 
     def clean(self):
-        if self.line.pk not in self.goal_item.sku.skumanufacturingline_set.values_list(
-            "line", flat=True
-        ):
-            raise ValidationError(
-                "SKU '%(sku_name)s' cannot be manufactured on Line '%(line_name)s'",
-                params={
-                    "sku_name": self.goal_item.sku.verbose_name,
-                    "line_name": self.line.shortname,
-                },
-            )
+        if hasattr(self, "line") and self.line:
+            if not SkuManufacturingLine.objects.filter(
+                sku=self.goal_item.sku, line=self.line
+            ).exists():
+                raise ValidationError(
+                    "SKU '%(sku_name)s' cannot be manufactured on Line '%(line_name)s'",
+                    params={
+                        "sku_name": self.goal_item.sku.verbose_name,
+                        "line_name": self.line.shortname,
+                    },
+                )
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -624,6 +650,16 @@ class GoalSchedule(
     @property
     def completion_time(self):
         return self.end_time or utils.compute_end_time(self.start_time, self.hours)
+
+    @property
+    def completion_hours(self):
+        return (
+            self.completion_time - self.start_time
+        ).total_seconds() / SECONDS_PER_HOUR
+
+    @property
+    def orphaned(self):
+        return not self.goal_item.goal.is_enabled
 
     class Meta:
         unique_together = (("goal_item", "line"),)

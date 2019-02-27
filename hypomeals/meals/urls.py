@@ -78,6 +78,7 @@ urlpatterns = [
         name="export_calculation_csv",
     ),
     path("goals/schedule", views.schedule, name="schedule"),
+    path("goals/schedule/report/", views.schedule_report, name="schedule_report"),
     path("filter_skus/", views.filter_skus, name="filter_skus"),
     # Manufacturing line views
     path("lines/", views.lines, name="lines"),

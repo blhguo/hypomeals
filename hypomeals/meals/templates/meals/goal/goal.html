@@ -2,7 +2,7 @@
 {% load humanize %}
 {% load staticfiles %}
 
-{% block goal_active %}active{% endblock %}
+{% block manufacturing_active %}active{% endblock %}
 {% block title %}Manufacturing Goals{% endblock %}
 
 {% block body %}
@@ -35,7 +35,7 @@
 </div>
 
 {% if messages %}
-<div class="row">
+<div class="row mt-2">
 <div class="col-sm-12">
     <div class="alert alert-success" id="messagesDiv">
     {% for message in messages %}
@@ -78,7 +78,7 @@
         <button class="btn btn-primary dropdown-toggle dropdown-toggle-split"
                 data-toggle="dropdown"></button>
         <div class="dropdown-menu">
-        <a href="#"
+        <a href="{% url 'schedule' %}"
            id="scheduleButton"
            class="dropdown-item"><span class="fas fa-calendar-check"></span> Schedule</a>
         <a href="#"
@@ -143,11 +143,10 @@
     <th>Deadline</th>
     {% if request.user.is_admin %}
     <th>
-        E&#47;S?
-        <span class="fas fa-info-circle"
-              title="Enabled / Scheduled"
-              data-toggle="tooltip"
-              data-placement="top"></span>
+        <a href="#"
+           title="Whether this goal is Enabled / Scheduled"
+           data-toggle="tooltip"
+           data-placement="top">E&#47;S?</a>
     </th>
     <th>Creator</th>
     {% endif %}
@@ -170,24 +169,9 @@
     <td><a href = "{% url 'edit_goal' goal.pk %}">{{ goal.name }}</a></td>
     <td>{{ goal.deadline|date:"N d, Y" }} ({{ goal.deadline|naturaltime }})</td>
     {% if request.user.is_admin %}
-    <td>
-        <div class="custom-control custom-control-inline custom-checkbox m-0">
-        <input type="checkbox"
-               disabled="disabled"
-               {% if goal.is_enabled %}checked="checked"{% endif %}
-               id="enabled-{{ goal.pk }}"
-               class="custom-control-input">
-        <label for="enabled-{{ goal.pk }}" class="custom-control-label"></label>
-        </div>
-        <div class="custom-control custom-control-inline custom-checkbox m-0">
-        <input type="checkbox"
-               disabled="disabled"
-               {% if goal.is_scheduled %}checked="checked"{% endif %}
-               id="scheduled-{{ goal.pk }}"
-               class="custom-control-input">
-        <label for="scheduled-{{ goal.pk }}" class="custom-control-label"></label>
-        </div>
-    </td>
+    <td class="d-flex justify-content-between align-items-center">
+        <span class="fas {% if goal.is_enabled %}fa-check{% else %}fa-times{% endif %}"></span>
+        <span class="fas {% if goal.scheduled %}fa-check{% else %}fa-times{% endif %}"></span>
     <td>{{ goal.user.get_full_name }}</td>
     {% endif %}
     <td>{{ goal.save_time|naturaltime }}</td>

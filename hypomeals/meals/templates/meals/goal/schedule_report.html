@@ -1,0 +1,162 @@
+{% extends 'meals/base.html' %}
+{% load static %}
+{% load meals_extras %}
+
+{% block manufacturing_active %}active{% endblock %}
+{% block title %}Manufacturing Schdule{% endblock %}
+
+{% block body %}
+<div class="container m-auto">
+
+<div class="row mt-3">
+<div class="col-sm">
+<div class="alert alert-success">
+    <h3>Manufacturing Schedule Report</h3>
+    <p class="mb-0">
+        Manufacturing report for Line '{{ line.shortname }}'
+        {% if start %}
+        {% if end %}
+        from {{ start|date:'F n, Y' }} to {{ end|date:'F n, Y' }}.
+        {% else %}
+        from {{ start|date:'F n, Y' }}.
+        {% endif %}
+        {% else %}
+        {% if end %}
+        up to {{ end|date:'F n, Y' }}.
+        {% else %}
+        for all times.
+        {% endif %}
+        {% endif %}
+    Report generated at {{ time|date:'l, F n, Y H:i:s' }}
+        by {{ request.user.get_full_name }}</p>
+</div>
+</div>
+</div>
+
+<!-- Print -->
+<div class="row mt-2 d-print-none">
+<div class="col-sm d-flex justify-content-end">
+    <button type="button" onclick="window.print();" class="btn btn-primary">Export to PDF</button>
+</div>
+</div>
+
+<!-- SKUs -->
+<div class="row mt-3">
+<div class="col-sm">
+<h4>Activities</h4>
+<table class="table">
+<thead class="thead-light">
+<tr>
+    <th>SKU#</th>
+    <th>Name</th>
+    <th>Quantity (cases)</th>
+    <th>Formula Name</th>
+    <th>Scale Factor</th>
+    <th>Product Line</th>
+    <th>Line</th>
+    <th>Start Time</th>
+    <th>
+        ECT
+        <span class="fas fa-question-circle"
+              data-toggle="tooltip"
+              data-placement="top"
+              title="Estimated Completion Time"></span>
+    </th>
+    <th>Hours</th>
+</tr>
+</thead>
+
+<tbody>
+{% for activity in activities %}
+<tr>
+    <td>{{ activity.goal_item.sku.number }}</td>
+    <td>{{ activity.goal_item.sku.name }}</td>
+    <td>{{ activity.goal_item.quantity|quantize:2 }}</td>
+    <td>{{ activity.goal_item.sku.formula.name }}</td>
+    <td>{{ activity.goal_item.sku.formula_scale|quantize:2 }}</td>
+    <td>{{ activity.goal_item.sku.product_line.name }}</td>
+    <td>{{ activity.line.shortname }}</td>
+    <td>{{ activity.start_time|date:'N d, Y H:i:s' }}</td>
+    <td>{{ activity.completion_time|date:'N d, Y H:i:s' }}</td>
+    <td>{{ activity.completion_hours }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- Formulas -->
+<div class="row mt-3">
+<div class="col-sm">
+<h4>Formulas Used</h4>
+<table class="table">
+<thead class="thead-light">
+<tr>
+    <th>Formula#</th>
+    <th>Formula Name</th>
+    <th>Ingr#</th>
+    <th>Ingredient Name</th>
+    <th>Quantity</th>
+    <th>Comment</th>
+</tr>
+</thead>
+
+<tbody>
+{% for formula in formulas %}
+<tr>
+    <td>{{ formula.formula_id }}</td>
+    <td>{{ formula.formula.name }}</td>
+    <td>{{ formula.ingredient_id }}</td>
+    <td>{{ formula.ingredient.name }}</td>
+    <td>{{ formula.quantity|quantize:2 }} {{ formula.unit.symbol }}</td>
+    {% ifchanged %}<td>{{ formula.formula.comment }}</td>{% endifchanged %}
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- Ingredients -->
+<div class="row mt-3">
+<div class="col-sm">
+<h4>Ingredients Used</h4>
+<table class="table">
+<thead class="thead-light">
+<tr>
+    <th>Ingr#</th>
+    <th>Ingredient Name</th>
+    <th>Amount (packages)</th>
+    <th>Amount</th>
+</tr>
+</thead>
+
+<tbody>
+{% for ingr, amount in ingredients %}
+<tr>
+    <td>{{ ingr.number }}</td>
+    <td>{{ ingr.name }}</td>
+    <td>{{ amount.normalize|floatformat:2 }}</td>
+    <td>{% multiply amount ingr.size 2 %} {{ ingr.unit.symbol }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</div>
+
+<div class="row my-3 d-print-none">
+<div class="col-sm">
+<div class="btn-group">
+    <a href="{% url 'lines' %}" class="btn btn-secondary">Back</a>
+</div>
+</div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block scriptend %}
+<script src="{% static 'meals/goal/schedule_report.js' %}"></script>
+{% endblock %}
