@@ -900,7 +900,6 @@ class FormulaForm(forms.Form, utils.BootstrapFormControlMixin):
 
 
 class FormulaFormsetBase(forms.BaseFormSet):
-
     def clean(self):
         if any(self.errors):
             return
@@ -1189,8 +1188,8 @@ class EditUserForm(forms.ModelForm, utils.BootstrapFormControlMixin):
 
     class Meta:
         model = User
-        fields = ["username", "first_name", "last_name", "email", "netid"]
-        labels = {"number": "Ingr#"}
+        fields = ["username", "first_name", "last_name", "email", "netid", "password"]
+        widgets = {"password": forms.PasswordInput()}
 
     def __init__(self, *args, **kwargs):
         instance = kwargs.pop("instance", None)
@@ -1199,11 +1198,11 @@ class EditUserForm(forms.ModelForm, utils.BootstrapFormControlMixin):
 
     def save(self, commit=False):
         instance = super().save(commit)
-
         users_group = Group.objects.get(name=USERS_GROUP)
         users_group.user_set.remove(instance)
         admin_group = Group.objects.get(name=ADMINS_GROUP)
         admin_group.user_set.remove(instance)
+        instance.set_password(self.cleaned_data["password"])
 
         instance.save()
 
