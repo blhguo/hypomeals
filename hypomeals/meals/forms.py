@@ -789,9 +789,9 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
             setattr(instance, fk, self.cleaned_data[fk])
         manufacturing_lines = self.cleaned_data["manufacturing_lines"]
         SkuManufacturingLine.objects.filter(sku=instance).delete()
+        instance.save()
         for manufacturing_line in manufacturing_lines:
             SkuManufacturingLine.objects.create(sku=instance, line=manufacturing_line)
-        instance.save()
         self.save_m2m()
         return instance
 
@@ -853,6 +853,7 @@ class FormulaNameForm(forms.ModelForm, utils.BootstrapFormControlMixin):
         self.fields = reordered_fields
 
         self.fields["number"].required = False
+        self.fields["comment"].required = False
         if "instance" in kwargs:
             instance = kwargs["instance"]
             self.instance = instance

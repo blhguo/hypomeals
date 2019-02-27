@@ -70,8 +70,15 @@ Please correct the following error(s):
 {{ formset.non_form_errors }}
 </div>
 {% endif %}
-{{ form }}
-<table class="table">
+{% for field in form %}
+    <div class="form-group mb-2">
+    {{ field.label_tag }}
+    {{ field }}
+    {% if field.errors %}<small class="errorlist">{{ field.errors }}</small>{% endif %}
+    </div>
+{% endfor %}
+
+<table class="table my-3">
 <thead class="thead-light">
 <tr>
     <th>Ingredient</th>
@@ -155,7 +162,7 @@ add another ingredient to this SKU.
         <button type="button"
                 class="btn btn-success"
                 disabled="disabled"
-                id="modalSaveButton">Save Ingredient</button>
+                id="modalSaveButton">Save Formula</button>
     </div>
 </div>
 </div>
@@ -177,4 +184,4 @@ add another ingredient to this SKU.
 <script lang="javascript" src="{% static 'meals/formula/edit_formula.js' %}"></script>
 {% endblock %}
 
-{% block sku_active %}active{% endblock %}
+{% block formula_active %}active{% endblock %}
