@@ -1,7 +1,8 @@
 import json
+import logging
 
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_list_or_404, render, get_object_or_404
+from django.shortcuts import render, get_object_or_404
 from django.template.loader import render_to_string
 
 from meals import auth, utils
@@ -9,15 +10,12 @@ from meals.exceptions import UserFacingException
 from meals.forms import ManufacturingLineForm
 from meals.models import ManufacturingLine
 
-import logging
-
-
 logger = logging.getLogger(__name__)
 
 
 @login_required
 def lines(request):
-    line_objs = get_list_or_404(ManufacturingLine)
+    line_objs = ManufacturingLine.objects.all()
     return render(
         request,
         template_name="meals/manufacturing/line.html",
