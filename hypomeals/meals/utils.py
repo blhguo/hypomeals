@@ -1,4 +1,4 @@
-# pylint: disable-msg=protected-access
+# pylint: disable-msg=protected-access,cyclic-import
 
 import functools
 import logging
@@ -495,7 +495,7 @@ def ajax_view(func):
 
     @functools.wraps(func)
     def wrapper(request, *args, **kwargs):
-        from meals.exceptions import UserFacingException
+        from meals.exceptions import UserFacingException  # noqa
         if request.is_ajax():
             try:
                 result = func(request, *args, **kwargs)

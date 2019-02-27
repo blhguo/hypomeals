@@ -1,5 +1,6 @@
 import logging
 import time
+import json
 
 import jsonpickle
 from django.contrib import messages
@@ -8,11 +9,12 @@ from django.core.paginator import Paginator
 from django.db import transaction, DatabaseError
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.template.loader import render_to_string
 from django.views.decorators.http import require_POST
 
 from meals import auth
 from meals.forms import SkuFilterForm, EditSkuForm
-from meals.models import Sku
+from meals.models import Sku, ManufacturingLine, SkuManufacturingLine
 from ..bulk_export import export_skus
 
 logger = logging.getLogger(__name__)
@@ -37,8 +39,16 @@ def sku(request):
         else:
             skus = Paginator(Sku.objects.all(), 50)
     else:
-        form = SkuFilterForm()
-        skus = Paginator(Sku.objects.all(), 50)
+        params = {"key_word": "", "ingredients": "", "product_lines": "", "formulas": "", "page_num": 1, "num_per_page": 50, "sort_by": "name", "keyword": ""}
+        if "formula" in request.GET:
+            formula_name = request.GET["formula"]
+            params["formulas"] = formula_name
+
+        form = SkuFilterForm(params)
+        if form.is_valid():
+            skus = form.query()
+        else:
+            skus = Paginator(Sku.objects.all(), 50)
     page = getattr(form, "cleaned_data", {"page_num": 1}).get("page_num", 1)
     if page > skus.num_pages:
         # For whatever reason, if the page being requested is larger than the actual
@@ -125,3 +135,69 @@ def remove_skus(request):
         )
     except DatabaseError as e:
         return JsonResponse({"error": str(e), "resp": "Not removed"})
+
+@login_required
+@auth.permission_required_ajax(perm="meals.delete_sku")
+def view_lines(request):
+    skus = json.loads(request.GET.get("skus", "[]"))
+    print(skus)
+    all_set = set()
+    partial_set = set()
+    none_set = set()
+    for ml in ManufacturingLine.objects.all():
+        all_set.add(ml)
+        none_set.add(ml)
+    for sku in skus:
+        sku = int(sku)
+        sku_obj = Sku.objects.filter(number=sku)[0]
+        all_mls = SkuManufacturingLine.objects.filter(sku=sku_obj)
+        manufacturing_lines = {ml.line for ml in all_mls}
+        all_set &= manufacturing_lines
+        partial_set |= manufacturing_lines
+    partial_set -= all_set
+    none_set -= all_set
+    none_set -= partial_set
+    form_html = render_to_string(
+        request=request,
+        template_name="meals/sku/bulk_edit.html",
+        context={"all_set": all_set, "partial_set": partial_set, "none_set": none_set, "sku_number": len(skus)}
+    )
+
+    if request.is_ajax():
+        resp = {"error": "Success", "resp": form_html}
+        return JsonResponse(resp)
+
+    return render(
+        request,
+        template_name="meals/sku/bulk_edit.html",
+        context={"all_set": all_set, "partial_set": partial_set, "none_set": none_set, "sku_number": len(skus)}
+    )
+
+
+@login_required
+@auth.permission_required_ajax(perm="meals.delete_sku")
+def edit_lines(request):
+    skus = json.loads(request.GET.get("skus", "[]"))
+    checked = json.loads(request.GET.get("checked", "[]"))
+    unchecked = json.loads(request.GET.get("unchecked", "[]"))
+
+    created = 0
+    deleted = 0
+    for sku_number in skus:
+        sku = Sku.objects.filter(number=sku_number)[0]
+        rate = sku.manufacturing_rate
+        for ml_sn in checked:
+            ml = ManufacturingLine.objects.filter(shortname=ml_sn)[0]
+            exist = SkuManufacturingLine.objects.filter(sku=sku, line=ml).exists()
+            if not exist:
+                created += 1
+                SkuManufacturingLine.objects.create(sku=sku, line=ml, rate=rate)
+        for ml_sn in unchecked:
+            ml = ManufacturingLine.objects.filter(shortname=ml_sn)[0]
+            exist = SkuManufacturingLine.objects.filter(sku=sku, line=ml).exists()
+            if exist:
+                deleted += 1
+                SkuManufacturingLine.objects.filter(sku=sku, line=ml).delete()
+
+    resp = {"error": f"Success in creating {created} new mappings, deleting {deleted} old mappings"}
+    return JsonResponse(resp)

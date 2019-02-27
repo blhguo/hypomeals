@@ -109,11 +109,13 @@ $(function() {
  * the {@code done} handler of a {@code jqXHR} object.
  * @param data the JSON data returned by the server
  * @param textStatus the status of the response
+ * @param suppressAlerts whether to show an alert to the user if a network error
+ *      has occurred
  * @returns {boolean} whether processing should continue: true iff there's an
  *      error.
  */
-function showNetworkError(data, textStatus) {
-    if (textStatus !== "success" || !("resp" in data)) {
+function showNetworkError(data, textStatus, suppressAlerts) {
+    if (textStatus !== "success" && !suppressAlerts) {
         alert(
             `[status=${textStatus}] Cannot get data from server.\n` +
             (data.error !== null) ? "Error: " + data.error : "" +
@@ -257,7 +259,7 @@ function makeModalAlert(title, message, success, cancel) {
     modalBody.append(message);
     let successButton = modal.find("#modalSuccessButton");
     if (success === undefined || success === null) {
-        successButton.toggle("false");
+        successButton.toggle(false);
     } else {
         successButton.on("click", function () {
             if (_.isFunction(success)) {
@@ -283,4 +285,32 @@ function makeModalAlert(title, message, success, cancel) {
     $("body").append(modal);
     modal.modal("show");
     return modal;
+}
+
+function getJson(url, data, suppressAlerts) {
+    let deferred = $.Deferred();
+    $.getJSON(url, data)
+        .done(function(data, textStatus) {
+            if (!showNetworkError(data, textStatus, suppressAlerts)) {
+                return;
+            }
+            if ("error" in data && data.error) {
+                if (!suppressAlerts) {
+                    makeModalAlert("Error", data.error);
+                }
+                deferred.reject(data.error);
+                return;
+            }
+            if (!("resp" in data)) {
+                let msg = "The server returned an empty response.";
+                if (!suppressAlerts) {
+                    makeModalAlert("Error",
+                        msg + " Please try again later.")
+                }
+                deferred.reject(msg);
+                return;
+            }
+            deferred.resolve(data.resp);
+        });
+    return deferred;
 }

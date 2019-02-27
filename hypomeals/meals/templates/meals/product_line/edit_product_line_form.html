@@ -20,9 +20,9 @@
 <div class="row mb-4">
     <div class="col-sm">
     {% if editing %}
-    <form method="post" action="{% url 'edit_product_line' product_line_name %}" id="editProduct_LineForm">
+    <form method="post" action="{% url 'edit_product_line' product_line_name %}" id="editProductLineForm">
     {% else %}
-    <form method="post" action="{% url 'add_product_line' %}" id="editProduct_LineForm">
+    <form method="post" action="{% url 'add_product_line' %}" id="editProductLineForm">
     {% endif %}
     {% csrf_token %}
     {% if form.non_field_errors %}
@@ -39,7 +39,6 @@
         {% if field.errors %}{{ field.errors }}{% endif %}
         </div>
     {% endfor %}
-    <input type="submit" id="editProduct_LineSubmitButton" style="display: none;">
     </form>
     <div class="btn-group" id="formSubmitBtnGroup">
         {% if editing %}

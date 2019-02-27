@@ -1,0 +1,124 @@
+{% extends 'meals/base.html' %}
+{% load static %}
+
+{% block title %}Manufacturing Lines{% endblock %}
+{% block manufacturing_active %}active{% endblock %}
+
+{% block style %}
+ul.ui-autocomplete {
+    z-index: 1100;
+}
+{% endblock %}
+
+{% block body %}
+<div class="container m-auto">
+
+<div class="row mt-3">
+<div class="col-sm">
+    <div class="alert alert-success mb-0">
+    <h3>Manufacturing Lines</h3>
+    <p class="mb-0">
+        Review, add, or remove manufacturing lines below.
+    </p>
+    </div>
+</div>
+</div>
+
+{% if messages %}
+<div class="row">
+<div class="col-sm-12">
+    <div class="alert alert-success" id="messagesDiv">
+    {% for message in messages %}
+    <p class="{% if message.tags %}{{ message.tags }}{% endif %}{% if forloop.counter == messages|length %} mb-0{% endif %}">
+        {{ message }}
+    </p>
+    {% endfor %}
+    </div>
+</div>
+</div>
+{% endif %}
+
+<div class="row mt-3">
+<div class="col-sm d-flex justify-content-end">
+    <div class="btn-group">
+    <button type="button"
+            data-href="{% url 'add_line' %}"
+            id="addButton"
+            class="btn btn-primary">
+        <span class="fas fa-plus"></span> Add Manufacturing Line
+    </button>
+    <button type="button"
+            data-href="{% url 'remove_lines' %}"
+            id="removeButton"
+            class="btn btn-danger"
+            disabled>
+        <span class="fas fa-minus"></span> Remove selected
+    </button>
+    </div>
+</div>
+</div>
+
+<!-- Table -->
+<div class="row mt-3">
+<div class="col-sm">
+<table class="table">
+<thead class="thead-light">
+<tr>
+    {% if request.user.is_admin %}
+    <th>
+        <div class="custom-control custom-checkbox">
+        <input type="checkbox"
+               id="selectAllCheckbox"
+               class="custom-control-input">
+        <label for="selectAllCheckbox" class="custom-control-label"></label>
+        </div>
+    </th>
+    {% endif %}
+    <th>Line #</th>
+    <th>Name</th>
+    <th>Shortname</th>
+    <th>Comment</th>
+</tr>
+</thead>
+
+<tbody>
+{% for line in lines %}
+<tr>
+    {% if request.user.is_admin %}
+    <td>
+        <div class="custom-control custom-checkbox">
+        <input type="checkbox" data-line-id="{{ line.pk }}"
+               id="checkbox-{{ line.pk }}"
+               class="custom-control-input selectLineCheckboxes">
+        <label for="checkbox-{{ line.pk }}" class="custom-control-label"></label>
+        </div>
+    </td>
+    {% endif %}
+    <td>{{ line.pk }}</td>
+    <td>
+        <a href="{% url 'edit_line' line.pk %}" class="editLineButtons">
+            {{ line.name }}
+        </a>
+    </td>
+    <td>{{ line.shortname }}</td>
+    <td>{{ line.comment }}</td>
+</tr>
+{% empty %}
+    <div class="alert alert-danger">
+    There is currently no manufacturing lines. Click on the "Add Manufacturing
+    Line" button to create a new one.
+    </div>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block scriptend %}
+<script src="{% static 'meals/common.js' %}"></script>
+<script src="https://craig.global.ssl.fastly.net/js/mousetrap/mousetrap.min.js"></script>
+<script src="{% static 'meals/manufacturing/line.js' %}"></script>
+{% endblock %}

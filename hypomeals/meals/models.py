@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.utils.text import Truncator
 
 from meals import utils
-from meals.constants import ADMINS_GROUP
+from meals.constants import ADMINS_GROUP, MIX_UNIT_EXP_REGEX, UNIT_ACCEPTED_FORMS
 from meals.validators import validate_alphanumeric, validate_netid
 
 logger = logging.getLogger(__name__)
@@ -117,6 +117,46 @@ class Unit(models.Model):
 
     __str__ = __repr__
 
+    @classmethod
+    def from_exp(cls, exp):
+        """
+        Parses a mixed-unit expression and return the unit, as a Unit instance. If the
+        user cannot be found, a RuntimeError is raised.
+        :param exp: a mixed-unit expression
+        :return: a pair of (number, unit) where number is the number part, converted to
+            a Python float, and unit is an instance of this class corresponding to the
+            unit part.
+        """
+        match = MIX_UNIT_EXP_REGEX.fullmatch(exp)
+        if not match:
+            raise RuntimeError(f"Invalid mixed-unit expression: '{exp}'")
+        if not match.group(1):
+            raise RuntimeError(
+                f"Invalid mixed-unit expression '{exp}': missing number part"
+            )
+        if not match.group(2):
+            raise RuntimeError(
+                f"Invalid mixed-unit expression '{exp}': missing units part"
+            )
+        number_part = float(match.group(1))
+        unit_part = (
+            match.group(2)
+            .strip()
+            .replace(".", "")
+            .replace(" ", "")
+            .casefold()
+            .rstrip("s")
+        )
+        for symbol, accepted_forms in UNIT_ACCEPTED_FORMS.items():
+            if unit_part in accepted_forms:
+                return number_part, cls.objects.get(symbol=symbol)
+
+        accepted_units = cls.objects.values_list("symbol", flat=True)
+        raise RuntimeError(
+            f"Unrecognized unit '{unit_part}'. "
+            f"Accepted units are {', '.join(accepted_units)}."
+        )
+
 
 class Ingredient(
     models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutionMixin
@@ -198,7 +238,7 @@ class Ingredient(
 class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutionMixin):
     compare_excluded_fields = ("number",)
 
-    NAME_REGEX = re.compile(r"(?P<name>.+):\s*(?P<size>.+)\s*\*\s*(?P<count>\d+)")
+    NAME_REGEX = re.compile(r"(?P<name>.+):\s*(?P<size>.+)\s*\*\s*(?P<count>\d+)\s*\(#(?P<id>\d+)\)")  # noqa
 
     name = models.CharField(max_length=32, verbose_name="Name", blank=False)
 
@@ -288,7 +328,7 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
 
     @property
     def verbose_name(self):
-        return f"{self.name}: {self.unit_size} * {self.count}"
+        return f"{self.name}: {self.unit_size} * {self.count} (#{self.number})"
 
     def __repr__(self):
         return f"<SKU #{self.number}: {self.name}>"
@@ -342,6 +382,13 @@ class Formula(
     def __str__(self):
         return self.name
 
+    @classmethod
+    def get_sortable_fields(cls):
+        return [
+            ("number", "Number"),
+            ("name", "Name"),
+        ]
+
     def save(self, *args, **kwargs):
         if not self.number:
             self.number = utils.next_id(Formula)
@@ -368,6 +415,7 @@ class FormulaIngredient(
         related_query_name="formula",
     )
     quantity = models.DecimalField(blank=False, max_digits=12, decimal_places=6)
+    unit = models.ForeignKey(Unit, on_delete=models.PROTECT, related_name="+")
 
     def __repr__(self):
         return (
@@ -478,7 +526,7 @@ class Goal(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutio
             ("-save_time", "Last Modified Time"),
             ("name", "Name"),
             ("user__first_name", "Creator Name"),
-            ("deadline", "Deadline")
+            ("deadline", "Deadline"),
         ]
 
     class Meta:

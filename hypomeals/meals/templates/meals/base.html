@@ -14,6 +14,7 @@
     <!--FontAwesome CSS -->
     <link href="https://use.fontawesome.com/releases/v5.0.6/css/all.css" rel="stylesheet">
     <link href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" rel="stylesheet">
+    <link rel="shortcut icon" type="image/png" href="{% static 'meals/favicon.ico' %}"/>
     <title>{% block title %}{% endblock %}</title>
     {% block head %}
     {% endblock %}
@@ -58,11 +59,18 @@
             <li class="nav-item {% block ingredient_active %}{% endblock %}">
                 <a class="nav-link" href="{% url 'ingredient' %}">Ingredients</a>
             </li>
+            <li class="nav-item {% block product_line_active %}{% endblock %}">
+                <a class="nav-link" href="{% url 'product_line' %}">Product Lines</a>
+            </li>
+            <li class="nav-item {% block formula_active %}{% endblock %}">
+                <a class="nav-link" href="{% url 'formula' %}">Formulas</a>
+            </li>
             <li class="nav-item dropdown {% block manufacturing_active %}{% endblock %}">
               <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">
                 Manufacturing
               </a>
               <div class="dropdown-menu">
+                <a class="dropdown-item" href="{% url 'lines' %}">Lines</a>
                 <a class="dropdown-item" href="{% url 'goals' %}">Goals</a>
                 <a class="dropdown-item" href="{% url 'schedule' %}">Schedule</a>
               </div>
