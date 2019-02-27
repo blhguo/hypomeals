@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 @login_required
-@permission_required("meals.add_formula", raise_exception=True)
+@auth.user_is_admin_ajax(msg="Only an administrator may add a new formula.")
 def add_formula(request):
     in_flow = False
     if request.method == "POST":
@@ -105,7 +105,7 @@ def formula(request):
 
 
 @login_required
-@permission_required("meals.view_formulaingredient", raise_exception=True)
+@auth.user_is_admin_ajax(msg="Only an administrator may edit a new formula.")
 def edit_formula(request, formula_number):
     formula = get_object_or_404(Formula, pk=formula_number)
     in_flow = request.GET.get("in_flow", "0") == "1"
@@ -177,7 +177,7 @@ def view_formula(request, formula_number):
 
 @login_required
 @require_POST
-@auth.permission_required_ajax(perm="meals.delete_formula")
+@auth.user_is_admin_ajax(msg="Only an administrator may add a new formula.")
 def remove_formulas(request):
     to_remove = jsonpickle.loads(request.POST.get("to_remove", "[]"))
     try:

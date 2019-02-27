@@ -8,6 +8,7 @@ from django.shortcuts import render, redirect
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
+from meals import auth
 from meals.bulk_import import (
     has_ongoing_transaction,
     get_transaction,
@@ -66,7 +67,7 @@ def _render_collision(collision):
 
 
 @login_required
-@permission_required(IMPORT_PERMISSIONS, raise_exception=True)
+@auth.user_is_admin_ajax(msg="Only administrators may perform bulk import.")
 def import_page(request):
 
     if request.method == "POST":
