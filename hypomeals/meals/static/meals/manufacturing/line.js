@@ -3,6 +3,7 @@ $(function() {
     function refreshPage() {
         window.location.href = pageUrl;
     }
+    $("[data-toggle='tooltip']").tooltip();
 
     Mousetrap.bind(["command+a", "ctrl+a"], function(ev) {
         ev.preventDefault();
@@ -94,4 +95,85 @@ $(function() {
         });
         return false;
     }
+
+    /****************** Reporting ***********************/
+    let html = `\
+<div class="row mb-3">
+<div class="col-sm">
+<div class="alert alert-success">
+    <h4>Generate Schedule Report</h4>
+    <p>
+    A schedule report lists the SKUs, formulas and ingredients for manufacturing
+    activities on this manufacturing line.
+    </p>
+    <p class="mb-0">
+    Simply enter a start and end date below to get started.
+    </p>
+</div>
+</div>
+</div>
+
+<div class="form-row mt-3">
+<div class="input-group">
+    <div class="input-group-prepend">
+        <label class="input-group-text" for="startDate">
+            From
+        </label>
+    </div>
+    <input type="date" id="startDate" class="form-control">
+</div>
+<small>If empty, will be the start time of the earliest scheduled item on this line.</small>
+</div>
+
+<div class="form-row mt-3">
+<div class="input-group">
+    <div class="input-group-prepend">
+        <label class="input-group-text" for="startDate">
+            To
+        </label>
+    </div>
+    <input type="date" id="endDate" class="form-control">
+</div>
+<small>If empty, will be the end time of last scheduled item on this line.</small>
+</div>
+</div>
+</div>`;
+
+    $(".scheduleReportButtons").click(function(ev) {
+        ev.preventDefault();
+        let line = $(this).attr("data-line-shortname");
+        let reportUrl = $(this).attr("href");
+        let modalContent = $(html);
+        let mlSelect = modalContent.find("#mlSelect");
+
+        let modal = makeModalAlert(`Generate Schedule Report for '${line}'`,
+            modalContent, generateReport);
+        modal.find(".modal-dialog").addClass("modal-lg");
+        modal.find("input[type=date]").change(function() {
+            let value = $(this).val();
+            if (value.length === 0) {
+                $(this).removeClass("is-invalid").removeClass("is-valid");
+                return;
+            }
+            if (moment(value).isValid()) {
+                $(this).removeClass("is-invalid").addClass("is-valid");
+            } else {
+                $(this).removeClass("is-valid").addClass("is-invalid");
+            }
+        });
+
+        function generateReport() {
+            let url = new URL(window.location.href);
+            url.pathname = reportUrl;
+            let start = moment(modal.find("input#startDate").val());
+            let end = moment(modal.find("input#endDate").val());
+            options = {
+                l: line,
+                s: start.isValid() ? start.format("YYYY-MM-DD") : "",
+                e: end.isValid() ? end.format("YYYY-MM-DD") : ""
+            };
+            url.search = $.param(options);
+            window.location.href = url;
+        }
+    });
 });

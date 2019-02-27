@@ -12,7 +12,22 @@
 <div class="col-sm">
 <div class="alert alert-success">
     <h3>Manufacturing Schedule Report</h3>
-    <p class="mb-0">Report generated at {{ time|date:'l, F n, Y H:i:s' }}
+    <p class="mb-0">
+        Manufacturing report for Line '{{ line.shortname }}'
+        {% if start %}
+        {% if end %}
+        from {{ start|date:'F n, Y' }} to {{ end|date:'F n, Y' }}.
+        {% else %}
+        from {{ start|date:'F n, Y' }}.
+        {% endif %}
+        {% else %}
+        {% if end %}
+        up to {{ end|date:'F n, Y' }}.
+        {% else %}
+        for all times.
+        {% endif %}
+        {% endif %}
+    Report generated at {{ time|date:'l, F n, Y H:i:s' }}
         by {{ request.user.get_full_name }}</p>
 </div>
 </div>
@@ -134,7 +149,7 @@
 <div class="row my-3 d-print-none">
 <div class="col-sm">
 <div class="btn-group">
-    <a href="{% url 'goals' %}" class="btn btn-secondary">Back</a>
+    <a href="{% url 'lines' %}" class="btn btn-secondary">Back</a>
 </div>
 </div>
 </div>

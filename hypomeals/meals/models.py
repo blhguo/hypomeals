@@ -589,6 +589,10 @@ class GoalItem(
     def scheduled(self):
         return hasattr(self, "schedule")
 
+    @property
+    def orphaned(self):
+        return not self.goal.is_enabled
+
     __str__ = __repr__
 
     class Meta:
@@ -615,7 +619,7 @@ class GoalSchedule(
     end_time = models.DateTimeField(verbose_name="End time", blank=True, null=True)
 
     def clean(self):
-        if self.line:
+        if hasattr(self, "line") and self.line:
             if not SkuManufacturingLine.objects.filter(
                 sku=self.goal_item.sku, line=self.line
             ).exists():

@@ -34,7 +34,8 @@ ul.errorlist {
     </p>
     <p>
         You may only schedule each item once. Hover over the item to view the
-        manufacturing lines they may be produced on.
+        manufacturing lines they may be produced on. Once you start dragging,
+        compatible manufacturing lines will become highlighted.
     </p>
     <p class="mb-0">
         <b>Timeline controls:</b> You may zoom with a scroll wheel, or click on
@@ -82,8 +83,15 @@ ul.errorlist {
 {% endif %}
 
 <div class="row my-3">
-<div class="col-sm-12 d-flex justify-content-end">
-<div class="btn-toolbar" role="toolbar">
+<div class="col-sm-12">
+<div class="btn-toolbar d-flex justify-content-end align-items-baseline" role="toolbar">
+<div class="custom-control custom-checkbox mr-2">
+    <input type="checkbox" class="custom-control-input" id="suppressWarningCheckbox">
+    <label class="custom-control-label"
+           for="suppressWarningCheckbox">
+        Suppress all warnings
+    </label>
+</div>
 <div class="input-group date mr-2">
         <div class="input-group-prepend">
             <label class="input-group-text" for="dateInput">
@@ -92,7 +100,7 @@ ul.errorlist {
         </div>
         <input type="date" class="form-control" id="dateInput">
     </div>
-<div class="btn-group mr-2">
+<div class="btn-group">
     <button class="btn btn-success" id="showHelpButton">
         <span class="fas fa-question-circle"></span> Help
     </button>
@@ -107,18 +115,18 @@ ul.errorlist {
         <a href="#" class="dropdown-item" id="fitAllButton">Visible</a>
     </div>
 </div>
+</div>
+</div>
+</div>
 
-<div class="btn-group">
-    <button class="btn btn-info"
-            data-toggle="tooltip"
-            data-placement="bottom"
-            title="Generate report for a particular manufacturing line."
-            data-href="{% url 'schedule_report' %}"
-            id="reportButton">
-        <span class="fas fa-file"></span> Report
-    </button>
-</div>
-</div>
+<div class="row mt-3" id="warningDiv" style="display: none;">
+<div class="col-sm">
+    <div class="alert alert-warning">
+        <h4>Warning</h4>
+        <ul class="mb-0" id="warningUl">
+
+        </ul>
+    </div>
 </div>
 </div>
 
@@ -169,7 +177,7 @@ ul.errorlist {
        {% endif %}
        data-goal-item-id="{{ item.id }}"
        data-sku-id="{{ item.sku.pk }}">
-        {{ item.sku }} (SKU #{{ item.sku.pk }})
+        {{ item.sku }}
         <span class="badge badge-pill badge-info">{{ item.quantity|quantize:2 }}</span>
     </a>
     {% endwith %}
@@ -189,7 +197,7 @@ ul.errorlist {
 <div class="col-sm-12">
 <div class="formsetDiv">
 <form method="post" action="{% url 'schedule' %}">
-<div style="">
+<div style="display: none;">
     {% csrf_token %}
     {{ formset.management_form }}
     {% for form in formset %}
@@ -220,12 +228,26 @@ ul.errorlist {
 
 <div class="btn-group">
     <button class="btn btn-success" id="submitButton">Apply Changes</button>
-    <button class="btn btn-secondary" id="cancelButton">Cancel</button>
+    <a class="btn btn-secondary" href="{% url 'goals' %}">Back to Goals</a>
 </div>
 </div>
 </div>
 </div>
 
+<div style="display: none;">
+<table class="table mt-3" id="confirmationTable">
+<thead class="thead-light">
+    <tr>
+        <th>Item</th>
+        <th>Line</th>
+        <th>Start Time</th>
+        <th>Estimated Completion</th>
+    </tr>
+</thead>
+<tbody>
+</tbody>
+</table>
+</div>
 
 </div>
 </div>

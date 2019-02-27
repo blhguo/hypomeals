@@ -885,6 +885,7 @@ class FormulaForm(forms.Form, utils.BootstrapFormControlMixin):
 
 
 class FormulaFormsetBase(forms.BaseFormSet):
+
     def clean(self):
         if any(self.errors):
             return
@@ -1071,9 +1072,24 @@ class GoalScheduleForm(forms.ModelForm):
         logger.info("Found line %s for goal item %d", qs[0].pk, self.item.pk)
         return qs[0]
 
+    def should_delete(self):
+        return any(
+            [
+                "start_time" not in self.cleaned_data,
+                not self.cleaned_data["start_time"],
+                "line" not in self.cleaned_data,
+                not self.cleaned_data["line"],
+                "end_time" not in self.cleaned_data,
+                not self.cleaned_data["end_time"],
+            ]
+        )
+
     def clean(self):
-        if "line" in self.cleaned_data:
-            if not self.cleaned_data["start_time"]:
+        if "line" in self.cleaned_data and self.cleaned_data["line"]:
+            if (
+                "start_time" not in self.cleaned_data
+                or not self.cleaned_data["start_time"]
+            ):
                 raise ValidationError(
                     "Form tampering detected: Goal Item %(item)d has manufacturing "
                     "line but not start time.",
@@ -1119,7 +1135,8 @@ class GoalScheduleFormsetBase(forms.BaseFormSet):
     def _check_overlap(self):
         lines = defaultdict(list)
         for form in self.forms:
-            if form.cleaned_data:
+            if form.is_valid() and form.cleaned_data and form.cleaned_data["line"]:
+                logger.info(form.cleaned_data)
                 lines[form.cleaned_data["line"].shortname].append(form)
 
         for line, _forms in lines.items():  # "forms" is in outer scope
@@ -1143,9 +1160,8 @@ class GoalScheduleFormsetBase(forms.BaseFormSet):
                     )
 
     def clean(self):
-        super_cleaned = super().clean()
+        super().clean()
         self._check_overlap()
-        return super_cleaned
 
 
 GoalScheduleFormset = formset_factory(

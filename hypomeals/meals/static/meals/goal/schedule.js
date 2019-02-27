@@ -9,9 +9,13 @@ let timeline = null;
 let items = new vis.DataSet([]);
 let groups = new vis.DataSet([]);
 let goalItemsMap = new Map();
+let warnings = new vis.DataSet([]);
 
 $(function() {
     $("[data-toggle='tooltip']").tooltip();
+    let warningUl = $("#warningUl");
+    let warningDiv = $("#warningDiv");
+    let suppressWarningCheckbox = $("#suppressWarningCheckbox");
     $("#showHelpButton").click(function() {
         $("#helpDiv").toggle("fast");
     });
@@ -22,13 +26,9 @@ $(function() {
         let src = $(this);
         let goalItemId = Number(src.attr("data-goal-item-id"));
         let itemInfo = goalItemsMap.get(goalItemId);
-        let item = {
-            id: goalItemId,
-            content: itemInfo.name,
-            type: "range"
-        };
         event.originalEvent.dataTransfer.effectAllowed = "move";
-        event.originalEvent.dataTransfer.setData("text", JSON.stringify(item));
+        event.originalEvent.dataTransfer.setData("text",
+            JSON.stringify(itemInfo));
         highlightGroups(itemInfo.lines, true);
     }).on("click", function() {
         let goalItemId = Number($(this).attr("data-goal-item-id"));
@@ -38,6 +38,66 @@ $(function() {
     });
     $(document).on("dragend", function() {
         highlightGroups("*", false);
+    });
+
+    /**************** Timeline event listeners ***************/
+    items.on("update", function(event, properties, senderId) {
+        if (senderId === IGNORE_SENDER_ID) return;
+        let item = properties.data[0];
+        let oldItem = properties.oldData[0];
+        let itemInfo = goalItemsMap.get(item.id);
+        if (!itemInfo.lines.includes(item.group)) {
+            makeModalAlert("Cannot Schedule",
+                `Manufacturing Line '${item.group}' cannot produce SKU #${itemInfo.skuId}.
+                Operation will be reverted.`);
+            items.update(properties.oldData[0]);
+            return;
+        }
+        if ("start" in item) {
+            try {
+                adjustEnd(item, item.start, true);
+            } catch (e) {
+                if (e.message !== "overlap") throw e;
+                makeModalAlert("Error",
+                    `Production overlaps on Manufacturing Line '${item.group}'.
+                    This operation will be reverted.`,
+                    null,
+                    function() {
+                        items.update(oldItem, IGNORE_SENDER_ID);
+                    });
+            }
+        }
+        generateWarnings();
+    });
+    items.on("add", function(event, properties, senderId) {
+        let item = items.get(properties.items[0]);
+        let itemInfo = goalItemsMap.get(item.id);
+        if (!itemInfo.lines.includes(item.group)) {
+            makeModalAlert("Cannot Schedule",
+                `Manufacturing Line '${item.group}'\
+                 cannot produce SKU #${itemInfo.skuId}.
+                This item has been removed.`);
+            items.remove({id: item.id});
+            return false;
+        }
+        toggleGoalItem(item.id, true);
+        if ("start" in item) {
+            try {
+                adjustEnd(item, item.start, !item.suppressWarning);
+            } catch (e) {
+                makeModalAlert("Error",
+                    `Production overlaps on Manufacturing Line '${item.group}'.
+                    This item will be removed.`,
+                    null,
+                    function () {items.remove({id: item.id});});
+            }
+        }
+        generateWarnings();
+    });
+    items.on("remove", function(event, properties, senderId) {
+        let itemInfo = goalItemsMap.get(properties.items[0]);
+        toggleGoalItem(properties.items[0], itemInfo.isOrphaned);
+        // generateWarnings();
     });
 
     /****************** Sync with Form **********************/
@@ -65,7 +125,14 @@ $(function() {
 
         if (itemInfo.isOrphaned) {
             itemInfo.className = "bg-warning text-dark";
-            itemInfo.title = "Orphaned item. Consider removing."
+            itemInfo.title = "Orphaned item. Consider removing.";
+            itemInfo.editable = {
+                add: false,
+                updateTime: false,
+                updateGroup: false,
+                remove: true,
+                overrideItems: false,
+            };
         }
 
         let line = div.find("select option:selected").val();
@@ -88,33 +155,58 @@ $(function() {
                 endTime = getCompletionTime(startTime, itemInfo.hours);
                 itemInfo.end = endTime;
             }
+            goalItemsMap.set(id, itemInfo);
             items.add(itemInfo);
         }
         goalItemsMap.set(id, itemInfo);
     });
+    generateWarnings();
 
     $("#submitButton").click(function(e) {
+        let scheduled = [];
         for (let itemId of goalItemsMap.keys()) {
             let formDiv = form.find(`div[data-goal-item-id=${itemId}]`);
             let select = formDiv.find("select");
             let startTime = formDiv.find("input[name*=start_time]");
+            let endTime = formDiv.find("input[name*=end_time]");
             let scheduledItem = items.get(itemId);
             if (scheduledItem !== null) {
                 select.find(`option[value=${scheduledItem.group}]`).prop("selected", true);
                 startTime.val(moment(scheduledItem.start).toISOString());
+                endTime.val(moment(scheduledItem.end).toISOString());
+                scheduled.push(scheduledItem);
             } else {
                 select.find("option:eq(0)").prop("selected", true);
                 startTime.val("");
+                endTime.val("");
             }
         }
-        form.submit();
+
+        let html = null;
+        if (scheduled.length > 0) {
+            html = $(`<p>You have scheduled the following items:</p>`);
+            let table = $("#confirmationTable");
+            for (let item of scheduled) {
+                table.find("tbody").append($("<tr>").append([
+                    $("<td>").text(item.content),
+                    $("<td>").text(item.group),
+                    $("<td>").text(moment(item.start).format("lll")),
+                    $("<td>").text(moment(item.end).format("lll")),
+                ]));
+            }
+            html.append(table);
+        } else {
+            html = $("<p>No items were scheduled.</p>");
+        }
+        html.append($(`<p class='mb-3'>Items not listed here will 
+<b>all be unscheduled.</b> Do you want to save this schedule?</p>`));
+        makeModalAlert("Confirm", html, function() {
+            form.submit();
+        }).find(".modal-dialog")
+            .addClass("modal-lg");
     });
 
     /***************** Timeline *******************/
-
-    console.log(goalItemsMap);
-    console.log(mfgLines);
-
     groups = new vis.DataSet([]);
     mfgLines.forEach((l) => {
         groups.add({
@@ -122,78 +214,6 @@ $(function() {
             content: l,
             visible: true,
         })
-    });
-    groups.add({
-        id: "DT3",
-        content: "DT3",
-        visible: true,
-    });
-
-    console.log(groups);
-
-    items.on("update", function(event, properties, senderId) {
-        if (senderId === IGNORE_SENDER_ID) return;
-        let item = properties.data[0];
-        let oldItem = properties.oldData[0];
-        let itemInfo = goalItemsMap.get(item.id);
-        if (!itemInfo.lines.includes(item.group)) {
-            makeModalAlert("Cannot Schedule",
-                `Manufacturing Line '${item.group}' cannot produce SKU #${itemInfo.skuId}.
-                Operation will be reverted.`);
-            items.update(properties.oldData[0]);
-            return;
-        }
-        if ("start" in item) {
-            if ((moment(item.end) - moment(item.start)) ===
-                (moment(oldItem.end) - moment(oldItem.start))) {
-                // If the user dragged the whole range in time
-                // we should recompute end time, taking into considertion the
-                // current start time.
-                try {
-                    adjustEnd(item, item.start, true);
-                } catch (e) {
-                    makeModalAlert("Error",
-                        `Production overlaps on Manufacturing Line '${item.group}'.
-                        Operation will be reverted.`,
-                        null,
-                        function () {
-                            items.update(oldItem, IGNORE_SENDER_ID);
-                        });
-                }
-            } else {
-                // Otherwise the user has forcefully changed duration of the item
-                console.log(`User force-updated item #${item.id}`);
-                itemInfo.isForced = true;
-                item.className = "bg-info text-white";
-                items.update(item, IGNORE_SENDER_ID);
-            }
-        }
-    });
-    items.on("add", function(event, properties, senderId) {
-        let item = items.get(properties.items[0]);
-        let itemInfo = goalItemsMap.get(item.id);
-        if (!itemInfo.lines.includes(item.group)) {
-            makeModalAlert("Cannot Schedule",
-                `Manufacturing Line '${item.group}' cannot produce SKU #${itemInfo.skuId}.
-                This item has been removed.`);
-            items.remove({id: item.id});
-            return false;
-        }
-        toggleGoalItem(item.id, true);
-        if ("start" in item) {
-            try {
-                adjustEnd(item, item.start, !item.suppressWarning);
-            } catch (e) {
-                makeModalAlert("Error",
-                    `Production overlaps on Manufacturing Line '${item.group}'.
-                    This item will be removed.`,
-                    null,
-                    function () {items.remove({id: item.id});});
-            }
-        }
-    });
-    items.on("remove", function(event, properties, senderId) {
-        toggleGoalItem(properties.items[0], false);
     });
 
     function highlightGroups(groupIds, highlighted) {
@@ -227,19 +247,17 @@ $(function() {
 
     function adjustEnd(item, start, showWarning) {
         let itemId = item.id;
+        let globalSuppress = suppressWarningCheckbox.prop("checked");
         start = moment(start);
         let itemInfo = goalItemsMap.get(itemId);
         let updates = {id: itemId};
-        if (!itemInfo.isForced) {
-            updates["end"] = getCompletionTime(start, itemInfo.hours);
-            updates["type"] = "range";
-        }
-        if (end > itemInfo.deadline) {
-            console.log(`Item ${itemId} will exceed deadline`);
+        updates["end"] = getCompletionTime(start, itemInfo.hours);
+        updates["type"] = "range";
+        if (updates.end > itemInfo.deadline) {
             updates["className"] = "bg-danger text-white";
             updates["title"] = `Start: ${start.format("lll")}.
         Warning: item exceeds deadline ${itemInfo.deadline.format("lll")}`;
-            if (showWarning) {
+            if (showWarning && !globalSuppress) {
                 makeModalAlert("Warning",
                     `Scheduling this item to start at \
             ${start.format("lll")} will exceed predetermined \
@@ -247,13 +265,12 @@ $(function() {
             Consider moving this item earlier.`);
             }
         } else {
-            updates["className"] = itemInfo.isForced ? "bg-info text-white" :
-                (itemInfo.isOrphaned ? "bg-warning text-dark" : "");
+            updates["className"] = itemInfo.isOrphaned ? "bg-warning text-dark" : "";
             updates["title"] = `Start: ${start.format("lll")}`;
         }
         items.update(updates, IGNORE_SENDER_ID);
         if (checkOverlap(item)) {
-            throw "Overlap detected!";
+            throw Error("overlap");
         }
     }
 
@@ -282,8 +299,32 @@ $(function() {
             endTime.startOf("day").hours(WORK_HOURS_END).add(remainingHours, "hours");
         }
 
-        console.log("start: ", startTime.format(), "end: ", endTime.format());
         return endTime;
+    }
+
+    function generateWarnings() {
+        if (timeline === null) return;  // Timeline is not initialized yet.
+        let visibleItems = timeline.getVisibleItems();
+        let suppressWarning = $("#suppressWarningCheckbox").prop("checked");
+        let warnings = [];
+        for (let itemId of visibleItems) {
+            let item = items.get(itemId);
+            let itemInfo = goalItemsMap.get(itemId);
+            if (itemInfo.isOrphaned) {
+                warnings.push(`Item '${itemInfo.content}' is orphaned. \
+                    consider removing the item.`);
+                continue;  // other warnings are suppressed for orphaned items.
+            }
+            if (moment(item.end) > itemInfo.deadline) {
+                warnings.push(`Item '${itemInfo.content}' exceeds \
+                    deadline of ${itemInfo.deadline.format("lll")}`);
+            }
+        }
+        warningDiv.toggle(warnings.length > 0 && !suppressWarning);
+        warningUl.find("li").remove();
+        warnings.forEach(function(warning) {
+            $("<li>", {text: warning}).appendTo(warningUl);
+        });
     }
 
     timeline = new vis.Timeline($("#timelineDiv")[0], items, groups, {
@@ -309,6 +350,8 @@ $(function() {
             }
         },
     });
+
+    timeline.on("rangechanged", generateWarnings);
 
     $(".vis-timeline").css("visibility", "visible");
 
@@ -336,107 +379,5 @@ $(function() {
         }
         timeline.setWindow(center.clone().startOf("week"),
             center.clone().endOf("week"));
-    });
-
-    /****************** Reporting ***********************/
-    let html = `\
-<div class="row mb-3">
-<div class="col-sm">
-<div class="alert alert-success">
-    <h3>Generate Schedule Report</h3>
-    <p class="mb-0">
-    As an administrator you may generate a schedule report for a particular
-    manufacturing line over a specific timespan. Select a manufacturing line
-    below, and enter the start and end dates. <b>Note</b> that your current
-    schedule will be saved before the report is generated.
-    </p>
-</div>
-</div>
-</div>
-<div class="row">
-<div class="col-sm">
-<div class="input-group">
-    <div class="input-group-prepend">
-        <label class="input-group-text" for="mlSelect">Manufacturing Line</label>
-    </div>
-    <select class="custom-select" id="mlSelect">
-    </select>
-</div>
-<small>Only manufacturing lines with at least one item is shown.</small>
-
-<div class="form-row mt-3">
-<div class="input-group col-sm-6">
-    <div class="input-group-prepend">
-        <label class="input-group-text" for="startDate">
-            From
-        </label>
-    </div>
-    <input type="date" id="startDate" class="form-control">
-    <small>If empty, will be the start time of the earliest scheduled item.</small>
-</div>
-
-<div class="input-group col-sm-6">
-    <div class="input-group-prepend">
-        <label class="input-group-text" for="startDate">
-            To
-        </label>
-    </div>
-    <input type="date" id="startDate" class="form-control">
-    <small>If empty, will be the end time of last scheduled item.</small>
-</div>
-</div>
-</div>
-</div>`;
-
-    $("#reportButton").click(function(ev) {
-        ev.preventDefault();
-        let url = $("form").attr("action");
-        let groupMap = new Map();
-        for (let group of groups.get({"fields": ["id"]}).map((g) => g.id)) {
-            let groupItems = items.get({
-                "filter": (item) => item.group === group
-            });
-            if (groupItems.length > 0) {
-                groupMap.set(group, groupItems);
-            }
-        }
-        if (groupMap.size === 0) {
-            makeModalAlert("Error",
-                "Cannot generate report: no item was scheduled.");
-            return;
-        }
-        let modalContent = $(html);
-        let mlSelect = modalContent.find("#mlSelect");
-        for (let group of groupMap.keys()) {
-            mlSelect.append($("<option>", {value: group, text: group}));
-        }
-        let modal = makeModalAlert("Generate Report", modalContent, generateReport);
-        modal.find(".modal-dialog").addClass("modal-lg");
-        modal.find("input[type=date]").change(function() {
-            let value = $(this).val();
-            if (value.length === 0) {
-                $(this).removeClass("is-invalid").removeClass("is-valid");
-                return;
-            }
-            if (moment(value).isValid()) {
-                $(this).removeClass("is-invalid").addClass("is-valid");
-            } else {
-                $(this).removeClass("is-valid").addClass("is-invalid");
-            }
-        });
-
-        function generateReport() {
-            url = new URL(window.location.href, url);
-            let start = moment(modal.find("input[name*=startDate]"));
-            let end = moment(modal.find("input[name*=endDate]"));
-            options = {
-                report: "1",
-                l: mlSelect.find("option:selected").val(),
-                s: start.isValid() ? start.format() : "",
-                e: end.isValid() ? end.format() : ""
-            };
-            url.search = $.param(options);
-            $("form").attr("action", url.href).submit();
-        }
     });
 });

@@ -1,5 +1,6 @@
+#pylint: disable-msg=unexpected-keyword-arg
+
 import csv
-import itertools
 import json
 import logging
 import operator
@@ -310,16 +311,11 @@ def disable_goals(request):
 @login_required
 @auth.user_is_admin_ajax(msg="Only administrators may create a manufacturing schedule.")
 def schedule(request):
-    goal_objs = Goal.objects.filter(is_enabled=True)
-    if goal_objs.count() == 0:
-        messages.error(
-            request,
-            "No goal was enabled. You must enable at least one goal"
-            "before creating a manufacturing schedule.",
-        )
-        return redirect("error")
-    goal_items = list(
-        itertools.chain.from_iterable(goal.details.all() for goal in goal_objs)
+    goal_items = GoalItem.objects.filter(
+        Q(schedule__isnull=False) | Q(goal__is_enabled=True)
+    )
+    goal_objs = Goal.objects.filter(
+        pk__in=set(goal_items.values_list("goal", flat=True).distinct())
     )
     if request.method == "POST":
         formset = GoalScheduleFormset(request.POST, goal_items=goal_items)
@@ -328,7 +324,7 @@ def schedule(request):
                 instances = []
                 deleted = 0
                 for form in formset:
-                    if form.cleaned_data:
+                    if not form.should_delete():
                         instances.append(form.save(commit=True))
                     else:
                         # Unschedule this goal item
@@ -342,13 +338,6 @@ def schedule(request):
             )
             messages.info(request, msg)
             logger.info(msg)
-            if request.GET.get("report", "0") == "1":
-                return redirect(
-                    "schedule_report",
-                    request.GET.get("l", ""),
-                    request.GET.get("s", ""),
-                    request.GET.get("e", ""),
-                )
             return redirect("schedule")
     else:
         formset = GoalScheduleFormset(goal_items=goal_items)
@@ -361,9 +350,13 @@ def schedule(request):
 
 
 @login_required
-def schedule_report(request, line_shortname, start, end):
+def schedule_report(request):
+    line_shortname = request.GET.get("l", "")
+    start = request.GET.get("s", "")
+    end = request.GET.get("e", "")
+    logger.info("Line: %s, start: %s, end: %s", line_shortname, start, end)
     qs = ManufacturingLine.objects.filter(shortname__iexact=line_shortname)
-    if not line_shortname or not qs.exists():
+    if not qs.exists():
         messages.error(request, f"Invalid manufacturing line name: '{line_shortname}'")
         return redirect("error")
 
@@ -374,9 +367,9 @@ def schedule_report(request, line_shortname, start, end):
             query &= Q(start_time__gte=start)
         if end:
             end = timezone.make_aware(datetime.strptime(end, "%Y-%m-%d"))
-            query &= (Q(end_time__lte=end) | Q(end_time__isnull=True))
+            query &= Q(end_time__lte=end) | Q(end_time__isnull=True)
     except ValueError as e:
-        messages.error(request, f"Invalid date: {e:s}")
+        messages.error(request, f"Invalid date: {str(e)}")
         return redirect("error")
     schedules = GoalSchedule.objects.filter(query)
     if schedules.count() == 0:
@@ -398,6 +391,9 @@ def schedule_report(request, line_shortname, start, end):
         template_name="meals/goal/schedule_report.html",
         context={
             "time": timezone.now(),
+            "line": qs[0],
+            "start": start,
+            "end": end,
             "activities": schedules,
             "formulas": ingredients,
             "ingredients": result.items(),

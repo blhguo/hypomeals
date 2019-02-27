@@ -78,6 +78,7 @@ ul.ui-autocomplete {
     <th>Name</th>
     <th>Shortname</th>
     <th>Comment</th>
+    <th>Action</th>
 </tr>
 </thead>
 
@@ -102,6 +103,13 @@ ul.ui-autocomplete {
     </td>
     <td>{{ line.shortname }}</td>
     <td>{{ line.comment }}</td>
+    <td><a href="{% url 'schedule_report' %}"
+           data-toggle="tooltip"
+           data-placement="left"
+           title="View a formatted manufacturing schedule report for this
+                manufacturing line suitable for display in the factory."
+           class="scheduleReportButtons"
+           data-line-shortname="{{ line.shortname }}">Report</a></td>
 </tr>
 {% empty %}
     <div class="alert alert-danger">
@@ -119,6 +127,7 @@ ul.ui-autocomplete {
 
 {% block scriptend %}
 <script src="{% static 'meals/common.js' %}"></script>
+<script src="https://momentjs.com/downloads/moment.js"></script>
 <script src="https://craig.global.ssl.fastly.net/js/mousetrap/mousetrap.min.js"></script>
 <script src="{% static 'meals/manufacturing/line.js' %}"></script>
 {% endblock %}
