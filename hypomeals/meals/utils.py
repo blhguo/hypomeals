@@ -1,4 +1,4 @@
-# pylint: disable-msg=protected-access
+# pylint: disable-msg=protected-access,cyclic-import
 
 import functools
 import logging
@@ -13,10 +13,12 @@ from functools import wraps
 
 import magic
 from django.conf import settings
+from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db.models import Max
 from django.db.models.fields.related import ForeignKey
+from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.template.defaultfilters import filesizeformat
 from django.utils import six as django_six, timezone
@@ -489,3 +491,23 @@ def compute_end_time(start_time: datetime, num_hours: float) -> datetime:
             hours=remaining_hours
         )
     return end_time
+
+
+def ajax_view(func):
+
+    @functools.wraps(func)
+    def wrapper(request, *args, **kwargs):
+        from meals.exceptions import UserFacingException  # noqa
+        if request.is_ajax():
+            try:
+                result = func(request, *args, **kwargs)
+            except UserFacingException as e:
+                return JsonResponse({"error": str(e), "resp": None})
+            else:
+                if isinstance(result, django_six.text_type):
+                    return JsonResponse({"error": None, "resp": result})
+                return JsonResponse(result)
+        else:
+            messages.error(request, "This view is not intended for browsers.")
+            return redirect("error")
+    return wrapper

@@ -14,14 +14,10 @@ urlpatterns = [
         "remove-product-lines", views.remove_product_lines, name="remove_product_lines"
     ),
     path("add-product-line", views.add_product_line, name="add_product_line"),
-    path(
-        "edit-product-line/<str:product_line_name>",
-        views.edit_product_line,
-        name="edit_product_line",
-    ),
-    path(
-        "view-pl-skus/<str:product_line_name>", views.view_pl_skus, name="view_pl_skus"
-    ),
+    path("edit-product-line/<int:pk>",
+         views.edit_product_line, name="edit_product_line"),
+    path("view-pl-skus/<int:pk>",
+         views.view_pl_skus, name="view_pl_skus"),
     # SKU views
     path("sku", views.sku, name="sku"),
     path("remove-skus", views.remove_skus, name="remove_skus"),
@@ -64,7 +60,7 @@ urlpatterns = [
     path("import/", views.import_page, name="import"),
     path("import/success/", views.import_success, name="import_success"),
     path("import/collision/", views.collision, name="collision"),
-    # Manufacturer Goal views
+    # Manufacturing goal views
     path("goal/new/", views.edit_goal, name="add_goal"),
     path("goal/<int:goal_id>", views.edit_goal, name="edit_goal"),
     path("goals/enable", views.enable_goals, name="enable_goals"),
@@ -82,7 +78,17 @@ urlpatterns = [
         name="export_calculation_csv",
     ),
     path("goals/schedule", views.schedule, name="schedule"),
+    path(
+        "goals/schedule/report/<str:line_shortname>/<slug:start>/<slug:end>",
+        views.schedule_report,
+        name="schedule_report",
+    ),
     path("filter_skus/", views.filter_skus, name="filter_skus"),
+    # Manufacturing line views
+    path("lines/", views.lines, name="lines"),
+    path("lines/edit/<int:pk>", views.edit_line, name="edit_line"),
+    path("lines/add/", views.add_line, name="add_line"),
+    path("lines/remove", views.remove_lines, name="remove_lines"),
     # Account management views
     path(
         "accounts/login/",

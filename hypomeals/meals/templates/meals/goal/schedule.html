@@ -92,7 +92,7 @@ ul.errorlist {
         </div>
         <input type="date" class="form-control" id="dateInput">
     </div>
-<div class="btn-group">
+<div class="btn-group mr-2">
     <button class="btn btn-success" id="showHelpButton">
         <span class="fas fa-question-circle"></span> Help
     </button>
@@ -106,6 +106,17 @@ ul.errorlist {
         <a href="#" class="dropdown-item" id="currentYearButton">Year</a>
         <a href="#" class="dropdown-item" id="fitAllButton">Visible</a>
     </div>
+</div>
+
+<div class="btn-group">
+    <button class="btn btn-info"
+            data-toggle="tooltip"
+            data-placement="bottom"
+            title="Generate report for a particular manufacturing line."
+            data-href="{% url 'schedule_report' %}"
+            id="reportButton">
+        <span class="fas fa-file"></span> Report
+    </button>
 </div>
 </div>
 </div>
@@ -151,18 +162,12 @@ ul.errorlist {
         no manufacturing line produces SKU #{{ item.sku.pk }}"
        disabled="disabled"
        {% else %}
-       title="Can be produced on the following manufacturing lines: {{ lines|join:', ' }}"
+       title="Compatible manufacturing lines: {{ lines|join:', ' }}"
        draggable="true"
        style="cursor: pointer"
        data-schedulable="true"
-       data-goal-deadline="{{ goal.deadline|date:"c" }}"
-       data-goal-id="{{ goal.pk }}"
-       data-goal-item-id="{{ item.pk }}"
-       data-lines="{{ lines|join:',' }}"
-       data-sku-rate="{{ item.sku.manufacturing_rate }}"
-       data-hours="{{ item.hours }}"
-       data-quantity="{{ item.quantity }}"
        {% endif %}
+       data-goal-item-id="{{ item.id }}"
        data-sku-id="{{ item.sku.pk }}">
         {{ item.sku }} (SKU #{{ item.sku.pk }})
         <span class="badge badge-pill badge-info">{{ item.quantity|quantize:2 }}</span>
@@ -183,20 +188,30 @@ ul.errorlist {
 <div class="row">
 <div class="col-sm-12">
 <div class="formsetDiv">
-<form method="post">
+<form method="post" action="{% url 'schedule' %}">
 <div style="">
     {% csrf_token %}
     {{ formset.management_form }}
     {% for form in formset %}
-    <div data-goal-item-id="{{ form.item.pk }}"
+    {% with goal=form.item.goal lines=form.item.sku.line_shortnames item=form.item %}
+    <div class="goalItems"
+         data-goal-item-id="{{ item.pk }}"
          {% if form.item.scheduled %}
          data-is-scheduled="true"
-         data-line="{{ form.item.schedule.line.shortname }}"
-         data-start-time="{{ form.item.schedule.start_time|date:'c' }}"
-         data-end-time="{{ form.item.completion_time|date:'c' }}"
          {% else %}
          data-is-scheduled="false"
-         {% endif %}>
+         {% endif %}
+         data-is-orphaned="{% if item.orphaned %}true{% else %}false{% endif %}"
+         data-sku-verbose-name="{{ item.sku.verbose_name }}"
+         data-goal-deadline="{{ goal.deadline|date:"c" }}"
+         data-goal-id="{{ goal.pk }}"
+         data-goal-item-id="{{ item.pk }}"
+         data-sku-id="{{ item.sku.number }}"
+         data-lines="{{ lines|join:',' }}"
+         data-sku-rate="{{ item.sku.manufacturing_rate }}"
+         data-hours="{{ item.hours }}"
+         data-quantity="{{ item.quantity }}">
+    {% endwith %}
     {{ form }}
     </div>
     {% endfor %}
@@ -217,7 +232,6 @@ ul.errorlist {
 
 <!-- Hidden div with template data -->
 <div style="display: none;">
-<a href="{% url 'completion_time' %}" id="completionTimeUrl"></a>
 </div>
 {% endblock %}
 

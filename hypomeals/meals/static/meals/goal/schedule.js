@@ -5,46 +5,31 @@ const WORK_HOURS_END = 18;
 const SECONDS_PER_HOUR = 3600;
 const MILLISECONDS_PER_HOUR = SECONDS_PER_HOUR * 1000;
 
-var timeline = null;
-var items = null;
-var groups = null;
-var goalItemsMap = null;
+let timeline = null;
+let items = new vis.DataSet([]);
+let groups = new vis.DataSet([]);
+let goalItemsMap = new Map();
 
 $(function() {
-    let completionTimeUrl = $("#completionTimeUrl").attr("href");
     $("[data-toggle='tooltip']").tooltip();
     $("#showHelpButton").click(function() {
         $("#helpDiv").toggle("fast");
     });
 
-    goalItemsMap = new Map();
-    let mfgLines = new Set();
-    $(".goalItems[data-schedulable=true]").each((i, item) => {
-        item = $(item);
-        let goalItemId = Number(item.attr("data-goal-item-id"));
-        let lines = item.attr("data-lines").split(",");
-        goalItemsMap.set(goalItemId, {
-            name: `${item.text().trim()}`,
-            hours: Number(item.attr("data-hours")),
-            lines: lines,
-            skuId: Number(item.attr("data-sku-id")),
-            goalId: Number(item.attr("data-goal-id")),
-            goalItemId: goalItemId,
-            deadline: moment(item.attr("data-goal-deadline")).hours(WORK_HOURS_END),
-        });
-        lines.forEach((l) => mfgLines.add(l));
-    }).on("dragstart", function(event) {
+    let mfgLines = new Set();  // Set of MLs to display groups
+    $(".goalItems[data-schedulable=true]")
+        .on("dragstart", function(event) {
         let src = $(this);
         let goalItemId = Number(src.attr("data-goal-item-id"));
-        let goalItem = goalItemsMap.get(goalItemId);
+        let itemInfo = goalItemsMap.get(goalItemId);
         let item = {
             id: goalItemId,
-            content: goalItem.name,
+            content: itemInfo.name,
             type: "range"
         };
         event.originalEvent.dataTransfer.effectAllowed = "move";
         event.originalEvent.dataTransfer.setData("text", JSON.stringify(item));
-        highlightGroups(goalItem.lines, true);
+        highlightGroups(itemInfo.lines, true);
     }).on("click", function() {
         let goalItemId = Number($(this).attr("data-goal-item-id"));
         if (items.get(goalItemId) !== null) {
@@ -54,6 +39,78 @@ $(function() {
     $(document).on("dragend", function() {
         highlightGroups("*", false);
     });
+
+    /****************** Sync with Form **********************/
+    let form = $("form");
+    form.find("div.goalItems").each(function(i, div) {
+        div = $(div);
+        let id = Number(div.attr("data-goal-item-id"));
+        let lines = div.attr("data-lines").split(",");
+        let itemInfo = {
+            id: id,
+            type: "range",
+            content: `${div.attr("data-sku-verbose-name")}\
+                (${Number(div.attr("data-quantity"))})`,
+            skuId: Number(div.attr("data-sku-id")),
+            goalId: Number(div.attr("data-goal-id")),
+            goalItemId: Number(div.attr("data-goal-item-id")),
+            deadline: moment(div.attr("data-goal-deadline")).hours(WORK_HOURS_END),
+            lines: lines,
+            isOrphaned: JSON.parse(div.attr("data-is-orphaned")),
+            rate: Number(div.attr("data-sku-rate")),
+            hours: Number(div.attr("data-hours")),
+            quantity: Number(div.attr("data-quantity")),
+            suppressWarning: true,
+        };
+
+        if (itemInfo.isOrphaned) {
+            itemInfo.className = "bg-warning text-dark";
+            itemInfo.title = "Orphaned item. Consider removing."
+        }
+
+        let line = div.find("select option:selected").val();
+        if (lines.includes(line)) {
+            itemInfo.group = line;
+        }
+        lines.forEach((l) => mfgLines.add(l));
+
+        let endTime = moment(div.find("input[name*=end_time]").val(),
+            "YYYY-MM-DD HH:mm:ss");
+        if (endTime.isValid()) {
+            itemInfo.end = endTime;
+        }
+
+        let startTime = moment(div.find("input[name*=start_time]").val(),
+            "YYYY-MM-DD HH:mm:ss");
+        if (startTime.isValid()) {
+            itemInfo.start = startTime;
+            if (!endTime.isValid()) {
+                endTime = getCompletionTime(startTime, itemInfo.hours);
+                itemInfo.end = endTime;
+            }
+            items.add(itemInfo);
+        }
+        goalItemsMap.set(id, itemInfo);
+    });
+
+    $("#submitButton").click(function(e) {
+        for (let itemId of goalItemsMap.keys()) {
+            let formDiv = form.find(`div[data-goal-item-id=${itemId}]`);
+            let select = formDiv.find("select");
+            let startTime = formDiv.find("input[name*=start_time]");
+            let scheduledItem = items.get(itemId);
+            if (scheduledItem !== null) {
+                select.find(`option[value=${scheduledItem.group}]`).prop("selected", true);
+                startTime.val(moment(scheduledItem.start).toISOString());
+            } else {
+                select.find("option:eq(0)").prop("selected", true);
+                startTime.val("");
+            }
+        }
+        form.submit();
+    });
+
+    /***************** Timeline *******************/
 
     console.log(goalItemsMap);
     console.log(mfgLines);
@@ -73,11 +130,11 @@ $(function() {
     });
 
     console.log(groups);
-    items = new vis.DataSet([]);
 
     items.on("update", function(event, properties, senderId) {
         if (senderId === IGNORE_SENDER_ID) return;
         let item = properties.data[0];
+        let oldItem = properties.oldData[0];
         let itemInfo = goalItemsMap.get(item.id);
         if (!itemInfo.lines.includes(item.group)) {
             makeModalAlert("Cannot Schedule",
@@ -87,16 +144,28 @@ $(function() {
             return;
         }
         if ("start" in item) {
-            try {
-                adjustEnd(item, item.start, true);
-            } catch (e) {
-                makeModalAlert("Error",
-                    `Production overlaps on Manufacturing Line '${item.group}'.
-                    Operation will be reverted.`,
-                    null,
-                    function() {
-                    items.update(properties.oldData[0], IGNORE_SENDER_ID);
-                });
+            if ((moment(item.end) - moment(item.start)) ===
+                (moment(oldItem.end) - moment(oldItem.start))) {
+                // If the user dragged the whole range in time
+                // we should recompute end time, taking into considertion the
+                // current start time.
+                try {
+                    adjustEnd(item, item.start, true);
+                } catch (e) {
+                    makeModalAlert("Error",
+                        `Production overlaps on Manufacturing Line '${item.group}'.
+                        Operation will be reverted.`,
+                        null,
+                        function () {
+                            items.update(oldItem, IGNORE_SENDER_ID);
+                        });
+                }
+            } else {
+                // Otherwise the user has forcefully changed duration of the item
+                console.log(`User force-updated item #${item.id}`);
+                itemInfo.isForced = true;
+                item.className = "bg-info text-white";
+                items.update(item, IGNORE_SENDER_ID);
             }
         }
     });
@@ -160,22 +229,26 @@ $(function() {
         let itemId = item.id;
         start = moment(start);
         let itemInfo = goalItemsMap.get(itemId);
-        let end = getCompletionTime(start, itemInfo.hours);
-        let updates = {id: itemId, start: start, end: end, type: "range"};
+        let updates = {id: itemId};
+        if (!itemInfo.isForced) {
+            updates["end"] = getCompletionTime(start, itemInfo.hours);
+            updates["type"] = "range";
+        }
         if (end > itemInfo.deadline) {
             console.log(`Item ${itemId} will exceed deadline`);
             updates["className"] = "bg-danger text-white";
             updates["title"] = `Start: ${start.format("lll")}.
-            Warning: item exceeds deadline ${itemInfo.deadline.format("lll")}`;
+        Warning: item exceeds deadline ${itemInfo.deadline.format("lll")}`;
             if (showWarning) {
                 makeModalAlert("Warning",
                     `Scheduling this item to start at \
-                ${start.format("lll")} will exceed predetermined \
-                deadline of ${itemInfo.deadline.format("lll")} in the goal.
-                Consider moving this item earlier.`);
+            ${start.format("lll")} will exceed predetermined \
+            deadline of ${itemInfo.deadline.format("lll")} in the goal.
+            Consider moving this item earlier.`);
             }
         } else {
-            updates["className"] = "";
+            updates["className"] = itemInfo.isForced ? "bg-info text-white" :
+                (itemInfo.isOrphaned ? "bg-warning text-dark" : "");
             updates["title"] = `Start: ${start.format("lll")}`;
         }
         items.update(updates, IGNORE_SENDER_ID);
@@ -240,41 +313,6 @@ $(function() {
     $(".vis-timeline").css("visibility", "visible");
 
 
-    /****************** Sync with Form **********************/
-    let form = $("form");
-    form.find("div[data-is-scheduled=true]").each(function(i, div) {
-        div = $(div);
-        let id = Number(div.attr("data-goal-item-id"));
-        let itemInfo = goalItemsMap.get(id);
-        items.add({
-            id: id,
-            type: "range",
-            content: itemInfo.name,
-            start: moment(div.attr("data-start-time")),
-            end: moment(div.attr("data-end-time")),
-            group: div.attr("data-line"),
-            suppressWarning: true,
-        })
-    });
-
-    $("#submitButton").click(function(e) {
-        for (let itemId of goalItemsMap.keys()) {
-            let formDiv = form.find(`div[data-goal-item-id=${itemId}]`);
-            let select = formDiv.find("select");
-            let startTime = formDiv.find("input[name*=start_time]");
-            let scheduledItem = items.get(itemId);
-            if (scheduledItem !== null) {
-                select.find(`option[value=${scheduledItem.group}]`).prop("selected", true);
-                startTime.val(moment(scheduledItem.start).toISOString());
-            } else {
-                select.find("option:eq(0)").prop("selected", true);
-                startTime.val("");
-            }
-        }
-        form.submit();
-    });
-
-
     /****************** Timeline controls *******************/
     function fitTo(unit) {
         let center = moment($("#dateInput").val());
@@ -298,5 +336,107 @@ $(function() {
         }
         timeline.setWindow(center.clone().startOf("week"),
             center.clone().endOf("week"));
+    });
+
+    /****************** Reporting ***********************/
+    let html = `\
+<div class="row mb-3">
+<div class="col-sm">
+<div class="alert alert-success">
+    <h3>Generate Schedule Report</h3>
+    <p class="mb-0">
+    As an administrator you may generate a schedule report for a particular
+    manufacturing line over a specific timespan. Select a manufacturing line
+    below, and enter the start and end dates. <b>Note</b> that your current
+    schedule will be saved before the report is generated.
+    </p>
+</div>
+</div>
+</div>
+<div class="row">
+<div class="col-sm">
+<div class="input-group">
+    <div class="input-group-prepend">
+        <label class="input-group-text" for="mlSelect">Manufacturing Line</label>
+    </div>
+    <select class="custom-select" id="mlSelect">
+    </select>
+</div>
+<small>Only manufacturing lines with at least one item is shown.</small>
+
+<div class="form-row mt-3">
+<div class="input-group col-sm-6">
+    <div class="input-group-prepend">
+        <label class="input-group-text" for="startDate">
+            From
+        </label>
+    </div>
+    <input type="date" id="startDate" class="form-control">
+    <small>If empty, will be the start time of the earliest scheduled item.</small>
+</div>
+
+<div class="input-group col-sm-6">
+    <div class="input-group-prepend">
+        <label class="input-group-text" for="startDate">
+            To
+        </label>
+    </div>
+    <input type="date" id="startDate" class="form-control">
+    <small>If empty, will be the end time of last scheduled item.</small>
+</div>
+</div>
+</div>
+</div>`;
+
+    $("#reportButton").click(function(ev) {
+        ev.preventDefault();
+        let url = $("form").attr("action");
+        let groupMap = new Map();
+        for (let group of groups.get({"fields": ["id"]}).map((g) => g.id)) {
+            let groupItems = items.get({
+                "filter": (item) => item.group === group
+            });
+            if (groupItems.length > 0) {
+                groupMap.set(group, groupItems);
+            }
+        }
+        if (groupMap.size === 0) {
+            makeModalAlert("Error",
+                "Cannot generate report: no item was scheduled.");
+            return;
+        }
+        let modalContent = $(html);
+        let mlSelect = modalContent.find("#mlSelect");
+        for (let group of groupMap.keys()) {
+            mlSelect.append($("<option>", {value: group, text: group}));
+        }
+        let modal = makeModalAlert("Generate Report", modalContent, generateReport);
+        modal.find(".modal-dialog").addClass("modal-lg");
+        modal.find("input[type=date]").change(function() {
+            let value = $(this).val();
+            if (value.length === 0) {
+                $(this).removeClass("is-invalid").removeClass("is-valid");
+                return;
+            }
+            if (moment(value).isValid()) {
+                $(this).removeClass("is-invalid").addClass("is-valid");
+            } else {
+                $(this).removeClass("is-valid").addClass("is-invalid");
+            }
+        });
+
+        function generateReport() {
+            url = new URL(window.location.href, url);
+            let start = moment(modal.find("input[name*=startDate]"));
+            let end = moment(modal.find("input[name*=endDate]"));
+            options = {
+                report: "1",
+                l: mlSelect.find("option:selected").val(),
+                s: start.isValid() ? start.format() : "",
+                e: end.isValid() ? end.format() : ""
+            };
+            url.search = $.param(options);
+            $("form").attr("action", url.href).submit();
+        }
     });
 });

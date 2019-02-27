@@ -11,7 +11,12 @@ from django.utils import timezone
 from django.utils.text import Truncator
 
 from meals import utils
-from meals.constants import ADMINS_GROUP, MIX_UNIT_EXP_REGEX, UNIT_ACCEPTED_FORMS
+from meals.constants import (
+    ADMINS_GROUP,
+    MIX_UNIT_EXP_REGEX,
+    UNIT_ACCEPTED_FORMS,
+    SECONDS_PER_HOUR,
+)
 from meals.validators import validate_alphanumeric, validate_netid
 
 logger = logging.getLogger(__name__)
@@ -239,7 +244,7 @@ class Ingredient(
 class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutionMixin):
     compare_excluded_fields = ("number",)
 
-    NAME_REGEX = re.compile(r"(?P<name>.+):\s*(?P<size>.+)\s*\*\s*(?P<count>\d+)")
+    NAME_REGEX = re.compile(r"(?P<name>.+):\s*(?P<size>.+)\s*\*\s*(?P<count>\d+)\s*\(#(?P<id>\d+)\)")  # noqa
 
     name = models.CharField(max_length=32, verbose_name="Name", blank=False)
 
@@ -329,7 +334,7 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
 
     @property
     def verbose_name(self):
-        return f"{self.name}: {self.unit_size} * {self.count}"
+        return f"{self.name}: {self.unit_size} * {self.count} (#{self.number})"
 
     @property
     def line_shortnames(self):
@@ -395,10 +400,7 @@ class Formula(
 
     @classmethod
     def get_sortable_fields(cls):
-        return [
-            ("number", "Number"),
-            ("name", "Name"),
-        ]
+        return [("number", "Number"), ("name", "Name")]
 
     def save(self, *args, **kwargs):
         if not self.number:
@@ -644,6 +646,16 @@ class GoalSchedule(
     @property
     def completion_time(self):
         return self.end_time or utils.compute_end_time(self.start_time, self.hours)
+
+    @property
+    def completion_hours(self):
+        return (
+            self.completion_time - self.start_time
+        ).total_seconds() / SECONDS_PER_HOUR
+
+    @property
+    def orphaned(self):
+        return not self.goal_item.goal.is_enabled
 
     class Meta:
         unique_together = (("goal_item", "line"),)

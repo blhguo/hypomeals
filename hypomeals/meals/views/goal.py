@@ -11,8 +11,10 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
+from django.utils import timezone
 from django.utils.datetime_safe import datetime
 
 from meals import auth
@@ -24,7 +26,15 @@ from meals.forms import (
     GoalFilterForm,
     GoalScheduleFormset,
 )
-from meals.models import Sku, ProductLine, Goal, GoalItem, GoalSchedule
+from meals.models import (
+    Sku,
+    ProductLine,
+    Goal,
+    GoalItem,
+    GoalSchedule,
+    FormulaIngredient,
+    ManufacturingLine,
+)
 from meals.utils import SortedDefaultDict
 
 logger = logging.getLogger(__name__)
@@ -141,18 +151,24 @@ def export_csv(request, goal_id):
         writer = csv.writer(f)
         writer.writerow(["SKU#", "SKU Name", "SKU Quantity"])
         for item in items:
-            writer.writerow([item.sku.number, item.sku.name, item.quantity])
+            writer.writerow([item.sku.number, item.sku.verbose_name, item.quantity])
     resp = HttpResponse(open(tf).read(), content_type="text/csv")
     resp["Content-Disposition"] = f"attachment;filename=goal_{goal.name}.csv"
     return resp
 
 
-def _calculate_report(goal):
-    result = SortedDefaultDict(lambda: Decimal(0.0), key=operator.attrgetter("pk"))
+def _calculate_report(goal, result=None):
+    # Result is always in packages
+    if result is None:
+        result = SortedDefaultDict(lambda: Decimal(0.0), key=operator.attrgetter("pk"))
     for item in goal.details.all():
         for formula_item in item.sku.formula.formulaingredient_set.all():
+            unit_scale = (
+                formula_item.unit.scale_factor
+                / formula_item.ingredient.unit.scale_factor
+            )
             result[formula_item.ingredient] += (
-                formula_item.quantity * item.sku.formula_scale
+                formula_item.quantity * item.sku.formula_scale * unit_scale
             )
     logger.info("Report: %s", result)
     return result
@@ -181,7 +197,12 @@ def _generate_calculation(request, goal_id, output_format="csv"):
             for ingr, amount in report.items():
                 total_amount = round(amount * ingr.size, 2)
                 writer.writerow(
-                    [ingr.number, ingr.name, round(amount, 2), total_amount]
+                    [
+                        ingr.number,
+                        ingr.name,
+                        round(amount, 2),
+                        f"{total_amount} {ingr.unit.symbol}",
+                    ]
                 )
         response = HttpResponse(open(tf).read(), content_type="text/csv")
         response["Content-Disposition"] = f"attachment;filename={goal.name}_report.csv"
@@ -321,7 +342,14 @@ def schedule(request):
             )
             messages.info(request, msg)
             logger.info(msg)
-            return redirect("goals")
+            if request.GET.get("report", "0") == "1":
+                return redirect(
+                    "schedule_report",
+                    request.GET.get("l", ""),
+                    request.GET.get("s", ""),
+                    request.GET.get("e", ""),
+                )
+            return redirect("schedule")
     else:
         formset = GoalScheduleFormset(goal_items=goal_items)
 
@@ -329,6 +357,51 @@ def schedule(request):
         request,
         template_name="meals/goal/schedule.html",
         context={"formset": formset, "goals": goal_objs, "goal_items": goal_items},
+    )
+
+
+@login_required
+def schedule_report(request, line_shortname, start, end):
+    qs = ManufacturingLine.objects.filter(shortname__iexact=line_shortname)
+    if not line_shortname or not qs.exists():
+        messages.error(request, f"Invalid manufacturing line name: '{line_shortname}'")
+        return redirect("error")
+
+    query = Q(line=qs[0])
+    try:
+        if start:
+            start = timezone.make_aware(datetime.strptime(start, "%Y-%m-%d"))
+            query &= Q(start_time__gte=start)
+        if end:
+            end = timezone.make_aware(datetime.strptime(end, "%Y-%m-%d"))
+            query &= (Q(end_time__lte=end) | Q(end_time__isnull=True))
+    except ValueError as e:
+        messages.error(request, f"Invalid date: {e:s}")
+        return redirect("error")
+    schedules = GoalSchedule.objects.filter(query)
+    if schedules.count() == 0:
+        messages.error(
+            request,
+            "Unable to generate report: no goal was scheduled on "
+            f"'{line_shortname}' between the specified timespan.",
+        )
+        return redirect("error")
+    formula_ids = set(schedules.values_list("goal_item__sku__formula", flat=True))
+    ingredients = FormulaIngredient.objects.filter(formula_id__in=formula_ids)
+    goal_ids = set(schedules.values_list("goal_item__goal", flat=True))
+    goal_objs = Goal.objects.filter(pk__in=goal_ids)
+    result = SortedDefaultDict(lambda: Decimal(0.0), key=operator.attrgetter("pk"))
+    for goal in goal_objs:
+        _calculate_report(goal, result=result)
+    return render(
+        request,
+        template_name="meals/goal/schedule_report.html",
+        context={
+            "time": timezone.now(),
+            "activities": schedules,
+            "formulas": ingredients,
+            "ingredients": result.items(),
+        },
     )
 
 

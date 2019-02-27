@@ -263,52 +263,20 @@ class CsvAutocompletedField(AutocompletedCharField):
         return qs if self.return_qs else found
 
 
-class ProductLineFilterForm(forms.Form):
-    NUM_PER_PAGE_CHOICES = [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
-
-    page_num = forms.IntegerField(
-        widget=forms.HiddenInput(), initial=1, min_value=1, required=False
-    )
-    num_per_page = forms.ChoiceField(choices=NUM_PER_PAGE_CHOICES, required=True)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        for field in self.fields.values():
-            field.widget.attrs["class"] = "form-control mb-2"
-
-    def clean_skus(self):
-        value = self.cleaned_data["skus"]
+class SkuAutocompletedField(CsvAutocompletedField):
+    def clean(self, value):
         items = {item.strip() for item in COMMA_SPLIT_REGEX.split(value)} - {""}
         if not items:
             return items
-        found = set()
-        not_found = []
+        results = []
         for item in items:
             sku = Sku.from_name(item)
             if sku is None:
-                not_found.append(item)
-            else:
-                found.add(sku)
-        if not_found:
-            errors = []
-            for item in not_found:
-                errors.append(
-                    ValidationError(
-                        "'%(item)s' cannot be found.", params={"item": item}
-                    )
+                raise ValidationError(
+                    "'%(item)s' cannot be found.", params={"item": item}
                 )
-            raise ValidationError(errors)
-        return found
-
-    def query(self) -> Paginator:
-        params = self.cleaned_data
-        logger.info("Querying Product Lines with parameters %s", params)
-        num_per_page = int(params.get("num_per_page", 50))
-        query = ProductLine.objects.all()
-        if num_per_page == -1:
-            num_per_page = query.count()
-        return Paginator(query.distinct(), num_per_page)
+            results.append(sku)
+        return results if self.return_qs else items
 
 
 class EditProductLineForm(forms.ModelForm):
@@ -817,6 +785,51 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
         return instance
 
 
+class ManufacturingLineForm(forms.ModelForm, utils.BootstrapFormControlMixin):
+
+    skus = SkuAutocompletedField(
+        Sku,
+        data_source=reverse_lazy("autocomplete_skus"),
+        attr="name",
+        return_qs=True,
+        required=False,
+        label="SKUs",
+        help_text="Optionally specify a comma-separated list of SKUs that "
+        "this manufacturing line produces.",
+        widget=forms.TextInput(attrs={"placeholder": "Start typing..."}),
+    )
+    comment = forms.CharField(
+        required=False, widget=forms.Textarea(attrs={"maxlength": 4000})
+    )
+
+    def __init__(self, *args, **kwargs):
+        instance = kwargs.pop("instance", None)
+        initial = kwargs.pop("initial", {})
+        if instance:
+            initial["skus"] = ", ".join(
+                line.sku.verbose_name for line in instance.skus.all()
+            )
+        super().__init__(*args, instance=instance, initial=initial, **kwargs)
+
+    @transaction.atomic
+    def save(self, commit=False):
+        instance = super().save(commit=commit)
+        sku_line_objs = []
+        if self.cleaned_data["skus"]:
+            sku_line_objs = [
+                SkuManufacturingLine(sku=sku, line=instance)
+                for sku in self.cleaned_data["skus"]
+            ]
+            if commit:
+                SkuManufacturingLine.objects.filter(line=instance).delete()
+                SkuManufacturingLine.objects.bulk_create(sku_line_objs)
+        return instance, sku_line_objs
+
+    class Meta:
+        model = ManufacturingLine
+        fields = ["name", "shortname", "comment"]
+
+
 class FormulaNameForm(forms.ModelForm, utils.BootstrapFormControlMixin):
     def __init__(self, *args, **kwargs):
         initial = kwargs.pop("initial") if "initial" in kwargs else {}
@@ -838,7 +851,7 @@ class FormulaNameForm(forms.ModelForm, utils.BootstrapFormControlMixin):
     class Meta:
         model = Formula
         fields = ["name", "number", "comment"]
-        widgets = {"comment": forms.Textarea(attrs={"maxlength": 200})}
+        widgets = {"comment": forms.Textarea(attrs={"maxlength": 4000})}
         labels = {"number": "Formula#"}
 
 

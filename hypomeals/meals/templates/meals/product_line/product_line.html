@@ -1,87 +1,61 @@
 {% extends "meals/base.html" %}
 {% load staticfiles %}
 
-{% block ingredient_active %}active{% endblock %}
-{% block title %}Ingredients{% endblock %}
+{% block product_line_active %}active{% endblock %}
+{% block title %}Product Lines{% endblock %}
 
 {% block body %}
-<div class="container-fluid m-auto">
-<form method="post" action="{% url 'product_line' %}" id="productlineFilterForm">
-{%  csrf_token %}
-<div class="row">
-<div class="col-sm-8">
-<nav>
-<ul class="pagination my-4" id="pageList">
-{% if product_lines.has_previous %}
-    <li class="page-item">
-        <a class="page-link" page="{{  product_lines.previous_page_number }}" href="#">
-            <span>&laquo;</span>
-        </a>
-    </li>
-{% else %}
-    <li class="page-item disabled">
-        <a class="page-link" href="#">
-            <span>&laquo;</span>
-        </a>
-    </li>
-{% endif %}
+<div class="container m-auto">
 
-{% for page in pages %}
-    {%  if current_page == forloop.counter %}
-        <li class="page-item active">
-    {% else %}
-        <li class="page-item">
-    {% endif %}
-        <a class="page-link" page="{{ forloop.counter }}" href="#">
-        {{ forloop.counter }}
-        </a>
-    </li>
-{% endfor %}
-
-{% if product_lines.has_next %}
-    <li class="page-item">
-    <a class="page-link" page="{{ product_lines.next_page_number }}" href="#">
-        <span>&raquo;</span>
-    </a>
-    </li>
-{% else %}
-    <li class="page-item disabled">
-    <a class="page-link" href="#">
-        <span>&raquo;</span>
-    </a>
-    </li>
-{% endif %}
-</ul>
-</nav>
+{% if messages %}
+<div class="row mt-3">
+<div class="col-sm-12">
+    <div class="alert alert-success" id="messagesDiv">
+    {% for message in messages %}
+    <p class="{% if message.tags %}{{ message.tags }}{% endif %}{% if forloop.counter == messages|length %} mb-0{% endif %}">
+        {{ message }}
+    </p>
+    {% endfor %}
+    </div>
 </div>
-<div class="col-sm-4">
-    <div class="btn-group my-4" style="float:right;">
-        {% if perms.meals.add_product_line %}
-        <a id="addProduct_LineButton"
-           href="{%  url 'add_product_line' %}"
+</div>
+{% endif %}
+
+<div class="row mt-3 d-flex justify-content-right align-items-center">
+<div class="col-sm">
+    <div class="btn-group" style="float:right;">
+        <a href="{%  url 'add_product_line' %}"
            class="btn btn-primary">
-            <span class="fa fa-plus"></span> Add a new Product Line
+            <span class="fa fa-plus"></span> Add Product Line
         </a>
+        {% if request.user.is_admin %}
+        <button data-href="{% url 'remove_product_lines' %}"
+                disabled
+                id="removeButton"
+                class="btn btn-danger">
+            <span class="fas fa-minus"></span> Remove selected
+        </button>
         {% endif %}
 
     </div>
 </div>
 </div>
 
-<!-- Table column -->
+<!-- Table -->
+<div class="row mt-3">
 <div class="col-sm-12">
-{% if messages %}
-<div class="alert alert-success" id="messagesDiv">
-{% for message in messages %}
-<p {% if message.tags %}class="{{ message.tags }}{% endif %}">{{ message }}</p>
-{% endfor %}
-</div>
-{% endif %}
 <table class="table" style="width:100%">
     <thead class="thead-light">
     <tr>
-        {% if perms.meals.delete_product_line %}
-        <th><input type="checkbox" id="selectAllCheckbox"> </th>
+        {% if request.user.is_admin %}
+        <th>
+        <div class="custom-control custom-checkbox">
+        <input type="checkbox"
+               id="selectAllCheckbox"
+               class="custom-control-input">
+        <label for="selectAllCheckbox" class="custom-control-label"></label>
+        </div>
+        </th>
         {% endif %}
         <th>Name</th>
         <th>Options</th>
@@ -90,12 +64,19 @@
     <tbody class="table-striped">
     {% for product_line in product_lines %}
     <tr>
-        {% if perms.meals.delete_product_lines %}
-        <td><input type="checkbox" class="product_line-checkbox" id="{{ product_line.number }}"> </td>
+        {% if request.user.is_admin %}
+        <td>
+        <div class="custom-control custom-checkbox">
+        <input type="checkbox" data-pl-id="{{ product_line.pk }}"
+               id="checkbox-{{ product_line.pk }}"
+               class="custom-control-input selectProductLineCheckboxes">
+        <label for="checkbox-{{ product_line.pk }}" class="custom-control-label"></label>
+        </div>
+        </td>
         {% endif %}
         <td>
-            <a href="{% url "edit_product_line" product_line.name %}"
-               {% if perms.meals.change_product_line %}
+            <a href="{% url "edit_product_line" product_line.pk %}"
+               {% if request.user.is_admin %}
                title="Click on the name to edit this product line."
                {% else %}
                title="You don't have permission to edit this Product Line."
@@ -108,21 +89,13 @@
         <td>
             <a class="btn btn-link viewPLSkus"
                href="#"
-               {% if not perms.meals.view_pl_skus %}
-               disabled="disabled"
-               data-toggle="tooltip"
-               data-placement="left"
-               title="You don't have permission to view this product line's SKUs"
-               {% endif %}
-                data-toggle="modal"
+               data-toggle="modal"
                data-target="#modalDiv"
-               id="{{ product_line.name }}">
+               data-pl-id="{{ product_line.pk }}">
                 View
             </a>
-        <!--TODO: Not sure if I need to add the ability to edit a product line-->
         </td>
     </tr>
-    {%  empty %}
     {% endfor %}
     </tbody>
 </table>
@@ -131,7 +104,7 @@
 </div>
 </div>
 </div>
-</form>
+
 </div>
 
 <!-- Modal -->
