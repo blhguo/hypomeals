@@ -53,7 +53,13 @@
         {% if file_form.non_field_errors %}
         <div class="alert alert-danger">
         <p>Please correct the following errors and re-upload your file(s):</p>
-        {{ file_form.non_field_errors | linebreaks }}
+        <ul>
+            {% for error in file_form.non_field_errors %}
+            <li class="{% if forloop.counter == file_form.non_field_errors|length %}mb-0{% endif %}">
+                {{ error|linebreaks }}
+            </li>
+            {% endfor %}
+        </ul>
         </div>
         {% endif %}
         {% for field in file_form %}
