@@ -900,7 +900,6 @@ class FormulaForm(forms.Form, utils.BootstrapFormControlMixin):
 
 
 class FormulaFormsetBase(forms.BaseFormSet):
-
     def clean(self):
         if any(self.errors):
             return
@@ -1088,15 +1087,13 @@ class GoalScheduleForm(forms.ModelForm):
         return qs[0]
 
     def should_delete(self):
-        return any(
-            [
-                "start_time" not in self.cleaned_data,
-                not self.cleaned_data["start_time"],
-                "line" not in self.cleaned_data,
-                not self.cleaned_data["line"],
-                "end_time" not in self.cleaned_data,
-                not self.cleaned_data["end_time"],
-            ]
+        return (
+            "start_time" not in self.cleaned_data
+            or not self.cleaned_data["start_time"]
+            or "line" not in self.cleaned_data
+            or not self.cleaned_data["line"]
+            or "end_time" not in self.cleaned_data
+            or not self.cleaned_data["end_time"]
         )
 
     def clean(self):
@@ -1110,6 +1107,11 @@ class GoalScheduleForm(forms.ModelForm):
                     "line but not start time.",
                     params={"item": self.item.pk},
                 )
+            # Regardless of what the user gives, we always compute the end time on
+            # server side to prevent cheating.
+            self.cleaned_data["end_time"] = utils.compute_end_time(
+                self.cleaned_data["start_time"], self.item.hours
+            )
         return super().clean()
 
     def __init__(self, *args, item, **kwargs):

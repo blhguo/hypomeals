@@ -281,24 +281,24 @@ $(function() {
 
     function getCompletionTime(startTime, hours) {
         startTime = moment(startTime);
-        let endTime = startTime.clone();
-        let numDays = Math.floor(hours / WORK_HOURS_PER_DAY);
-        let remainingHours = hours % WORK_HOURS_PER_DAY;
-        if (remainingHours === 0) {
+        let numDays = Math.floor(hours  / WORK_HOURS_PER_DAY);
+        let remaining = hours % WORK_HOURS_PER_DAY;
+        if (remaining === 0) {
             numDays--;
-            remainingHours = WORK_HOURS_PER_DAY;
+            remaining = WORK_HOURS_PER_DAY;
         }
-        if (startTime.hour() >= WORK_HOURS_START && startTime.hour() <= WORK_HOURS_END) {
-            let startOfDay = startTime.clone().startOf("day").hours(WORK_HOURS_START);
-            remainingHours -= startTime.diff(startOfDay) / MILLISECONDS_PER_HOUR;
+        if ((startTime.hours() <= WORK_HOURS_END) && (startTime.hours() >= WORK_HOURS_START)) {
+            let firstDayEnd = startTime.clone().startOf("day").hours(WORK_HOURS_END);
+            remaining -= (firstDayEnd - startTime) / MILLISECONDS_PER_HOUR;
         }
-        endTime.add(numDays, "days");
-        if (remainingHours > 0) {
-            endTime.add(1, "days").hours(WORK_HOURS_START).add(remainingHours, "hours");
+        let endTime = startTime.clone().add(numDays, "days");
+        if (remaining > 0) {
+            endTime.add(1, "days").startOf("day").hours(WORK_HOURS_START).add(remaining, "hours");
         } else {
-            endTime.startOf("day").hours(WORK_HOURS_END).add(remainingHours, "hours");
+            endTime.startOf("day").hours(WORK_HOURS_END).add(remaining, "hours");
         }
 
+        console.log("start", startTime.format(), "hour", hours, "end", endTime.format());
         return endTime;
     }
 
