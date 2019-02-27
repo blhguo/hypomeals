@@ -17,6 +17,7 @@ from django.views.decorators.debug import sensitive_post_parameters
 from meals import auth, utils
 from meals.auth import sign_in_netid_user
 from meals.exceptions import UserFacingException
+from meals.forms import EditUserForm
 from meals.models import User
 
 logger = logging.getLogger(__name__)
@@ -144,13 +145,39 @@ def users(request):
 @login_required
 @auth.user_is_admin_ajax(msg="Only an administrator may add new users.")
 def add_user(request):
-    pass
+    if request.method == "POST":
+        form = EditUserForm(request.POST)
+        if form.is_valid():
+            instance = form.save()
+            message = f"User '{ instance.username }' added successfully"
+            messages.info(request, message)
+            return redirect("users")
+    else:
+        form = EditUserForm()
+    return render(
+        request, template_name="meals/accounts/edit_user.html", context={"form": form}
+    )
 
 
 @login_required
 @auth.user_is_admin_ajax(msg="Only an administrator may edit user information.")
 def edit_user(request, username):
-    pass
+    instance = User.objects.filter(pk=username)[0]
+    if request.method == "POST":
+        initial_data = {"is_admin": instance.is_admin}
+        form = EditUserForm(request.POST, instance=instance, initial=initial_data)
+        if form.is_valid():
+            instance = form.save()
+            messages.info(request, f"Successfully saved User {instance.username}")
+            return redirect("users")
+    else:
+        initial_data = {"is_admin": instance.is_admin}
+        form = EditUserForm(instance=instance, initial=initial_data)
+    return render(
+        request,
+        template_name="meals/accounts/edit_user.html",
+        context={"form": form, "edit": True, "user": instance},
+    )
 
 
 @login_required

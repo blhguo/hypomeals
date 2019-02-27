@@ -40,7 +40,13 @@ def add_formula(request):
             messages.info(request, f"Successfully inserted {len(saved)} ingredients.")
             message = f"Formula '{instance.name}' added successfully"
             if request.is_ajax():
-                resp = {"error": None, "resp": None, "success": True, "alert": message, "name": "test"}
+                resp = {
+                    "error": None,
+                    "resp": None,
+                    "success": True,
+                    "alert": message,
+                    "name": "test",
+                }
                 return JsonResponse(resp)
             return redirect("formula")
     else:
@@ -113,8 +119,8 @@ def edit_formula(request, formula_number):
             formula.save()
             logger.info("Cleaned data: %s", formset.cleaned_data)
             saved = []
+            FormulaIngredient.objects.filter(formula=formula).delete()
             with transaction.atomic():
-                FormulaIngredient.objects.filter(formula=formula).delete()
                 for form, data in zip(formset.forms, formset.cleaned_data):
                     if "DELETE" not in data or data["DELETE"]:
                         continue
@@ -126,7 +132,11 @@ def edit_formula(request, formula_number):
     else:
         formulas = FormulaIngredient.objects.filter(formula=formula)
         initial_data = [
-            {"ingredient": formula.ingredient.name, "quantity": formula.quantity}
+            {
+                "ingredient": formula.ingredient.name,
+                "quantity": formula.quantity,
+                "unit": formula.unit.symbol,
+            }
             for formula in formulas
         ]
         formset = FormulaFormset(initial=initial_data)

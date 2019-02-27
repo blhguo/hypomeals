@@ -25,10 +25,10 @@ $(function() {
             if (!showNetworkError(data, textStatus)) {
                 return;
             }
-            if ("error" in data) {
-                makeModalAlert("Error", data.error);
-                return;
-            }
+            // if ("error" in data) {
+            //     makeModalAlert("Error", data.error);
+            //     return;
+            // }
             makeModalAlert("Success", data.resp);
         })
     })

@@ -32,6 +32,7 @@
   <tr>
       <th>Ingredient</th>
       <th>Quantity</th>
+      <th>Unit</th>
       <th>Action</th>
   </tr>
   </thead>
@@ -48,6 +49,12 @@
           {{ form.quantity }}
           {% if form.quantity.errors %}
           <small>{{ form.quantity.errors }}</small>
+          {% endif %}
+      </td>
+      <td class="align-middle">
+          {{ form.unit }}
+          {% if form.unit.errors %}
+          <small>{{ form.unit.errors }}</small>
           {% endif %}
       </td>
       <td class="align-middle">
