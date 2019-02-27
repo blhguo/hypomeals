@@ -104,7 +104,7 @@ class Unit(models.Model):
     # A scale factor w.r.t. the base unit for this class. I.e., this unit multiplied by
     # the scale factor should equal to the base unit
     scale_factor = models.DecimalField(
-        max_digits=12,
+        max_digits=20,
         decimal_places=6,
         validators=[
             MinValueValidator(
@@ -183,7 +183,7 @@ class Ingredient(
     size = models.DecimalField(
         verbose_name="Size",
         blank=False,
-        max_digits=12,
+        max_digits=20,
         decimal_places=6,
         validators=[
             MinValueValidator(
@@ -200,7 +200,7 @@ class Ingredient(
 
     cost = models.DecimalField(
         blank=False,
-        max_digits=12,
+        max_digits=20,
         decimal_places=2,
         verbose_name="Cost",
         validators=[
@@ -287,7 +287,7 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
     formula_scale = models.DecimalField(
         verbose_name="Formula Scale Factor",
         default=1.0,
-        max_digits=12,
+        max_digits=20,
         decimal_places=6,
         validators=[
             MinValueValidator(
@@ -303,7 +303,7 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
     )
     manufacturing_rate = models.DecimalField(
         verbose_name="Manufacturing Rate",
-        max_digits=12,
+        max_digits=20,
         decimal_places=6,
         default=1.0,
         blank=False,
@@ -383,7 +383,7 @@ class Formula(
     models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutionMixin
 ):
 
-    name = models.CharField(max_length=32, verbose_name="Name")
+    name = models.CharField(max_length=32, verbose_name="Name", unique=True)
     number = models.IntegerField(
         blank=False, verbose_name="Formula#", primary_key=True, unique=True
     )
@@ -427,7 +427,7 @@ class FormulaIngredient(
         related_name="formulas",
         related_query_name="formula",
     )
-    quantity = models.DecimalField(blank=False, max_digits=12, decimal_places=6)
+    quantity = models.DecimalField(blank=False, max_digits=20, decimal_places=6)
     unit = models.ForeignKey(Unit, on_delete=models.PROTECT, related_name="+")
 
     def __repr__(self):
@@ -564,7 +564,7 @@ class GoalItem(
     )
     quantity = models.DecimalField(
         verbose_name="Quantity",
-        max_digits=12,
+        max_digits=20,
         decimal_places=6,
         validators=[
             MinValueValidator(limit_value=0.000001, message="Quantity must be positive")
