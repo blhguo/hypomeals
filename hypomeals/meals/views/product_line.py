@@ -1,20 +1,17 @@
+import json
 import logging
 import time
 
-import jsonpickle
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
-from django.core.paginator import Paginator
-from django.db import transaction, DatabaseError
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
-
-from django.views.decorators.http import require_POST, require_GET
+from django.views.decorators.http import require_GET
 
 from meals import auth
-from meals.forms import ProductLineFilterForm, EditProductLineForm
-from meals.models import ProductLine, Sku
+from meals.forms import EditProductLineForm
+from meals.models import ProductLine
 
 logger = logging.getLogger(__name__)
 
@@ -22,30 +19,13 @@ logger = logging.getLogger(__name__)
 @login_required
 def product_line(request):
     start = time.time()
-    if request.method == "POST":
-        form = ProductLineFilterForm(request.POST)
-        if form.is_valid():
-            product_lines = form.query()
-        else:
-            product_lines = Paginator(ProductLine.objects.all(), 50)
-    else:
-        form = ProductLineFilterForm()
-        product_lines = Paginator(ProductLine.objects.all(), 50)
-    page = getattr(form, "cleaned_data", {"page_num": 1}).get("page_num", 1)
-    if page > product_lines.num_pages:
-        # For whatever reason, if the page being requested is larger than the actual
-        # number of pages, just start over from the first page.
-        page = 1
-        form.initial["page_num"] = 1
+    product_lines = ProductLine.objects.all()
     end = time.time()
     return render(
         request,
         template_name="meals/product_line/product_line.html",
         context={
-            "product_lines": product_lines.page(page),
-            "form": form,
-            "pages": range(1, product_lines.num_pages + 1),
-            "current_page": page,
+            "product_lines": product_lines,
             "duration": "{:0.3f}".format(end - start),
         },
     )
@@ -87,7 +67,7 @@ def add_product_line(request):
         form = EditProductLineForm(request.POST)
         if form.is_valid():
             instance = form.save()
-            message = f"Product_Line '{instance.name}' added successfully"
+            message = f"Product Line '{instance.name}' added successfully"
             if request.is_ajax():
                 resp = {"error": None, "resp": None, "success": True, "alert": message}
                 return JsonResponse(resp)
@@ -113,34 +93,33 @@ def add_product_line(request):
 
 
 @login_required
-@require_POST
-@auth.permission_required_ajax(perm="meals.delete_product_line")
+@auth.user_is_admin_ajax(msg="Only administrators may delete product lines.")
 def remove_product_lines(request):
-    to_remove = jsonpickle.loads(request.POST.get("to_remove", "[]"))
-    try:
-        with transaction.atomic():
-            num_deleted, result = ProductLine.objects.filter(pk__in=to_remove).delete()
-            logger.info("removed %d Product Lines: %s", num_deleted, result)
-        return JsonResponse(
-            {"error": None, "resp": f"Successfully removed {result['meals.ProductLine']} Product Liness"}
-        )
-    except DatabaseError as e:
-        return JsonResponse({"error": str(e), "resp": "Not removed"})
+    to_remove = set(map(int, json.loads(request.GET.get("toRemove", "[]"))))
+    num_deleted, result = ProductLine.objects.filter(pk__in=to_remove).delete()
+    logger.info("removed %d Product Lines: %s", num_deleted, result)
+    return JsonResponse(
+        {
+            "error": None,
+            "resp": f"Successfully removed {result['meals.ProductLine']} Product Lines",
+        }
+    )
 
 
 @login_required
 @require_GET
-@permission_required("meals.view_pl_skus", raise_exception=True)
-def view_pl_skus(request, product_line_name):
-    queryset = ProductLine.objects.filter(name=product_line_name)
+def view_pl_skus(request, pk):
+    queryset = ProductLine.objects.filter(pk=pk)
     if queryset.exists():
-        productline = queryset[0]
-        pl_skus = Sku.objects.filter(product_line=productline)
-        resp = render_to_string(template_name="meals/sku/view_sku.html",
-                                context={"pl_skus": pl_skus},
-                                request=request,)
+        pl = queryset[0]
+        skus = pl.sku_set.all()
+        resp = render_to_string(
+            template_name="meals/sku/view_sku.html",
+            context={"pl_skus": skus},
+            request=request,
+        )
         error = None
     else:
-        error = f"Product Line with name '{product_line_name}' not found."
+        error = f"Product Line with ID '{pk}' not found."
         resp = error
     return JsonResponse({"error": error, "resp": resp})
