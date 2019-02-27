@@ -32,7 +32,7 @@ def product_line(request):
 
 
 @login_required
-@permission_required("meals.change_product_line", raise_exception=True)
+@auth.user_is_admin_ajax(msg="Only an administrator may edit product lines.")
 def edit_product_line(request, product_line_name):
     instance = get_object_or_404(ProductLine, name=product_line_name)
     if request.method == "POST":
@@ -61,7 +61,7 @@ def edit_product_line(request, product_line_name):
 
 
 @login_required
-@permission_required("meals.add_product_line", raise_exception=True)
+@auth.user_is_admin_ajax(msg="Only an administrator may add a new product line.")
 def add_product_line(request):
     if request.method == "POST":
         form = EditProductLineForm(request.POST)

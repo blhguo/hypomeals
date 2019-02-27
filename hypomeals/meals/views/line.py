@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 @login_required
-@auth.user_is_admin_ajax(msg="Only administrators may view manufacturing lines.")
 def lines(request):
     line_objs = get_list_or_404(ManufacturingLine)
     return render(
