@@ -215,14 +215,14 @@ def get_sku_choices():
     return [(sku.number, sku.number) for sku in Sku.objects.all()]
 
 
-def get_unit_choices(type=None):
-    if type is None:
+def get_unit_choices(unit_type=None):
+    if unit_type is None:
         return [
             (un.symbol, f"{un.symbol} ({un.verbose_name})") for un in Unit.objects.all()
         ]
     else:
         return [
-            (un.symbol, f"{un.symbol} ({un.verbose_name})") for un in Unit.objects.filter(unit_type=type)
+            (un.symbol, f"{un.symbol} ({un.verbose_name})") for un in Unit.objects.filter(unit_type=unit_type)
         ]
 
 
@@ -459,9 +459,9 @@ class EditIngredientForm(forms.ModelForm):
         required=True,
     )
 
-    #unit = forms.ChoiceField(
-     #   choices=lambda: BLANK_CHOICE_DASH + get_unit_choices(), required=True
-    #)
+    unit = forms.ChoiceField(
+       choices=lambda: BLANK_CHOICE_DASH + get_unit_choices(), required=True
+    )
 
     class Meta:
         model = Ingredient
@@ -476,6 +476,7 @@ class EditIngredientForm(forms.ModelForm):
             "comment",
         ]
         exclude = ["vendor"]
+        exclude = ["unit"]
         widgets = {"comment": forms.Textarea(attrs={"maxlength": 4000})}
         labels = {"number": "Ingr#"}
         help_texts = {
@@ -491,9 +492,6 @@ class EditIngredientForm(forms.ModelForm):
             if hasattr(instance, "pk") and instance.pk:
                 initial.update({"vendor": instance.vendor.info})
                 initial.update({"unit": instance.unit.symbol})
-                self.fields["unit"].queryset = get_unit_choices(type=instance.unit.unit_type)
-            else:
-                self.fields['unit'].queryset = get_unit_choices()
         super().__init__(*args, initial=initial, **kwargs)
         reordered_fields = OrderedDict()
         for field_name in self.Meta.fields:
@@ -508,6 +506,12 @@ class EditIngredientForm(forms.ModelForm):
             instance = kwargs["instance"]
             if hasattr(instance, "pk") and instance.pk:
                 self.fields["number"].disabled = True
+                self.fields["unit"] = forms.ChoiceField(choices=lambda: BLANK_CHOICE_DASH + get_unit_choices(unit_type=instance.unit.unit_type), required=True)
+                self.fields["unit"].widget.attrs.update({'class': 'form-control'})
+            else:
+                self.fields['unit'] = forms.ChoiceField(choices=lambda: BLANK_CHOICE_DASH + get_unit_choices(), required=True)
+                #self.fields["unit"].widget.attrs.update({'class': 'form-control'})
+
 
     def clean(self):
         # The main thing to check for here is whether the user has supplied a custom
