@@ -215,10 +215,15 @@ def get_sku_choices():
     return [(sku.number, sku.number) for sku in Sku.objects.all()]
 
 
-def get_unit_choices():
-    return [
-        (un.symbol, f"{un.symbol} ({un.verbose_name})") for un in Unit.objects.all()
-    ]
+def get_unit_choices(type=None):
+    if type is None:
+        return [
+            (un.symbol, f"{un.symbol} ({un.verbose_name})") for un in Unit.objects.all()
+        ]
+    else:
+        return [
+            (un.symbol, f"{un.symbol} ({un.verbose_name})") for un in Unit.objects.filter(unit_type=type)
+        ]
 
 
 class CsvAutocompletedField(AutocompletedCharField):
@@ -454,9 +459,9 @@ class EditIngredientForm(forms.ModelForm):
         required=True,
     )
 
-    unit = forms.ChoiceField(
-        choices=lambda: BLANK_CHOICE_DASH + get_unit_choices(), required=True
-    )
+    #unit = forms.ChoiceField(
+     #   choices=lambda: BLANK_CHOICE_DASH + get_unit_choices(), required=True
+    #)
 
     class Meta:
         model = Ingredient
@@ -486,6 +491,9 @@ class EditIngredientForm(forms.ModelForm):
             if hasattr(instance, "pk") and instance.pk:
                 initial.update({"vendor": instance.vendor.info})
                 initial.update({"unit": instance.unit.symbol})
+                self.fields["unit"].queryset = get_unit_choices(type=instance.unit.unit_type)
+            else:
+                self.fields['unit'].queryset = get_unit_choices()
         super().__init__(*args, initial=initial, **kwargs)
         reordered_fields = OrderedDict()
         for field_name in self.Meta.fields:
