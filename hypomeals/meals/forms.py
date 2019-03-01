@@ -220,11 +220,10 @@ def get_unit_choices(unit_type=None):
         return [
             (un.symbol, f"{un.symbol} ({un.verbose_name})") for un in Unit.objects.all()
         ]
-    else:
-        return [
-            (un.symbol, f"{un.symbol} ({un.verbose_name})")
-            for un in Unit.objects.filter(unit_type=unit_type)
-        ]
+    return [
+        (un.symbol, f"{un.symbol} ({un.verbose_name})")
+        for un in Unit.objects.filter(unit_type=unit_type)
+    ]
 
 
 class CsvAutocompletedField(AutocompletedCharField):
