@@ -222,7 +222,8 @@ def get_unit_choices(unit_type=None):
         ]
     else:
         return [
-            (un.symbol, f"{un.symbol} ({un.verbose_name})") for un in Unit.objects.filter(unit_type=unit_type)
+            (un.symbol, f"{un.symbol} ({un.verbose_name})")
+            for un in Unit.objects.filter(unit_type=unit_type)
         ]
 
 
@@ -505,7 +506,10 @@ class EditIngredientForm(forms.ModelForm):
             instance = kwargs["instance"]
             if hasattr(instance, "pk") and instance.pk:
                 self.fields["number"].disabled = True
-                self.fields["unit"] = forms.ChoiceField(choices=lambda: BLANK_CHOICE_DASH + get_unit_choices(unit_type=instance.unit.unit_type), required=True)
+                self.fields["unit"] = forms.ChoiceField(
+                    choices=lambda: BLANK_CHOICE_DASH
+                    + get_unit_choices(unit_type=instance.unit.unit_type),
+                    required=True)
                 self.fields["unit"].widget.attrs.update({'class': 'form-control'})
 
     def clean(self):
