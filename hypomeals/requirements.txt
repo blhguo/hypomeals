@@ -13,3 +13,5 @@ reportlab
 cachetools
 gunicorn
 requests
+Werkzeug
+django_extensions
