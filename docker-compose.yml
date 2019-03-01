@@ -15,8 +15,7 @@ services:
         environment:
             - "DJANGO_SETTINGS_MODULE=HypoMeals.settings_prod"
             # - "DJANGO_DB_HOST=db"
-            - "DJANGO_DB_HOST=Morton-Laptop.local"
-            - "DJANGO_DB_PORT=5555"
+            - "DJANGO_DB_PORT=5432"
         volumes:
             - ./hypomeals:/code
             - ./static:/srv/static
@@ -26,8 +25,7 @@ services:
         environment:
             - "DJANGO_SETTINGS_MODULE=HypoMeals.settings_prod"
             # - "DJANGO_DB_HOST=db"
-            - "DJANGO_DB_HOST=Morton-Laptop.local"
-            - "DJANGO_DB_PORT=5555"
+            - "DJANGO_DB_PORT=5432"
         command: /code/runserver.sh
         volumes:
             - ./hypomeals:/code

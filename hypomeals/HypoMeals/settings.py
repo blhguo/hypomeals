@@ -34,6 +34,12 @@ AUTH_USER_MODEL = "meals.User"
 LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"
 
+# Email settings
+EMAIL_HOST = "smtp.duke.edu"
+EMAIL_PORT = 25
+EMAIL_HOST_USER = os.getenv("DJANGO_EMAIL_USER")
+EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_PASSWORD")
+
 # File Storage on Google Cloud
 
 GOOGLE_APPLICATION_CREDENTIALS = os.path.join(BASE_DIR, "hypomeals-2f7acfcfe59c.json")

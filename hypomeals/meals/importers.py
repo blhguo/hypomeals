@@ -46,8 +46,9 @@ class Importer(ABC):
     primary_key: Field = None
     header: List[str] = []
     model: Model = None
-    model_name: str = ""
-    fields = {}
+    model_name: str = ""  # name of the model. Ideally human-readable.
+    fields = {}  # mapping of all fields in the model
+    m2m = {}  #  a mapping of all ManyToManyFields of the model
     field_dict: Dict[str, str] = {}
     unique_fields = []
 
@@ -172,7 +173,6 @@ class Importer(ABC):
             )
         for instance in self.instances:
             self.__save(instance)
-            self._save_m2m(instance)
 
         for collision in self.collisions:
             collision.old_record.delete()
@@ -221,6 +221,7 @@ class Importer(ABC):
         instance = self.model()
         for field_name in self.fields:
             setattr(instance, field_name, row[self.field_dict[field_name]])
+
         return instance
 
     def __save(self, instance: Type[model]) -> None:
