@@ -215,9 +215,14 @@ def get_sku_choices():
     return [(sku.number, sku.number) for sku in Sku.objects.all()]
 
 
-def get_unit_choices():
+def get_unit_choices(unit_type=None):
+    if unit_type is None:
+        return [
+            (un.symbol, f"{un.symbol} ({un.verbose_name})") for un in Unit.objects.all()
+        ]
     return [
-        (un.symbol, f"{un.symbol} ({un.verbose_name})") for un in Unit.objects.all()
+        (un.symbol, f"{un.symbol} ({un.verbose_name})")
+        for un in Unit.objects.filter(unit_type=unit_type)
     ]
 
 
@@ -500,6 +505,11 @@ class EditIngredientForm(forms.ModelForm):
             instance = kwargs["instance"]
             if hasattr(instance, "pk") and instance.pk:
                 self.fields["number"].disabled = True
+                self.fields["unit"] = forms.ChoiceField(
+                    choices=get_unit_choices(unit_type=instance.unit.unit_type),
+                    required=True,
+                )
+                self.fields["unit"].widget.attrs.update({"class": "form-control"})
 
     def clean(self):
         # The main thing to check for here is whether the user has supplied a custom
@@ -526,7 +536,7 @@ class EditIngredientForm(forms.ModelForm):
     def save(self, commit=False):
         instance = super().save(commit)
         # Manually save the foreign keys, then attach them to the instance
-        fks = ["vendor"]
+        fks = ["vendor", "unit"]
         for fk in fks:
             self.cleaned_data[fk].save()
             setattr(instance, fk, self.cleaned_data[fk])
