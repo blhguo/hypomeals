@@ -476,7 +476,6 @@ class EditIngredientForm(forms.ModelForm):
             "comment",
         ]
         exclude = ["vendor"]
-        exclude = ["unit"]
         widgets = {"comment": forms.Textarea(attrs={"maxlength": 4000})}
         labels = {"number": "Ingr#"}
         help_texts = {
@@ -508,10 +507,6 @@ class EditIngredientForm(forms.ModelForm):
                 self.fields["number"].disabled = True
                 self.fields["unit"] = forms.ChoiceField(choices=lambda: BLANK_CHOICE_DASH + get_unit_choices(unit_type=instance.unit.unit_type), required=True)
                 self.fields["unit"].widget.attrs.update({'class': 'form-control'})
-            else:
-                self.fields['unit'] = forms.ChoiceField(choices=lambda: BLANK_CHOICE_DASH + get_unit_choices(), required=True)
-                #self.fields["unit"].widget.attrs.update({'class': 'form-control'})
-
 
     def clean(self):
         # The main thing to check for here is whether the user has supplied a custom
@@ -538,7 +533,7 @@ class EditIngredientForm(forms.ModelForm):
     def save(self, commit=False):
         instance = super().save(commit)
         # Manually save the foreign keys, then attach them to the instance
-        fks = ["vendor"]
+        fks = ["vendor", "unit"]
         for fk in fks:
             self.cleaned_data[fk].save()
             setattr(instance, fk, self.cleaned_data[fk])
