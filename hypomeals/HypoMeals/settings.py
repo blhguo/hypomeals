@@ -11,10 +11,16 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 import json
 import os
+import pickle
 
+import gspread
+from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient import discovery
+from oauth2client.service_account import ServiceAccountCredentials
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -40,15 +46,24 @@ EMAIL_PORT = 25
 EMAIL_HOST_USER = os.getenv("DJANGO_EMAIL_USER")
 EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_PASSWORD")
 
-# File Storage on Google Cloud
+# Google stuff
+GOOGLE_SHEETS_SCOPES = [
+    "https://spreadsheets.google.com/feeds",
+    "https://www.googleapis.com/auth/drive",
+]
 
 GOOGLE_APPLICATION_CREDENTIALS = os.path.join(BASE_DIR, "hypomeals-2f7acfcfe59c.json")
 DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
 GS_BUCKET_NAME = "hypomeals"
+GOOGLE_SHEET_SPREADSHEET_NAME = "ECE458 Group 8 Task Sheet"
 if os.path.exists(GOOGLE_APPLICATION_CREDENTIALS):
     GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
         GOOGLE_APPLICATION_CREDENTIALS
     )
+    GOOGLE_SHEETS_OAUTH_CLIENT = ServiceAccountCredentials.from_json_keyfile_name(
+        GOOGLE_APPLICATION_CREDENTIALS, scopes=GOOGLE_SHEETS_SCOPES
+    )
+    GOOGLE_SHEETS_CLIENT = gspread.authorize(GOOGLE_SHEETS_OAUTH_CLIENT)
 else:
     # If this file is not configured, we are likely in test mode and will / should
     # never access Google cloud anyway. So just go ahead and ignore it.
