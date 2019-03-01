@@ -153,6 +153,7 @@
         <th>Formula#</th>
         <th>Name</th>
         <th>Ingredients</th>
+        <th>SKUs</th>
         <th>Comment</th>
     </tr>
     </thead>
@@ -165,6 +166,7 @@
         <td>{{ formula.number }}</td>
         <td>
             <a href="{% url "edit_formula" formula.number %}"
+               class="btn btn-link"
                {% if perms.meals.change_ingredient %}
                title="Click on the name to edit this formula."
                {% else %}
@@ -193,8 +195,10 @@
             {% if perms.meals.change_skuingredient and perms.meals.add_skuingredient %}
             <a class="btn btn-link" href="{% url "edit_formula" formula.number %}">Edit</a>
             {% endif %}
-            <a class="btn btn-link" href="{% url 'sku'%}?formula={{ formula.name }}">View Skus</a>
             </div>
+        </td>
+        <td>
+            <a class="btn btn-link" href="{% url 'sku'%}?formula={{ formula.name }}">View</a>
         </td>
         <td>{{ formula.comment|truncatewords:20 }}</td>
     </tr>

@@ -108,13 +108,14 @@
 </nav>
 {% block body %}
 {% endblock %}
-<script src="https://code.jquery.com/jquery-3.3.1.min.js" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/4.2.2/jquery.form.min.js" integrity="sha384-FzT3vTVGXqf7wRfy8k4BiyzvbNfeYjK+frTVqZeNDFl8woCbF0CYG6g2fMEFFo/i" crossorigin="anonymous"></script>
-<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
+<script src="{% static 'meals/lib/jquery-3.3.1.min.js' %}"></script>
+<script src="{% static 'meals/lib/jquery.form.min.js' %}"></script>
+<script src="{% static 'meals/lib/jquery-ui.min.js' %}"></script>
+<script src="{% static 'meals/lib/popper.min.js' %}"></script>
+<script src="{% static 'meals/lib/bootstrap.min.js' %}"></script>
+<script src="{% static 'meals/lib/mousetrap.min.js' %}"></script>
 <script src="{% static 'meals/lib/underscore.js' %}"></script>
+<script src="{% static 'meals/base.js' %}"></script>
 {% block scriptend %}
 {% endblock %}
 </body>

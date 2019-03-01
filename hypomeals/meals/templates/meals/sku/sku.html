@@ -1,5 +1,6 @@
 {% extends "meals/base.html" %}
 {% load staticfiles %}
+{% load meals_extras %}
 
 {% block sku_active %}active{% endblock %}
 {% block title %}Review SKUs{% endblock %}
@@ -200,6 +201,7 @@
 {% endfor %}
 </div>
 {% endif %}
+<div style="overflow: scroll;">
 <table class="table">
 <thead class="thead-light">
 <tr>
@@ -213,11 +215,11 @@
     <th>Unit Size</th>
     <th>Count Per Case</th>
     <th>Product Line</th>
-    <th>Comment</th>
     <th>Formula</th>
     <th>Formula Scale Factor</th>
-    <th>Manufactuing Lines</th>
+    <th>Manufacturing Lines</th>
     <th>Rate</th>
+    <th>Comment</th>
 </tr>
 </thead>
 <tbody class="table-striped">
@@ -244,7 +246,6 @@
     <td>{{ sku.unit_size }}</td>
     <td>{{ sku.count }}</td>
     <td>{{ sku.product_line.name }}</td>
-    <td>{{ sku.comment|truncatewords:20 }}</td>
     <td>
         <div class="btn-group">
         <a class="btn btn-link viewFormula"
@@ -265,15 +266,14 @@
         {% endif %}
         </div>
     </td>
-    <td>{{ sku.formula_scale }}</td>
+    <td>{{ sku.formula_scale|quantize:2 }}</td>
     <td>
-      {% for instance in sku.skumanufacturingline_set.all %}
-        {{ instance.line}},
-      {% endfor %}
+        {{ sku.skumanufacturingline_set|values_list:'line__shortname'|join:', ' }}
     </td>
     <td>
-        {{ sku.manufacturing_rate }}
+        {{ sku.manufacturing_rate|quantize:2 }}
     </td>
+    <td>{{ sku.comment|truncatewords:20 }}</td>
 </tr>
 {% empty %}
     <div class="alert alert-danger">
@@ -283,6 +283,8 @@
 {% endfor %}
 </tbody>
 </table>
+</div>
+
 <div>
 <p>Found {{ skus.paginator.count }} matches in {{ duration }} seconds</p>
 </div>

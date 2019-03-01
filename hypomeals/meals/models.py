@@ -382,6 +382,7 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
 class Formula(
     models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutionMixin
 ):
+    compare_excluded_fields = ("number",)
 
     name = models.CharField(max_length=32, verbose_name="Name", unique=True)
     number = models.IntegerField(

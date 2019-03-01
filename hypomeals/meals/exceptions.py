@@ -1,5 +1,6 @@
 # pylint: disable-msg=too-many-arguments
 import traceback
+from typing import Iterable
 
 from django.conf import settings
 from meals import utils
@@ -54,7 +55,6 @@ class DuplicateException(UserFacingException):
         self.line_num = line_num
         self.raw_exception = raw_exception
 
-    @utils.method_memoize_forever
     def __str__(self):
         result = self.message
         if self.model_name is not None and self.key and self.value:
@@ -117,7 +117,6 @@ class IntegrityException(UserFacingException):
         self.fk_value = fk_value
         self.raw_exception = raw_exception
 
-    @utils.method_memoize_forever
     def __str__(self):
         result = self.message
         if (
@@ -152,13 +151,20 @@ class CollisionException(Exception):
             f"'({self.new_record.pk}) {self.new_record}'"
         )
 
+class IdenticalRecord(Exception):
+    def __init__(self, record):
+        self.record = record
+
+    def __str__(self):
+        return f"<IdenticalRecord: {str(self.record)}>"
+
 
 class CollisionOccurredException(Exception):
     """An intentional exception to abort a transaction"""
     pass
 
 
-class AmbiguousRecordException(UserFacingException):
+class AmbiguousRecord(UserFacingException):
     def __init__(self, message, instance, matches):
         self.message = message
         self.instance = instance

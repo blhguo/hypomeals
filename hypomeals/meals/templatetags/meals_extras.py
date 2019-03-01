@@ -23,3 +23,7 @@ def quantize(x, decimal_places=2):
 @register.filter
 def any_bool(iterable):
     return any(iterable)
+
+@register.filter
+def values_list(queryset, param):
+    return queryset.values_list(param, flat=True)

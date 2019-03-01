@@ -176,15 +176,17 @@ class ImportForm(forms.Form, BootstrapFormControlMixin):
 
             csv_files = self._unzip()
         try:
-            inserted = bulk_import.process_csv_files(csv_files, self.session_key)
-            if inserted:
+            inserted, ignored = bulk_import.process_csv_files(
+                csv_files, self.session_key
+            )
+            if inserted or ignored:
                 self._imported = True
         except CollisionOccurredException:
             raise
         except Exception as e:
             raise ValidationError(str(e))
 
-        return inserted
+        return inserted, ignored
 
     @property
     def imported(self):
