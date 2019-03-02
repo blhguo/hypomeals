@@ -27,3 +27,8 @@ def any_bool(iterable):
 @register.filter
 def values_list(queryset, param):
     return queryset.values_list(param, flat=True)
+
+@register.filter
+def get_value(dct, key):
+    """Gets a value from a dictionary, or None if the key doesn't exist"""
+    return dct.get(key)

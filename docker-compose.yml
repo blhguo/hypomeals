@@ -32,8 +32,6 @@ services:
             - ./static:/srv/static
         expose:
             - "8000"
-        depends_on:
-            - web-init
     nginx:
         image: nginx:latest
         ports:

@@ -1,0 +1,93 @@
+{% load static %}
+{% load meals_extras %}
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Task Reminder</title>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet"
+          href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css"
+          integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS"
+          crossorigin="anonymous">
+    <!--FontAwesome CSS -->
+    <link href="https://use.fontawesome.com/releases/v5.0.6/css/all.css" rel="stylesheet">
+    <link href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" rel="stylesheet">
+</head>
+
+<body>
+<div class="container-fluid my-4">
+<div class="row mt-3">
+<div class="col-sm-12">
+    <div class="alert alert-success">
+        Hi {{ name }}. Good morning! Here is a reminder email for tasks waiting
+        for completion. To view details of these tasks, check the
+        <a href="https://docs.google.com/spreadsheets/d/{{ spreadsheet_id }}/edit">spreadsheet</a>.
+    </div>
+</div>
+</div>
+
+<div class="row mt-3">
+<div class="col-sm-12">
+    <p>
+        There are {{ u4g_tasks|length }} tasks up for grabs! Take you pick if
+        you would like to claim them. They are:
+    </p>
+    <table class="table">
+    <thead>
+    <tr>
+        <th>#</th>
+        <th>Description</th>
+        <th>Deadline</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for task in u4g_tasks %}
+    <tr>
+        <td>{{ task|get_value:'#' }}</td>
+        <td>{{ task|get_value:'Task' }}</td>
+        <td>{{ task|get_value:'Deadline' }} ({{ task|get_value:'Deadline'|naturaltime }})</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+    </table>
+</div>
+</div>
+
+<div class="row mt-3">
+<div class="col-sm-12">
+    <p>
+        There are {{ assigned_to|length }} task{{ assigned_to|length|pluralize }}
+        assigned to you that {{ assigned_to|length|pluralize:'is,are' }}
+        not completed. When you finish
+        a task, make sure to check them off on the spreadsheet.
+    </p>
+    <table class="table">
+    <thead>
+    <tr>
+        <th>#</th>
+        <th>Description</th>
+        <th>Deadline</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for task in assigned_to %}
+    {% if task|get_value:'Completed?' == 'FALSE' %}
+    <tr>
+        <td>{{ task|get_value:'#' }}</td>
+        <td>{{ task|get_value:'Task' }}</td>
+        <td>{{ task|get_value:'Deadline' }} ({{ task|get_value:'Deadline'|naturaltime }})</td>
+    </tr>
+    {% endif %}
+    {% endfor %}
+    </tbody>
+    </table>
+</div>
+</div>
+
+</div>
+</body>
