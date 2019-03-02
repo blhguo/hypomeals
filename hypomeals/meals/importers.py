@@ -3,15 +3,30 @@ import copy
 import csv
 import itertools
 import logging
+import operator
 import re
 from abc import ABC
 from collections import defaultdict
+from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
-from typing import List, Dict, Any, Tuple, Optional, Type
+from typing import (
+    List,
+    Dict,
+    Any,
+    Tuple,
+    Optional,
+    Type,
+    Iterable,
+    ClassVar,
+    TypeVar,
+    Sequence,
+    Union, Generic, cast)
 
+from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.db.models import Model, AutoField, Field
 from django.db.models.fields.related import RelatedField
+from django.db.models.options import Options
 
 from meals import utils
 from meals.exceptions import (
@@ -23,6 +38,7 @@ from meals.exceptions import (
     Skip,
     IdenticalRecord,
     CollisionOccurredException,
+    ImportException,
 )
 from meals.models import (
     Sku,
@@ -36,57 +52,75 @@ from meals.models import (
     Unit,
     SkuManufacturingLine,
 )
+from meals.utils import ModelFieldsCompareMixin
 
 logger = logging.getLogger(__name__)
 
+KeyType = ValueType = Tuple[str, ...]
+M2MType = Dict[str, Sequence[Any]]
+T = TypeVar("T", bound=Model)
 
-class Importer(ABC):
 
-    file_type: str = ""
-    primary_key: Field = None
-    header: List[str] = []
-    model: Model = None
-    model_name: str = ""  # name of the model. Ideally human-readable.
-    fields = {}  # mapping of all fields in the model
-    m2m = {}  #  a mapping of all ManyToManyFields of the model
+@dataclass
+class Instance(Generic[T]):
+    instance: Union[T, CollisionException[T]]
+    m2m: M2MType
+
+
+class Importer(ABC, Generic[T]):
+
+    file_type: str  # the type of CSV file
+    header: List[str]  # the list of headers in the CSV file
+    model: Type[T]  # a DB Model class
+    model_name: str  # name of the model. Ideally human-readable.
+    model_opts: Options  # the _meta attribute attached to the model
+    primary_key: Field  # the primary key of the model
+    fields: Dict[str, Field]  # mapping of all fields in the model
     field_dict: Dict[str, str] = {}
-    unique_fields = []
+    unique_fields: List[KeyType] = []
+
+    def __new__(cls, *args, **kwargs):
+        if cls.model is None:
+            raise ImproperlyConfigured(
+                f"Model {cls.__qualname__} does not have a model"
+            )
+        cls.model_opts = cls.model._meta
+        if cls.model_name is None:
+            cls.model_name = cls.model_opts.model_name
+        cls.primary_key = cls.model_opts.pk
+        return super().__new__(cls, *args, **kwargs)
 
     def __init__(self, filename: str = None):
-        model = self.model
-        self._instances: List[model] = []
-        self._collisions: List[CollisionException] = []
-        self._ignored: List[model] = []
-        self.unique_dict: Dict[Tuple[str, ...], Any] = defaultdict(dict)
+        self._instances: List[Instance[T]] = []
+        self._collisions: List[Instance[T]] = []
+        self._ignored: List[T] = []
+        self.unique_dict: Dict[KeyType, Dict[ValueType, int]] = defaultdict(dict)
         self.filename = filename or "<unknown file>"
         self._is_bound = False
-        if self.model is not None:
-            self.fields = {
-                field.name: field
-                for field in self.model._meta.fields
-                if not isinstance(field, AutoField)
-            }
-            self.unique_fields = [
-                (field_name,)
-                for field_name, field in self.fields.items()
-                if field.unique
-            ] + list(self.model._meta.unique_together)
+        self.fields = {
+            field.name: field
+            for field in self.model_opts.fields
+            if not isinstance(field, AutoField)
+        }
+        self.unique_fields = [
+            (field_name,) for field_name, field in self.fields.items() if field.unique
+        ] + list(self.model_opts.unique_together)
 
     @property
-    def is_bound(self):
+    def is_bound(self) -> bool:
         """Whether do_import has been called at least once"""
         return self._is_bound
 
     @property
-    def instances(self):
-        return self._instances
+    def instances(self) -> List[T]:
+        return list(map(operator.attrgetter("instance"), self._instances))
 
     @property
-    def collisions(self):
-        return self._collisions
+    def collisions(self) -> List[CollisionException[T]]:
+        return list(map(operator.attrgetter("instance"), self._collisions))
 
     @property
-    def ignored(self):
+    def ignored(self) -> List[T]:
         return self._ignored
 
     def __str__(self):
@@ -122,27 +156,26 @@ class Importer(ABC):
         reader = csv.DictReader(lines[1:], fieldnames=self.header, dialect="unix")
         num_processed = 0
         for line_num, row in enumerate(reader, start=2):
+            m2m = {}
             try:
                 converted_row = self._process_row(
                     copy.copy(row), self.filename, line_num
                 )
-                instance = self._construct_instance(converted_row)
+                instance, m2m = self._construct_instance(converted_row)
                 self._check_duplicates(row, converted_row, self.filename, line_num)
                 instance = self._save(instance, self.filename, line_num)
-                self._save_m2m(
-                    instance, converted_row, self.filename, line_num
-                )
+                self._save_m2m(instance, m2m)
             except UserFacingException as e:
                 e.message = f"{self.filename}:{line_num}: " + e.message
                 raise e
             except Skip:
                 continue
             except CollisionException as e:
-                self._collisions.append(e)
+                self._collisions.append(Instance(e, m2m))
             except IdenticalRecord as e:
                 self._ignored.append(e.record)
             else:
-                self._instances.append(instance)
+                self._instances.append(Instance(instance, m2m))
 
             num_processed += 1
 
@@ -171,8 +204,9 @@ class Importer(ABC):
                 "Data corruption detected. Please try importing "
                 "again. Error code: ENOTBOUND"
             )
-        for instance in self.instances:
-            self.__save(instance)
+        for instance in self._instances:
+            self.__save(instance.instance)
+            self._save_m2m(instance.instance, instance.m2m)
 
         for collision in self.collisions:
             collision.old_record.delete()
@@ -181,6 +215,18 @@ class Importer(ABC):
         self._post_process()
         return len(self.instances), len(self.collisions), len(self.ignored)
 
+    def _process_row(
+        self, row: Dict[str, Any], filename: str = None, line_num: int = None
+    ) -> Dict[str, Any]:
+        """
+        This method takes the raw CSV row, and returns a converted row. This can be
+        used to implement conversions such as from datetime string to a datetime
+        instance, etc.
+        :param row: a copy of the raw CSV row
+        :return: a converted row. This will be passed to _construct_instance().
+        """
+        return row
+
     def _check_duplicates(
         self,
         raw: Dict[str, str],
@@ -188,6 +234,14 @@ class Importer(ABC):
         filename: str,
         line_num: int,
     ) -> None:
+        """
+        Iterate through all the keys in the model and check if the row contains
+        duplicate values as any previous row.
+        :param raw: the raw row in the CSV
+        :param converted: the converted row in the CSV
+        :return: this method does not return anything
+        :raise: DuplicateException if a duplicate is detected.
+        """
         for unique_keys in self.unique_fields:
             values = tuple(
                 converted[self.field_dict[unique_key]] for unique_key in unique_keys
@@ -210,27 +264,30 @@ class Importer(ABC):
 
             self.unique_dict[unique_keys][values] = line_num
 
-    def _process_row(
-        self, row: Dict[str, Any], filename: str = None, line_num: int = None
-    ) -> Dict[str, Any]:
-        return row
-
     def _construct_instance(
         self, row: Dict[str, Any], line_num: int = None
-    ) -> Type[model]:
+    ) -> Instance:
+        """
+        This method constructs a new instance from a row, and optionally creates m2m
+        relationships.
+        :param row: a converted row
+        :param line_num: the line number
+        :return: a pair of (instance, m2m) where instance is the instance constructed
+            from the row, and m2m is an iterable of m2m relationships
+        """
         instance = self.model()
         for field_name in self.fields:
             setattr(instance, field_name, row[self.field_dict[field_name]])
 
-        return instance
+        return Instance(instance, {})
 
-    def __save(self, instance: Type[model]) -> None:
+    def __save(self, instance: T) -> None:
         """
         Saves an instance with ForeignKey objects that are potentially not committed to
         DB.
         :param instance: an instance to save
         """
-        for field in self.model._meta.fields:
+        for field in self.model_opts.fields:
             if isinstance(field, RelatedField):
                 fk = getattr(instance, field.name)
                 fk.save()
@@ -238,18 +295,16 @@ class Importer(ABC):
                 logger.info("Saved fk %s (#%d) %s", field.name, fk.pk, str(fk))
         instance.save()
 
-    def _save_m2m(
-        self,
-        instance: Type[model],
-        row: Dict[str, Any],
-        filename: str = None,
-        line_num: int = None,
-    ) -> None:
-        for field in self.model._meta.many_to_many:
-            values = row[self.field_dict[field.name]]
-            getattr(instance, field.attname).set(values)
+    def __save_m2m(self, instance: T, m2m: M2MType) -> None:
+        for field in self.model_opts.many_to_many:
+            if field.attname not in m2m:
+                raise ImportException(f"m2m relationship not found: {field.attname}")
+            related = m2m[field.attname]
+            manager = getattr(instance, field.attname)
+            manager.all().delete()
+            manager.set(related)
 
-    def _save(self, instance, filename, line_num) -> Type[model]:
+    def _save(self, instance: T, filename: str, line_num: int) -> T:
         """
         Tries to save a model. If duplicate occurs, check and see if two instances are
         identical: if so, a IdenticalRecord is raised. Otherwise, a
@@ -301,7 +356,24 @@ class Importer(ABC):
 
         return instance
 
-    def _post_process(self):
+    def _save_m2m(self, instance: T, m2m: M2MType) -> None:
+        """
+        Saves ManyToManyRelationship attached to an instance. This is needed because
+        of a "cycle": to save an instance of a model, one needs the m2m
+        relationships. To construct m2m relationship instances, one needs the instance
+        to be saved. This solves the problem by separating the creation and saving
+        of instances and their m2m relationships.
+
+        The need to save m2m relationships is rare, so this is "opt-in" in the sense
+        that a catch-all implementation is provided separately in __save_m2m() method.
+        If an importer subclass needs to use the built-in functionality, simply
+        override this method to call __save_m2m() with the same parameters.
+        :param instance: an instance that is already saved to the database.
+        :param m2m: a M2MType instance with all M2M objects
+        """
+        pass
+
+    def _post_process(self) -> None:
         pass
 
 
@@ -340,10 +412,6 @@ class SkuImporter(Importer):
         "manufacturing_rate": "Rate",
         "comment": "Comment",
     }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.sku_mls = []  # list of all SkuManufacturingLine objects to be applied
 
     def _process_row(
         self, row: Dict[str, Any], filename: str = None, line_num: int = None
@@ -411,24 +479,26 @@ class SkuImporter(Importer):
         row["ML Shortnames"] = ml_objs.all()
         return row
 
-    def _construct_instance(self, row: Dict[str, Any], line_num: int = None):
+    def _construct_instance(
+        self, row: Dict[str, Any], line_num: int = None
+    ) -> Instance:
         instance = super()._construct_instance(row, line_num)
-        [
-            self.sku_mls.append(SkuManufacturingLine(sku=instance, line=line))
+        instance.m2m["manufacturing_lines"] = [
+            SkuManufacturingLine(sku=instance, line=line)
             for line in row["ML Shortnames"]
         ]
+        return instance
 
-    def _post_process(self):
-        pass
+    def _save_m2m(self, instance: T, m2m: M2MType):
+        super().__save_m2m(instance, m2m)
 
 
 class IngredientImporter(Importer):
 
     file_type = "ingredients"
     header = ["Ingr#", "Name", "Vendor Info", "Size", "Cost", "Comment"]
-    primary_key = Ingredient._meta.get_field("number")
     model = Ingredient
-    model_name = ("Ingredient",)
+    model_name = "Ingredient",
     field_dict = {
         "number": "Ingr#",
         "name": "Name",

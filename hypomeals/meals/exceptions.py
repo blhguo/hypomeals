@@ -1,9 +1,10 @@
 # pylint: disable-msg=too-many-arguments
 import traceback
-from typing import Iterable
+from dataclasses import dataclass
+from typing import Iterable, Any, TypeVar, Generic, Sequence, Dict
 
 from django.conf import settings
-from meals import utils
+from django.db.models import Model
 
 
 class UserFacingException(Exception):
@@ -140,10 +141,13 @@ class IntegrityException(UserFacingException):
         return result
 
 
-class CollisionException(Exception):
-    def __init__(self, old_record, new_record):
-        self.old_record = old_record
-        self.new_record = new_record
+T = TypeVar("T")
+M2MType = Dict[str, Sequence[Any]]
+
+@dataclass
+class CollisionException(Exception, Generic[T]):
+    old_record: T
+    new_record: T
 
     def __str__(self):
         return (
@@ -209,4 +213,9 @@ class IllegalArgumentsException(UserFacingException):
 
 class Skip(Exception):
     """Used in Importers to signal that a particular row should be skipped"""
+    pass
+
+
+class ImportException(Exception):
+    """Signifies that an import error has occurred"""
     pass
