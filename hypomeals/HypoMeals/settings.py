@@ -41,10 +41,12 @@ LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"
 
 # Email settings
-EMAIL_HOST = "smtp.duke.edu"
-EMAIL_PORT = 25
+EMAIL_HOST = os.getenv("DJANGO_EMAIL_HOST", "smtp.mailgun.org")
+EMAIL_PORT = int(os.getenv("DJANGO_EMAIL_PORT", 587))
+EMAIL_USE_TLS = os.getenv("DJANGO_EMAIL_USE_TLS", "1") == "1"
 EMAIL_HOST_USER = os.getenv("DJANGO_EMAIL_USER")
 EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_PASSWORD")
+EMAIL_FROM_ADDR = os.getenv("DJANGO_EMAIL_FROM")
 
 # Google stuff
 GOOGLE_SHEETS_SCOPES = [

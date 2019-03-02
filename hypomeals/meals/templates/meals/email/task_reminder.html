@@ -62,13 +62,14 @@
 <div class="col-sm-12">
     <p>
         There are {{ assigned_to|length }} task{{ assigned_to|length|pluralize }}
-        that are not completed. When you finish
+        assigned to you that {{ assigned_to|length|pluralize:'is,are' }}
+        not completed. When you finish
         a task, make sure to check them off on the spreadsheet.
     </p>
     <table class="table">
     <thead>
     <tr>
-        <th>Task #</th>
+        <th>#</th>
         <th>Description</th>
         <th>Deadline</th>
     </tr>

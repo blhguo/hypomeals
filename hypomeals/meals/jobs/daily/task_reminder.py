@@ -1,17 +1,17 @@
-import csv
 from collections import defaultdict
 from datetime import datetime, time
 
 from django.template.loader import render_to_string
 from django_extensions.management.jobs import DailyJob
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
+from django.template.defaultfilters import striptags
 
 
 EMAILS = {
-    # "Brandon": "brandon.guo@duke.edu",
-    # "Xingyu": "xc77@duke.edu",
-    "Morton": "ym84@duke.edu",
+    "Brandon": "idkwain@gmail.com",
+    "Xingyu": "dukexingyuchen@gmail.com",
+    "Morton": "moyehan@gmail.com",
 }
 
 
@@ -59,11 +59,11 @@ class Job(DailyJob):
                     "assigned_to": assigned_to[person],
                 },
             )
-            send_mail(
+            msg = EmailMultiAlternatives(
                 "ECE458 Project Task Reminder",
-                message="Please view HTML message",
-                from_email="ym84@duke.edu",
-                recipient_list=[email],
-                fail_silently=False,
-                html_message=email_html,
+                striptags(email_html),
+                settings.EMAIL_FROM_ADDR,
+                [email],
             )
+            msg.attach_alternative(email_html, "text/html")
+            msg.send()
