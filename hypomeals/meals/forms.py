@@ -14,6 +14,7 @@ from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, BLANK_CHOICE_DASH
 from django.forms import formset_factory
+from django.forms.utils import ErrorList
 from django.urls import reverse_lazy
 
 from meals import bulk_import
