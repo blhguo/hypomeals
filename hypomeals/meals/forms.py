@@ -626,10 +626,10 @@ class UpcField(forms.CharField):
         if utils.is_valid_upc(value):
             if value[0] not in ["2", "3", "4", "5"]:
                 return value
-            else:
-                raise ValidationError(
-                    "%(value)s does not represent a consumer product", params={"value": value}
-                )
+            raise ValidationError(
+                "%(value)s does not represent a consumer product",
+                params={"value": value}
+            )
         raise ValidationError(
             "%(value)s is not a valid UPC number", params={"value": value}
         )
