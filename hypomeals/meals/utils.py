@@ -324,8 +324,8 @@ def is_valid_upc(number: django_six.text_type) -> bool:
     """
     if len(number) != 12:
         return False
-    if number[0] not in {"0", "1", "6", "7", "8", "9"}:
-        return False
+    # if number[0] not in {"0", "1", "6", "7", "8", "9"}:
+    #     return False
     check_digit = upc_check_digit(number)
     return number[11] == str(check_digit)
 

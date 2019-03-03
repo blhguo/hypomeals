@@ -624,7 +624,12 @@ class UpcField(forms.CharField):
         # add 0 if number is less than 12 digits
         value = "0" * (12 - len(value)) + value
         if utils.is_valid_upc(value):
-            return value
+            if value[0] not in ["2", "3", "4", "5"]:
+                return value
+            else:
+                raise ValidationError(
+                    "%(value)s does not represent a consumer product", params={"value": value}
+                )
         raise ValidationError(
             "%(value)s is not a valid UPC number", params={"value": value}
         )

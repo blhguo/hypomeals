@@ -8,7 +8,9 @@ from collections import defaultdict
 from decimal import Decimal, InvalidOperation
 from typing import List, Dict, Any, Tuple
 
+from django.core.exceptions import ValidationError
 from django.db.models import Model, AutoField, Field
+from django.utils.translation import gettext as _
 
 from meals import utils
 from meals.exceptions import (
@@ -239,12 +241,18 @@ class SkuImporter(Importer):
             )
         raw_case_upc = row["Case UPC"]
         if utils.is_valid_upc(raw_case_upc):
-            row["Case UPC"] = Upc.objects.get_or_create(upc_number=raw_case_upc)[0]
+            if str(raw_case_upc)[0] not in ["2", "3", "4", "5"]:
+                row["Case UPC"] = Upc.objects.get_or_create(upc_number=raw_case_upc)[0]
+            else:
+                raise ValidationError(_("Cannot import SKU#: %(sku_num)s due to non-consumer Case UPC"), params={'sku_num': row["SKU#"]})
         else:
             raise UserFacingException(f"{raw_case_upc} is not a valid UPC.")
         raw_unit_upc = row["Unit UPC"]
         if utils.is_valid_upc(raw_unit_upc):
-            row["Unit UPC"] = Upc.objects.get_or_create(upc_number=raw_unit_upc)[0]
+            if str(raw_unit_upc)[0] not in ["2", "3", "4", "5"]:
+                row["Unit UPC"] = Upc.objects.get_or_create(upc_number=raw_unit_upc)[0]
+            else:
+                raise ValidationError(_("Cannot import SKU#: %(sku_num)s due to non-consumer Unit UPC"), params={'sku_num': row["SKU#"]})
         else:
             raise UserFacingException(f"{raw_unit_upc} is not a valid UPC.")
         if row["Comment"] is None:
