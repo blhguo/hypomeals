@@ -16,8 +16,7 @@ $(function () {
     let skuFilterForm = $("#skuFilterForm");
     let bulkButton = $("#bulkButton");
 
-    $("[data-toggle*='tooltip']").tooltip();
-    bulkButton.tooltip();
+    $("[data-toggle='tooltip']").tooltip();
 
     function refreshPage() {
         window.location.href = skuUrl;
