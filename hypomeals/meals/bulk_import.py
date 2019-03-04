@@ -10,8 +10,7 @@ from django.db import transaction
 from django.db.models.fields.related import RelatedField
 
 from meals import utils
-from meals.exceptions import CollisionOccurredException, UserFacingException
-from meals.importers import IMPORTERS, Importer
+from meals.importers import IMPORTERS, Importer, CollisionOccurredException
 from .models import Sku, FormulaIngredient, ProductLine, Ingredient
 
 logger = logging.getLogger(__name__)
@@ -42,9 +41,7 @@ def process_csv_files(files, session_key: str) -> Tuple[Dict[str, int], Dict[str
             logger.info("Processing %s: %s", file_type, stream)
             lines = stream.read().decode("UTF-8").splitlines()
             try:
-                num_inserted, num_collisions, num_ignored = importer.do_import(
-                    lines, filename=stream.name
-                )
+                num_inserted, _, num_ignored = importer.do_import(lines)
             except CollisionOccurredException:
                 if session_key not in TRANSACTION_CACHE:
                     TRANSACTION_CACHE[session_key] = {}

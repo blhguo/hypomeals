@@ -10,7 +10,7 @@ import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 from functools import wraps
-from typing import Type, Tuple, Any, Callable, TypeVar
+from typing import Type, Tuple, Callable
 
 import magic
 from django.conf import settings

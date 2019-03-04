@@ -15,7 +15,7 @@ from meals.bulk_import import (
     clear_transaction,
     force_save,
 )
-from meals.exceptions import CollisionOccurredException
+from meals.importers import CollisionOccurredException
 from ..forms import ImportForm
 
 logger = logging.getLogger(__name__)

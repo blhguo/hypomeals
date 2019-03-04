@@ -19,7 +19,7 @@ from django.urls import reverse_lazy
 from meals import bulk_import
 from meals import utils
 from meals.constants import ADMINS_GROUP, USERS_GROUP
-from meals.exceptions import CollisionOccurredException
+from meals.importers import CollisionOccurredException
 from meals.models import (
     FormulaIngredient,
     SkuManufacturingLine,

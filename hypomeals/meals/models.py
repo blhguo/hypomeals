@@ -244,7 +244,9 @@ class Ingredient(
 class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolutionMixin):
     compare_excluded_fields = ("number",)
 
-    NAME_REGEX = re.compile(r"(?P<name>.+):\s*(?P<size>.+)\s*\*\s*(?P<count>\d+)\s*\(#(?P<id>\d+)\)")  # noqa
+    NAME_REGEX = re.compile(
+        r"(?P<name>.+):\s*(?P<size>.+)\s*\*\s*(?P<count>\d+)\s*\(#(?P<id>\d+)\)"
+    )  # noqa
 
     name = models.CharField(max_length=32, verbose_name="Name", blank=False)
 
@@ -421,12 +423,7 @@ class FormulaIngredient(
         Formula, blank=False, on_delete=models.CASCADE, verbose_name="Formula#"
     )
     ingredient = models.ForeignKey(
-        Ingredient,
-        blank=False,
-        on_delete=models.CASCADE,
-        verbose_name="Ingr#",
-        related_name="formulas",
-        related_query_name="formula",
+        Ingredient, blank=False, on_delete=models.CASCADE, verbose_name="Ingr#"
     )
     quantity = models.DecimalField(blank=False, max_digits=20, decimal_places=6)
     unit = models.ForeignKey(Unit, on_delete=models.PROTECT, related_name="+")
@@ -456,6 +453,9 @@ class ManufacturingLine(
         blank=False,
         help_text='A short name to quickly identify a manufacturing line. E.g., "BMP1"',
     )
+    skus = models.ManyToManyField(
+        Sku, through="SkuManufacturingLine", verbose_name="SKUs"
+    )
     comment = models.CharField(max_length=4000, verbose_name="Comment")
 
     def __repr__(self):
@@ -473,24 +473,8 @@ class SkuManufacturingLine(
 ):
     compare_excluded_fields = ("id",)
 
-    sku = models.ForeignKey(
-        Sku,
-        on_delete=models.CASCADE,
-        # This will enable related queries with "line". For example:
-        # >>> Sku.objects.filter(line__rate__ge=1.0)
-        related_query_name="line",
-    )
-    line = models.ForeignKey(
-        ManufacturingLine,
-        on_delete=models.CASCADE,
-        # This will create related object manager in ManufacturingLine as
-        # ManufacturingLine.skus. For example:
-        # >>> ManufacturingLine.skus.all()
-        related_name="skus",
-        # This will enable related queries with "sku". For example:
-        # >>> ManufacturingLine.objects.filter(sku__name__icontains="vegetable")
-        related_query_name="sku",
-    )
+    sku = models.ForeignKey(Sku, on_delete=models.CASCADE)
+    line = models.ForeignKey(ManufacturingLine, on_delete=models.CASCADE)
 
     def __repr__(self):
         return f"<SkuMfgLine #{self.id}: {self.sku.name} <-> " f"{self.line.shortname}>"
@@ -618,6 +602,9 @@ class GoalSchedule(
     )
     start_time = models.DateTimeField(verbose_name="Start time", blank=False)
     end_time = models.DateTimeField(verbose_name="End time", blank=True, null=True)
+    override_hours = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True
+    )
 
     def clean(self):
         if hasattr(self, "line") and self.line:

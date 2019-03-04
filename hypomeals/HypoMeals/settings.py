@@ -11,15 +11,9 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 import json
 import os
-import pickle
 
 import gspread
-from google.auth.transport.requests import Request
 from google.oauth2 import service_account
-
-# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient import discovery
 from oauth2client.service_account import ServiceAccountCredentials
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -42,7 +36,7 @@ LOGIN_REDIRECT_URL = "/"
 
 # Email settings
 EMAIL_HOST = os.getenv("DJANGO_EMAIL_HOST", "smtp.mailgun.org")
-EMAIL_PORT = int(os.getenv("DJANGO_EMAIL_PORT", 587))
+EMAIL_PORT = int(os.getenv("DJANGO_EMAIL_PORT", "587"))
 EMAIL_USE_TLS = os.getenv("DJANGO_EMAIL_USE_TLS", "1") == "1"
 EMAIL_HOST_USER = os.getenv("DJANGO_EMAIL_USER")
 EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_PASSWORD")
