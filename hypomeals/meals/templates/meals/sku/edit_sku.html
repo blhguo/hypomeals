@@ -5,13 +5,19 @@
     {% if editing %}Edit SKU #{{ sku_number }}{% else %}Add SKU{% endif %}
 {% endblock %}
 
+{% block style %}
+ul.ui-autocomplete {
+    z-index: 1100;
+}
+{% endblock %}
+
 {% block body %}
 <div class="container m-auto">
 <div class="row">
     <div class="col-sm">
         <div class="alert alert-success my-4">
             {% if editing %}
-            <h3>Editing SKU #{{ sku_number }}: {{ sku_name }}</h3>
+            <h3>Editing SKU {{ sku_name }}</h3>
             <p>
                 Modify the SKU using the form below. Note that you cannot change
                 some of the fields.
@@ -134,7 +140,6 @@ $(function() {
 
     let customPLDiv = $("#{{ form.custom_product_line.id_for_label }}").parent("div");
     let productLineSelect = $("#{{ form.product_line.id_for_label }}");
-
     customPLDiv.find("label").remove();
     customPLDiv.prop("style", "display: none;");
 

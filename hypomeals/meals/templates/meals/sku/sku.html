@@ -5,366 +5,380 @@
 {% block title %}Review SKUs{% endblock %}
 
 {% block body %}
-<div class="container-fluid m-auto">
-<form method="post" action="{% url 'sku' %}" id="skuFilterForm">
-{% csrf_token %}
-<div class="row">
-<div class="col-sm-8">
-<nav>
-    <ul class="pagination my-4" id="pageList">
-    {% if skus.has_previous %}
-        <li class="page-item">
-        <a class="page-link" page="{{ skus.previous_page_number }}" href="#">
-            <span>&laquo;</span>
-        </a>
-        </li>
-    {% else %}
-        <li class="page-item disabled">
-        <a class="page-link" href="#">
-            <span>&laquo;</span>
-        </a>
-        </li>
-    {% endif %}
+    <div class="container-fluid m-auto">
+        <form method="post" action="{% url 'sku' %}" id="skuFilterForm">
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-sm-8">
+                    <nav>
+                        <ul class="pagination my-4" id="pageList">
+                            {% if skus.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                       page="{{ skus.previous_page_number }}" href="#">
+                                        <span>&laquo;</span>
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#">
+                                        <span>&laquo;</span>
+                                    </a>
+                                </li>
+                            {% endif %}
 
-    {% for page in pages %}
-        {% if current_page == forloop.counter %}
-        <li class="page-item active">
-        {% else %}
-        <li class="page-item">
-        {% endif %}
-        <a class="page-link" page="{{ forloop.counter }}" href="#">
-        {{ forloop.counter }}
-        </a>
-        </li>
-    {% endfor %}
+                            {% for page in pages %}
+                                {% if current_page == forloop.counter %}
+                                    <li class="page-item active">
+                                        {% else %}
+                                    <li class="page-item">
+                                {% endif %}
+                            <a class="page-link" page="{{ forloop.counter }}" href="#">
+                                {{ forloop.counter }}
+                            </a>
+                            </li>
+                            {% endfor %}
 
-    {% if skus.has_next %}
-        <li class="page-item">
-        <a class="page-link" page="{{ skus.next_page_number }}" href="#">
-            <span>&raquo;</span>
-        </a>
-        </li>
-    {% else %}
-        <li class="page-item disabled">
-        <a class="page-link" href="#">
-            <span>&raquo;</span>
-        </a>
-        </li>
-    {% endif %}
-    </ul>
-</nav>
-</div>
-<div class="col-sm-4">
-<div class="btn-group my-4" style="float: right;">
-    {% if perms.meals.delete_sku %}
-    <button type="button" class="btn btn-info viewFormula"
-       disabled
-       id="bulkButton"
-       href="#"
-       data-toggle="modal"
-       data-target="#bulkModalDiv">
-        Bulk Edit Manufacturing Lines
-    </button>
-    {%  endif %}
-    {% if perms.meals.change_sku %}
-    <a id="addSkuButton"
-        href="{% url 'add_sku' %}"
-        class="btn btn-primary">
-        <span class="fa fa-plus"></span> Add a new SKU
-    </a>
-    {% endif %}
-    {% if perms.meals.delete_sku %}
-    <button type="button"
-            class="btn btn-danger"
-            disabled
-            data-toggle="tooltip"
-            data-placement="top"
-            title="Select SKUs below to remove them."
-            id="removeButton">
-        <span class="fa fa-minus"></span> Remove selected
-    </button>
-    {% endif %}
-</div>
-</div>
-</div>
-<div class="row">
-<div class="col-sm-2 my-2">
-<h3>Search</h3>
-{% if form.non_field_errors %}
-<div class="alert alert-danger">
-    <p>Please correct the following error:</p>
-    {{ form.non_field_errors }}
-</div>
-{% endif %}
-{{ form.page_num }}
-<div class="form-group">
-    <label for="{{ form.num_per_page.id_for_label }}">Number per page:</label>
-    {{ form.num_per_page }}
-    {% if form.num_per_page.errors %}
-    <small>{{ form.num_per_page.errors }}</small>
-    {% endif %}
-</div>
-<div class="form-group">
-    <label for="{{ form.sort_by.id_for_label }}">Sort by:</label>
-    {{ form.sort_by }}
-    {% if form.sort_by.errors %}
-    <small>{{ form.sort_by.errors }}</small>
-    {% endif %}
-</div>
-<div class="form-group">
-    <label for="{{ form.keyword.id_for_label }}">Search:</label>
-    {{ form.keyword }}
-    {% if form.keyword.errors %}
-    <small>{{ form.keyword.errors }}</small>
-    {% endif %}
-</div>
-<div class="form-group">
-    <label for="{{ form.ingredients.id_for_label }}">Contains ingredient(s):</label>
-    {{ form.ingredients }}
-    <small>{{ form.ingredients.help_text }}</small>
-    {% if form.ingredients.errors %}
-    <small>{{ form.ingredients.errors }}</small>
-    {% endif %}
-</div>
-<div class="form-group">
-    <label for="{{ form.product_lines.id_for_label }}">Belongs to product line(s):</label>
-    {{ form.product_lines }}
-    <small>{{ form.product_lines.help_text }}</small>
-    {% if form.product_lines.errors %}
-    <small>{{ form.product_lines.errors }}</small>
-    {% endif %}
-</div>
-<div class="form-group">
-    <label for="{{ form.formulas.id_for_label }}">Belongs to formula(s):</label>
-    {{ form.formulas }}
-    <small>{{ form.formulas.help_text }}</small>
-    {% if form.formulas.errors %}
-    <small>{{ form.formulas.errors }}</small>
-    {% endif %}
-</div>
-<div class="btn-group w-100" role="group">
-<button id="submitButton" class="btn btn-success w-100">
-    <span class="fas fa-filter"></span> Filter
-</button>
-<button id="resetAllButton" class="btn btn-danger w-100">
-    <span class="fas fa-trash-alt"></span> Reset
-</button>
-</div>
-<div>
-
-
-<!-- Export buttons -->
-<hr>
-<h3>Export</h3>
-<div class="form-check mb-2 w-100">
-    <input class="form-check-input"
-           type="checkbox"
-           id="exportFormulaCheckbox">
-    <label class="form-check-label"
-           for="exportFormulaCheckbox">
-        Include formulas
-        <span class="badge badge-pill badge-info"
-              data-toggle="tooltip"
-              data-placement="right"
-              data-html="true"
-              title="Selecting this option will generate a ZIP file containing a <pre>formulas.csv</pre>">i</span>
-    </label>
-</div>
-<div class="form-check mb-2 w-100">
-    <input class="form-check-input"
-           type="checkbox"
-           id="exportProductLineCheckbox">
-    <label class="form-check-label"
-           for="exportProductLineCheckbox">
-        Include separate Product Lines file
-        <span class="badge badge-pill badge-info"
-              data-toggle="tooltip"
-              data-placement="right"
-              data-html="true"
-              title="Selecting this option will generate a ZIP file containing a <pre>product_lines.csv</pre>">i</span>
-    </label>
-</div>
-<button class="btn btn-primary w-100" id="exportButton">
-    <span class="fas fa-download"></span> Export Current Search
-</button>
-</div>
-</div>
+                            {% if skus.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                       page="{{ skus.next_page_number }}" href="#">
+                                        <span>&raquo;</span>
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#">
+                                        <span>&raquo;</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                <div class="col-sm-4">
+                    <div class="btn-group my-4" style="float: right;">
+                        {% if perms.meals.delete_sku %}
+                            <button type="button" class="btn btn-info viewFormula"
+                                    disabled
+                                    id="bulkButton"
+                                    data-toggle="modal"
+                                    data-target="#bulkModalDiv">
+                                Bulk Edit Manufacturing Lines
+                            </button>
+                        {% endif %}
+                        {% if perms.meals.change_sku %}
+                            <a id="addSkuButton"
+                               href="{% url 'add_sku' %}"
+                               class="btn btn-primary">
+                                <span class="fa fa-plus"></span> Add a new SKU
+                            </a>
+                        {% endif %}
+                        {% if perms.meals.delete_sku %}
+                            <button type="button"
+                                    class="btn btn-danger"
+                                    disabled
+                                    data-toggle="tooltip"
+                                    data-placement="top"
+                                    title="Select SKUs below to remove them."
+                                    id="removeButton">
+                                <span class="fa fa-minus"></span> Remove selected
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm-2 my-2">
+                    <h3>Search</h3>
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            <p>Please correct the following error:</p>
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+                    {{ form.page_num }}
+                    <div class="form-group">
+                        <label for="{{ form.num_per_page.id_for_label }}">Number per
+                            page:</label>
+                        {{ form.num_per_page }}
+                        {% if form.num_per_page.errors %}
+                            <small>{{ form.num_per_page.errors }}</small>
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.sort_by.id_for_label }}">Sort by:</label>
+                        {{ form.sort_by }}
+                        {% if form.sort_by.errors %}
+                            <small>{{ form.sort_by.errors }}</small>
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.keyword.id_for_label }}">Search:</label>
+                        {{ form.keyword }}
+                        {% if form.keyword.errors %}
+                            <small>{{ form.keyword.errors }}</small>
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.ingredients.id_for_label }}">Contains
+                            ingredient(s):</label>
+                        {{ form.ingredients }}
+                        <small>{{ form.ingredients.help_text }}</small>
+                        {% if form.ingredients.errors %}
+                            <small>{{ form.ingredients.errors }}</small>
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.product_lines.id_for_label }}">Belongs to
+                            product line(s):</label>
+                        {{ form.product_lines }}
+                        <small>{{ form.product_lines.help_text }}</small>
+                        {% if form.product_lines.errors %}
+                            <small>{{ form.product_lines.errors }}</small>
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.formulas.id_for_label }}">Belongs to
+                            formula(s):</label>
+                        {{ form.formulas }}
+                        <small>{{ form.formulas.help_text }}</small>
+                        {% if form.formulas.errors %}
+                            <small>{{ form.formulas.errors }}</small>
+                        {% endif %}
+                    </div>
+                    <div class="btn-group w-100" role="group">
+                        <button id="submitButton" class="btn btn-success w-100">
+                            <span class="fas fa-filter"></span> Filter
+                        </button>
+                        <button id="resetAllButton" class="btn btn-danger w-100">
+                            <span class="fas fa-trash-alt"></span> Reset
+                        </button>
+                    </div>
+                    <div>
 
 
-<!-- Table column -->
-<div class="col-sm-10 my-2">
-{% if messages %}
-<div class="alert alert-success" id="messagesDiv">
-{% for message in messages %}
-<p {% if message.tags %}class="{{ message.tags }}{% endif %}">{{ message }}</p>
-{% endfor %}
-</div>
-{% endif %}
-<table class="table">
-<thead class="thead-light">
-<tr>
-    {% if perms.meals.delete_sku %}
-    <th><input type="checkbox" id="selectAll"> </th>
-    {% endif %}
-    <th>SKU#</th>
-    <th>Name</th>
-    <th>Case UPC#</th>
-    <th>Unit UPC#</th>
-    <th>Unit Size</th>
-    <th>Count Per Case</th>
-    <th>Product Line</th>
-    <th>Comment</th>
-    <th>Formula</th>
-    <th>Formula Scale Factor</th>
-    <th>Manufactuing Lines</th>
-    <th>Rate</th>
-</tr>
-</thead>
-<tbody class="table-striped">
-{% for sku in skus %}
-<tr>
-    {% if perms.meals.delete_sku %}
-    <td><input type="checkbox" class="sku-checkbox" id="{{ sku.number }}"> </td>
-    {% endif %}
-    <td>{{ sku.number }}</td>
-    <td>
-        <a href="{% url 'edit_sku' sku.number %}"
-           {% if perms.meals.change_sku %}
-           title="Click on the name to edit this SKU."
-           {% else %}
-           title="You don't have permission to edit this SKU."
-           {% endif %}
-           data-toggle="tooltip"
-           data-placement="right">
-            {{ sku.name }}
-        </a>
-    </td>
-    <td>{{ sku.case_upc.upc_number }}</td>
-    <td>{{ sku.unit_upc.upc_number }}</td>
-    <td>{{ sku.unit_size }}</td>
-    <td>{{ sku.count }}</td>
-    <td>{{ sku.product_line.name }}</td>
-    <td>{{ sku.comment|truncatewords:20 }}</td>
-    <td>
-        <div class="btn-group">
-        <a class="btn btn-link viewFormula"
-           href="#"
-           {% if not perms.meals.view_formulaingredient %}
-           disabled="disabled"
-           data-toggle="tooltip"
-           data-placement="left"
-           title="You don't have permission to view the formulas."
-           {% endif %}
-           data-toggle="modal"
-           data-target="#modalDiv"
-           id="{{ sku.formula.number }}">
-            View
-        </a>
-        {% if perms.meals.change_skuingredient and perms.meals.add_skuingredient and sku.formula.number %}
-        <a class="btn btn-link" href="{% url 'edit_formula' sku.formula.number %}">Edit</a>
-        {% endif %}
-        </div>
-    </td>
-    <td>{{ sku.formula_scale }}</td>
-    <td>
-      {% for instance in sku.skumanufacturingline_set.all %}
-        {{ instance.line}},
-      {% endfor %}
-    </td>
-    <td>
-        {{ sku.manufacturing_rate }}
-    </td>
-</tr>
-{% empty %}
-    <div class="alert alert-danger">
-        <p>No results were found. Please modify your search parameters and try again.</p>
-        <p>You can also click the "Add a new SKU" button to create a new SKU.</p>
+                        <!-- Export buttons -->
+                        <hr>
+                        <h3>Export</h3>
+                        <div class="form-check mb-2 w-100">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="exportFormulaCheckbox">
+                            <label class="form-check-label"
+                                   for="exportFormulaCheckbox">
+                                Include formulas
+                                <span class="badge badge-pill badge-info"
+                                      data-toggle="tooltip"
+                                      data-placement="right"
+                                      data-html="true"
+                                      title="Selecting this option will generate a ZIP file containing a <pre>formulas.csv</pre>">i</span>
+                            </label>
+                        </div>
+                        <div class="form-check mb-2 w-100">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="exportProductLineCheckbox">
+                            <label class="form-check-label"
+                                   for="exportProductLineCheckbox">
+                                Include separate Product Lines file
+                                <span class="badge badge-pill badge-info"
+                                      data-toggle="tooltip"
+                                      data-placement="right"
+                                      data-html="true"
+                                      title="Selecting this option will generate a ZIP file containing a <pre>product_lines.csv</pre>">i</span>
+                            </label>
+                        </div>
+                        <button class="btn btn-primary w-100" id="exportButton">
+                            <span class="fas fa-download"></span> Export Current Search
+                        </button>
+                    </div>
+                </div>
+
+
+                <!-- Table column -->
+                <div class="col-sm-10 my-2">
+                    {% if messages %}
+                        <div class="alert alert-success" id="messagesDiv">
+                            {% for message in messages %}
+                                <p {% if message.tags %}class="{{ message.tags }}{% endif %}">{{ message }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <table class="table">
+                        <thead class="thead-light">
+                        <tr>
+                            {% if perms.meals.delete_sku %}
+                                <th><input type="checkbox" id="selectAll"></th>
+                            {% endif %}
+                            <th>SKU#</th>
+                            <th>Name</th>
+                            <th>Case UPC#</th>
+                            <th>Unit UPC#</th>
+                            <th>Unit Size</th>
+                            <th>Count Per Case</th>
+                            <th>Product Line</th>
+                            <th>Comment</th>
+                            <th>Formula</th>
+                            <th>Formula Scale Factor</th>
+                            <th>Manufactuing Lines</th>
+                            <th>Rate</th>
+                        </tr>
+                        </thead>
+                        <tbody class="table-striped">
+                        {% for sku in skus %}
+                            <tr>
+                                {% if perms.meals.delete_sku %}
+                                    <td><input type="checkbox" class="sku-checkbox"
+                                               id="{{ sku.number }}"></td>
+                                {% endif %}
+                                <td>{{ sku.number }}</td>
+                                <td>
+                                    <a href="{% url 'edit_sku' sku.number %}"
+                                            {% if perms.meals.change_sku %}
+                                       title="Click on the name to edit this SKU."
+                                            {% else %}
+                                       title="You don't have permission to edit this SKU."
+                                            {% endif %}
+                                       data-toggle="tooltip"
+                                       data-placement="right">
+                                        {{ sku.name }}
+                                    </a>
+                                </td>
+                                <td>{{ sku.case_upc.upc_number }}</td>
+                                <td>{{ sku.unit_upc.upc_number }}</td>
+                                <td>{{ sku.unit_size }}</td>
+                                <td>{{ sku.count }}</td>
+                                <td>{{ sku.product_line.name }}</td>
+                                <td>{{ sku.comment|truncatewords:20 }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a class="btn btn-link viewFormula"
+                                           href="#"
+                                                {% if not perms.meals.view_formulaingredient %}
+                                           disabled="disabled"
+                                           data-toggle="tooltip"
+                                           data-placement="left"
+                                           title="You don't have permission to view the formulas."
+                                                {% endif %}
+                                           data-toggle="modal"
+                                           data-target="#modalDiv"
+                                           id="{{ sku.formula.number }}">
+                                            View
+                                        </a>
+                                        {% if perms.meals.change_skuingredient and perms.meals.add_skuingredient and sku.formula.number %}
+                                            <a class="btn btn-link"
+                                               href="{% url 'edit_formula' sku.formula.number %}">Edit</a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>{{ sku.formula_scale }}</td>
+                                <td>
+                                    {% for instance in sku.skumanufacturingline_set.all %}
+                                        {{ instance.line }},
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    {{ sku.manufacturing_rate }}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <div class="alert alert-danger">
+                                <p>No results were found. Please modify your search
+                                    parameters and try again.</p>
+                                <p>You can also click the "Add a new SKU" button to
+                                    create a new SKU.</p>
+                            </div>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    <div>
+                        <p>Found {{ skus.paginator.count }} matches in {{ duration }}
+                            seconds</p>
+                    </div>
+                </div>
+            </div>
+        </form>
     </div>
-{% endfor %}
-</tbody>
-</table>
-<div>
-<p>Found {{ skus.paginator.count }} matches in {{ duration }} seconds</p>
-</div>
-</div>
-</div>
-</form>
-</div>
-<!-- Modal -->
+    <!-- Modal -->
 
-<div class="modal" tabindex="-1" role="dialog" id="modalDiv">
-<div class="modal-dialog modal-lg" role="document">
-<div class="modal-content">
-    <div class="modal-header">
-        <h5 class="modal-title"></h5>
-        <button type="button" class="close" data-dismiss="modal">
-            <span class="fas fa-times"></span>
-        </button>
-    </div>
-    <div class="modal-body" id="modalBody">
-        <div class="d-flex justify-content-center">
-        <div class="spinner-border" role="status" id="loadingSpinner">
-            <span class="sr-only">Loading...</span>
-        </div>
-        </div>
-    </div>
-    <div class="modal-footer">
-        <button type="button"
-                class="btn btn-secondary"
-                data-dismiss="modal">Close</button>
-    </div>
-</div>
-</div>
-</div>
-
-<!-- Another Modal -->
-<div class="modal" tabindex="-1" role="dialog" id="bulkModalDiv">
-<div class="modal-dialog modal-lg" role="document">
-<div class="modal-content">
-    <div class="modal-header">
-        <h5 class="modal-title"></h5>
-        <button type="button" class="close" data-dismiss="modal">
-            <span class="fas fa-times"></span>
-        </button>
-    </div>
-    <div class="modal-body" id="bulkModalBody">
-        <div class="d-flex justify-content-center">
-        <div class="spinner-border" role="status" id="bulkLoadingSpinner">
-            <span class="sr-only">Loading...</span>
-        </div>
+    <div class="modal" tabindex="-1" role="dialog" id="modalDiv">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"></h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span class="fas fa-times"></span>
+                    </button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <div class="d-flex justify-content-center">
+                        <div class="spinner-border" role="status" id="loadingSpinner">
+                            <span class="sr-only">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-dismiss="modal">Close
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="modal-footer">
-        <button type="button"
-                class="btn btn-success"
-                data-dismiss="modal"
-                id="bulkModalSave">Save</button>
-        <button type="button"
-                class="btn btn-secondary"
-                data-dismiss="modal">Close</button>
-    </div>
-</div>
-</div>
-</div>
 
-<!-- Hidden div with template data -->
-<div style="display: none;">
-<a href="{% url 'autocomplete_ingredients' %}" id="acIngredientUrl"></a>
-<a href="{% url 'autocomplete_product_lines' %}" id="acProductLineUrl"></a>
-<input id="ingredientsInputId" value="{{ form.ingredients.id_for_label }}">
-<input id="productLinesInputId" value="{{ form.product_lines.id_for_label }}">
-<input id="pageNumInputId" value="{{ form.page_num.id_for_label }}">
-<a href="{% url 'sku' %}" id="skuUrl"></a>
-<a href="{% url 'remove_skus' %}" id="removeSkuUrl"></a>
-<a href="{% url 'view_formula' 0 %}" id="viewFormulaUrl"></a>
-<a href="{% url 'view_lines'%}" id="viewLinesUrl"></a>
-<a href="{% url 'edit_lines'%}" id="editLinesUrl"></a>
-<a href="{% url 'sku'%}" id="skuUrl"></a>
-</div>
+    <!-- Another Modal -->
+    <div class="modal" tabindex="-1" role="dialog" id="bulkModalDiv">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"></h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span class="fas fa-times"></span>
+                    </button>
+                </div>
+                <div class="modal-body" id="bulkModalBody">
+                    <div class="d-flex justify-content-center">
+                        <div class="spinner-border" role="status"
+                             id="bulkLoadingSpinner">
+                            <span class="sr-only">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-success"
+                            data-dismiss="modal"
+                            id="bulkModalSave">Save
+                    </button>
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-dismiss="modal">Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden div with template data -->
+    <div style="display: none;">
+        <a href="{% url 'autocomplete_ingredients' %}" id="acIngredientUrl"></a>
+        <a href="{% url 'autocomplete_product_lines' %}" id="acProductLineUrl"></a>
+        <input id="ingredientsInputId" value="{{ form.ingredients.id_for_label }}">
+        <input id="productLinesInputId" value="{{ form.product_lines.id_for_label }}">
+        <input id="pageNumInputId" value="{{ form.page_num.id_for_label }}">
+        <a href="{% url 'sku' %}" id="skuUrl"></a>
+        <a href="{% url 'remove_skus' %}" id="removeSkuUrl"></a>
+        <a href="{% url 'view_formula' 0 %}" id="viewFormulaUrl"></a>
+        <a href="{% url 'view_lines' %}" id="viewLinesUrl"></a>
+        <a href="{% url 'edit_lines' %}" id="editLinesUrl"></a>
+        <a href="{% url 'sku' %}" id="skuUrl"></a>
+    </div>
 
 {% endblock %}
 
 {% block scriptend %}
-<script src="{% static 'meals/common.js' %}"></script>
-<script src="{% static 'meals/sku/sku.js' %}"></script>
+    <script src="{% static 'meals/common.js' %}"></script>
+    <script src="{% static 'meals/sku/sku.js' %}"></script>
 {% endblock %}
