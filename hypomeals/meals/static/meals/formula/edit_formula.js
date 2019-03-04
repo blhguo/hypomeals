@@ -244,9 +244,9 @@ $(function () {
                   $("#formulaDiv").modal("hide");
                   let name = data.name;
                   let formulaSelector = $("#id_formula");
-                  let newOption = $("<option>").text(name)
-                                               .attr("value", name)
-                                               .appendTo($("#id_formula"));
+                  $("<option>").text(name)
+                               .attr("value", name)
+                               .appendTo($(formulaSelector));
               }
               formulaModalBody.trigger("modal:change", [$(data.resp)]);
           },
