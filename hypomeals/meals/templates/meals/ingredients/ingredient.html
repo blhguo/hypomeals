@@ -56,14 +56,14 @@
 </div>
 <div class="col-sm-4">
     <div class="btn-group my-4" style="float:right;">
-        {% if perms.meals.add_ingredient %}
+        {% if request.user.is_admin %}
         <a id="addIngredientButton"
            href="{%  url 'add_ingredient' %}"
            class="btn btn-primary">
             <span class="fa fa-plus"></span> Add a new Ingredient
         </a>
         {% endif %}
-        {% if perms.meals.delete_ingredient %}
+        {% if request.user.is_admin %}
         <button type="button"
                 class="btn btn-danger"
                 disabled
@@ -71,7 +71,7 @@
                 data-placement="top"
                 title="Select Ingredients below to remove them."
                 id="removeButton">
-            <span class="fa fa-minus"></span> Remove Selected
+            <span class="fa fa-minus"></span> Remove selected
         </button>
         {% endif %}
     </div>
@@ -151,7 +151,7 @@
 <table class="table">
     <thead class="thead-light">
     <tr>
-        {% if perms.meals.delete_ingredient %}
+        {% if request.user.is_admin %}
         <th><input type="checkbox" id="selectAllCheckbox"> </th>
         {% endif %}
         <th>Ingr#</th>
@@ -165,13 +165,13 @@
     <tbody class="table-striped">
     {% for ingredient in ingredients %}
     <tr>
-        {% if perms.meals.delete_ingredient %}
+        {% if request.user.is_admin %}
         <td><input type="checkbox" class="ingredient-checkbox" id="{{ ingredient.number }}"> </td>
         {% endif %}
         <td>{{ ingredient.number }}</td>
         <td>
             <a href="{% url "edit_ingredient" ingredient.number %}"
-               {% if perms.meals.change_ingredient %}
+               {% if request.user.is_admin %}
                title="Click on the name to edit this ingredient."
                {% else %}
                title="You don't have permission to edit this ingredient."

@@ -57,7 +57,7 @@
 </div>
 <div class="col-sm-4">
 <div class="btn-group my-4" style="float: right;">
-    {% if perms.meals.delete_sku %}
+    {% if request.user.is_admin %}
     <button type="button" class="btn btn-info viewFormula"
        disabled
        id="bulkButton"
@@ -67,14 +67,14 @@
         Bulk Edit Manufacturing Lines
     </button>
     {%  endif %}
-    {% if perms.meals.change_sku %}
+    {% if request.user.is_admin %}
     <a id="addSkuButton"
         href="{% url 'add_sku' %}"
         class="btn btn-primary">
         <span class="fa fa-plus"></span> Add a new SKU
     </a>
     {% endif %}
-    {% if perms.meals.delete_sku %}
+    {% if request.user.is_admin %}
     <button type="button"
             class="btn btn-danger"
             disabled
@@ -205,7 +205,7 @@
 <table class="table">
 <thead class="thead-light">
 <tr>
-    {% if perms.meals.delete_sku %}
+    {% if request.user.is_admin %}
     <th><input type="checkbox" id="selectAll"> </th>
     {% endif %}
     <th>SKU#</th>
@@ -225,13 +225,13 @@
 <tbody class="table-striped">
 {% for sku in skus %}
 <tr>
-    {% if perms.meals.delete_sku %}
+    {% if request.user.is_admin %}
     <td><input type="checkbox" class="sku-checkbox" id="{{ sku.number }}"> </td>
     {% endif %}
     <td>{{ sku.number }}</td>
     <td>
         <a href="{% url 'edit_sku' sku.number %}"
-           {% if perms.meals.change_sku %}
+           {% if request.user.is_admin %}
            title="Click on the name to edit this SKU."
            {% else %}
            title="You don't have permission to edit this SKU."
@@ -250,7 +250,7 @@
         <div class="btn-group">
         <a class="btn btn-link viewFormula"
            href="#"
-           {% if not perms.meals.view_formulaingredient %}
+           {% if not request.user.is_admin %}
            disabled="disabled"
            data-toggle="tooltip"
            data-placement="left"
@@ -261,7 +261,7 @@
            id="{{ sku.formula.number }}">
             View
         </a>
-        {% if perms.meals.change_skuingredient and perms.meals.add_skuingredient and sku.formula.number %}
+        {% if request.user.is_admin %}
         <a class="btn btn-link" href="{% url 'edit_formula' sku.formula.number %}">Edit</a>
         {% endif %}
         </div>
