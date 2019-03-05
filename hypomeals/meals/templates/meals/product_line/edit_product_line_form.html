@@ -20,7 +20,7 @@
 <div class="row mb-4">
     <div class="col-sm">
     {% if editing %}
-    <form method="post" action="{% url 'edit_product_line' product_line_name %}" id="editProductLineForm">
+    <form method="post" action="{% url 'edit_product_line' product_line_number %}" id="editProductLineForm">
     {% else %}
     <form method="post" action="{% url 'add_product_line' %}" id="editProductLineForm">
     {% endif %}
