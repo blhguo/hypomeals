@@ -656,7 +656,7 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
         data_source=reverse_lazy("autocomplete_manufacturing_lines"),
         required=True,
         attr="shortname",
-        help_text="Enter Manufacturing Lines (Short Name) separated by commas",
+        help_text="Enter Manufacturing Lines (shortname) separated by commas",
     )
 
     class Meta:
