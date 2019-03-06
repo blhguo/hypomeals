@@ -10,6 +10,7 @@ import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 from functools import wraps
+from typing import Type, Tuple, Callable
 
 import magic
 from django.conf import settings
@@ -229,7 +230,20 @@ class GeneralFileValidator:
 
 
 @parameterized
-def log_exceptions(func, logger=None, exclude=()):
+def log_exceptions(
+    func: Callable,
+    logger: logging.Logger = None,
+    exclude: Tuple[Type[Exception], ...] = (),
+) -> Callable:
+    """
+    A decorator to log all exceptions in the function, and optionally replace it with
+    another exception, usually to prevent internal exceptions from being visible to
+    the user.
+    :param func: the function to be decorated
+    :param logger: a logger to log the exception
+    :param exclude: an tuple of exception classes to exclude from logging
+    :return: the decorated function
+    """
 
     if logger is None:
         # If logger is not supplied, use the root logger
@@ -240,15 +254,15 @@ def log_exceptions(func, logger=None, exclude=()):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            if exclude:
-                if any(isinstance(e, excluded) for excluded in exclude):
-                    logger.debug(
-                        f"{e.__class__.__name__} raised when "
-                        f"calling function {func.__qualname__} but excluded."
-                    )
-            logger.exception(
-                f"Exception occurred when calling function {func.__qualname__}"
-            )
+            if exclude and isinstance(e, exclude):
+                logger.debug(
+                    f"{e.__class__.__name__} raised when "
+                    f"calling function {func.__qualname__} but excluded."
+                )
+            else:
+                logger.exception(
+                    f"Exception occurred when calling function {func.__qualname__}"
+                )
             raise e
 
     return wrapper
@@ -324,8 +338,8 @@ def is_valid_upc(number: django_six.text_type) -> bool:
     """
     if len(number) != 12:
         return False
-    if number[0] not in {"0", "1", "6", "7", "8", "9"}:
-        return False
+    # if number[0] not in {"0", "1", "6", "7", "8", "9"}:
+    #     return False
     check_digit = upc_check_digit(number)
     return number[11] == str(check_digit)
 
@@ -494,10 +508,10 @@ def compute_end_time(start_time: datetime, num_hours: float) -> datetime:
 
 
 def ajax_view(func):
-
     @functools.wraps(func)
     def wrapper(request, *args, **kwargs):
         from meals.exceptions import UserFacingException  # noqa
+
         if request.is_ajax():
             try:
                 result = func(request, *args, **kwargs)
@@ -510,4 +524,5 @@ def ajax_view(func):
         else:
             messages.error(request, "This view is not intended for browsers.")
             return redirect("error")
+
     return wrapper

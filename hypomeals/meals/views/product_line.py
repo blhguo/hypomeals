@@ -33,8 +33,8 @@ def product_line(request):
 
 @login_required
 @auth.user_is_admin_ajax(msg="Only an administrator may edit product lines.")
-def edit_product_line(request, product_line_name):
-    instance = get_object_or_404(ProductLine, name=product_line_name)
+def edit_product_line(request, pk):
+    instance = get_object_or_404(ProductLine, pk=pk)
     if request.method == "POST":
         form = EditProductLineForm(request.POST, instance=instance)
         if form.is_valid():
@@ -45,7 +45,7 @@ def edit_product_line(request, product_line_name):
         form = EditProductLineForm(instance=instance)
     form_html = render_to_string(
         template_name="meals/product_line/edit_product_line_form.html",
-        context={"form": form, "editing": True, "product_line_name": instance.name},
+        context={"form": form, "editing": True, "product_line_number": instance.pk},
         request=request,
     )
     return render(
