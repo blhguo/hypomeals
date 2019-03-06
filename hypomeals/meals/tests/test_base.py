@@ -59,7 +59,7 @@ class BaseTestCase(TestCase):
             return upc_number
         if upc_number is None:
             upc_number = utils.generate_random_upc()
-        if not utils.is_valid_upc(upc_number):
+        if not utils.is_valid_upc(upc_number) or str(upc_number)[0] in ['2', '3', '4', '5']:
             raise AssertionError(f"'{upc_number}' is not a valid UPC")
         return Upc.objects.get_or_create(upc_number=upc_number)[0]
 
