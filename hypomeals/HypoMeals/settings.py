@@ -96,6 +96,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_extensions",
+    "django_celery_results",
+    "django_celery_beat",
 ]
 
 MIDDLEWARE = [
@@ -259,3 +261,17 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = "/static/"
+
+
+# Celery
+CELERY_RESULT_BACKEND = "django-db"
+CELERY_REDIS_HOST = os.getenv("CELERY_REDIS_HOST", "localhost")
+CELERY_REDIS_PORT = os.getenv("CELERY_REDIS_PORT", "6379")
+CELERY_BROKER_URL = f"redis://{CELERY_REDIS_HOST}:{CELERY_REDIS_PORT}/0"
+
+# Sales
+SALES_INTERFACE_URL = "http://hypomeals-sales.colab.duke.edu:8080/"
+SALES_REQUEST_CONNECT_TIMEOUT = 5
+SALES_REQUEST_READ_TIMEOUT = 30
+SALES_REQUEST_MAX_RETRIES = 5
+SALES_TIMEOUT = 30

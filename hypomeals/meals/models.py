@@ -348,6 +348,12 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
             (shortname, shortname) for shortname in self.line_shortnames
         ]
 
+    @property
+    def sales_ready(self):
+        # 1999 to 2019 is 21 years.
+        # Obviously this project won't extend past the semester, so...
+        return self.sales.distinct("year").values("year").count() == 21
+
     def __repr__(self):
         return f"<SKU #{self.number}: {self.name}>"
 
@@ -378,7 +384,11 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
     def save(self, *args, **kwargs):
         if not self.number:
             self.number = utils.next_id(Sku)
-        return super().save(*args, **kwargs)
+        super_result = super().save(*args, **kwargs)
+        # I know this is ugly... There's no other way around the circular dependency
+        from meals.tasks import get_sku_sales
+        get_sku_sales(self.number)
+        return super_result
 
 
 class Formula(
@@ -654,3 +664,64 @@ class GoalSchedule(
 
     def __str__(self):
         return f"{self.goal_item.goal.name} @ {self.start_time.strftime('%Y-%m-%d')}"
+
+
+class Customer(models.Model):
+
+    name = models.CharField(max_length=1000, blank=False, unique=True)
+
+    def __str__(self):
+        return f"<Customer #{self.pk}: {self.name}>"
+
+    __repr__ = __str__
+
+
+class Sale(models.Model):
+
+    sku = models.ForeignKey(
+        Sku,
+        on_delete=models.CASCADE,
+        related_name="sales",
+        related_query_name="sale",
+        blank=False,
+    )
+    year = models.IntegerField(blank=False)
+    week = models.IntegerField(blank=False)
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.CASCADE,
+        related_name="sales",
+        related_query_name="sale",
+        blank=False,
+    )
+    sales = models.DecimalField(
+        max_digits=20,
+        decimal_places=6,
+        validators=[
+            MinValueValidator(
+                limit_value=0.000001, message="Sales records must be positive."
+            )
+        ],
+    )
+    price = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        validators=[
+            MinValueValidator(
+                limit_value=0.01, message="Price per case in sales must be positive."
+            )
+        ],
+    )
+    # Sales records retrieved will not change. Hence "auto_now_add".
+    retrieval_time = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return (
+            f"<Sale #{self.pk}: {self.sku.number} -> {self.customer.pk} "
+            f"({self.year}/{self.week}) {self.sales}@{self.price}>"
+        )
+
+    __repr__ = __str__
+
+    class Meta:
+        ordering = ["year", "week", "sku__number", "customer__pk"]

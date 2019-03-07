@@ -15,6 +15,8 @@ from .models import (
     ManufacturingLine,
     Unit,
     GoalSchedule,
+    Customer,
+    Sale,
 )
 
 # Register your models here.
@@ -32,3 +34,5 @@ admin.site.register(SkuManufacturingLine)
 admin.site.register(ManufacturingLine)
 admin.site.register(Unit)
 admin.site.register(GoalSchedule)
+admin.site.register(Customer)
+admin.site.register(Sale)
