@@ -47,7 +47,8 @@ class Job(DailyJob):
             if row["#"]:
                 row["Deadline"] = datetime.strptime(row["Deadline"], "%m/%d/%Y")
                 row["Deadline"] = datetime.combine(row["Deadline"], time(17, 0))
-                assigned_to[row["Assigned to"]].append(row)
+                if row["Completed?"] != "TRUE":
+                    assigned_to[row["Assigned to"]].append(row)
 
         for person, email in EMAILS.items():
             email_html = render_to_string(
