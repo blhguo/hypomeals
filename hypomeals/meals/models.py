@@ -2,6 +2,7 @@
 import logging
 import re
 
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
@@ -350,9 +351,32 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
 
     @property
     def sales_ready(self):
-        # 1999 to 2019 is 21 years.
-        # Obviously this project won't extend past the semester, so...
-        return self.sales.distinct("year").values("year").count() == 21
+        now = timezone.now()
+        num_years = now.year - settings.SALES_YEAR_START + 1
+        return self.sales.distinct("year").values("year").count() == num_years
+
+    def get_sales(self):
+        """
+        Schedules to retrieve all sales record from the sales system, in a sequential
+        manner, for the years 1999 to 2019. Note that due to requirements, this cannot
+        be parallelized.
+
+        Note: if Sales data already exists for a SKU and a particular year, they will be
+        deleted.
+        :param sku_number: the sku to retrieve sales records
+        :return: a dict mapping from year number an `AsyncResult` instance which, upon a
+            `.get()` call, returns the number of records retrieved.
+        """
+        now = timezone.now()
+        from meals.tasks import get_sku_sales_for_year as task
+        results = {
+            year: task.apply_async(
+                args=(self.number, year), countdown=settings.SALES_TIMEOUT
+            )
+            for year in range(1999, now.year + 1)
+        }
+
+        return results
 
     def __repr__(self):
         return f"<SKU #{self.number}: {self.name}>"
@@ -381,14 +405,18 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
             ("product_line__name", "Product Line"),
         ]
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, no_sales=False, **kwargs):
+        """
+        Saves the Sku instance to database, filling in its primary key value if
+        necessary.
+        :param no_sales a kw-only parameter which, if set to True, suppresses the
+            retrieval of sales records from the sales system.
+        """
         if not self.number:
             self.number = utils.next_id(Sku)
-        super_result = super().save(*args, **kwargs)
-        # I know this is ugly... There's no other way around the circular dependency
-        from meals.tasks import get_sku_sales
-        get_sku_sales(self.number)
-        return super_result
+        super().save(*args, **kwargs)
+        if not no_sales:
+            self.get_sales()
 
 
 class Formula(

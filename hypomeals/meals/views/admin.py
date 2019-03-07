@@ -19,7 +19,6 @@ from meals.auth import sign_in_netid_user
 from meals.exceptions import UserFacingException
 from meals.forms import EditUserForm
 from meals.models import User
-from meals.tasks import get_sku_sales
 
 logger = logging.getLogger(__name__)
 

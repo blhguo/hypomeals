@@ -1,7 +1,7 @@
 import operator
 from decimal import Decimal
 from logging import Logger
-from typing import List, Sequence, Iterator, Tuple, Dict
+from typing import List, Sequence, Iterator, Dict
 
 import requests
 from django.conf import settings

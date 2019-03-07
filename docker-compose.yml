@@ -29,6 +29,8 @@ services:
         #     - ./redis/data:/data
         expose:
             - "6379"
+        ports:
+            - "6379:6379"
     web:
         build: ./hypomeals
         user: nobody
@@ -36,6 +38,7 @@ services:
             - "DJANGO_SETTINGS_MODULE=HypoMeals.settings_prod"
             - "DJANGO_DB_HOST=db"
             - "DJANGO_DB_PORT=5432"
+            - "HOSTNAME=127.0.0.1"
             - "CELERY_REDIS_HOST=redis"
             - "CELERY_REDIS_PORT=6379"
         command: /code/runserver.sh
@@ -46,6 +49,7 @@ services:
             - "8000"
         depends_on:
             - celery
+            - celery-beat
     celery:
         build: ./hypomeals
         user: nobody
@@ -56,6 +60,21 @@ services:
             - "CELERY_REDIS_HOST=redis"
             - "CELERY_REDIS_PORT=6379"
         command: /code/runcelery.sh
+        volumes:
+            - ./hypomeals:/code
+        depends_on:
+            - redis
+    # This is a scheduler service that runs the daily jobs
+    celery-beat:
+        build: ./hypomeals
+        user: nobody
+        environment:
+            - "DJANGO_SETTINGS_MODULE=HypoMeals.settings_prod"
+            - "DJANGO_DB_HOST=db"
+            - "DJANGO_DB_PORT=5432"
+            - "CELERY_REDIS_HOST=redis"
+            - "CELERY_REDIS_PORT=6379"
+        command: /code/runcelerybeat.sh
         volumes:
             - ./hypomeals:/code
         depends_on:
