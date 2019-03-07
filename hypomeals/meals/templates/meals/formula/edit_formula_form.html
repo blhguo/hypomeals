@@ -23,17 +23,31 @@
     {{ formset.management_form }}
     {% if formset.non_form_errors %}
         <div class="alert alert-danger">
-  Please correct the following error(s):
-  {{ formset.non_form_errors }}
-  </div>
+            Please correct the following error(s):
+            {{ formset.non_form_errors }}
+        </div>
     {% endif %}
     {% for field in form %}
-    <div class="form-group mb-2">
-    {{ field.label_tag }}
-    {{ field }}
-    {% if field.errors %}<small class="errorlist">{{ field.errors }}</small>{% endif %}
-    </div>
+        <div class="form-group mb-2">
+            {{ field.label_tag }}
+            {{ field }}
+            {% if field.errors %}
+                <small class="errorlist">{{ field.errors }}</small>{% endif %}
+        </div>
     {% endfor %}
+    <div class="row">
+        <div class="col-sm mb-4">
+            <div class="btn-group float-right" role="group">
+                {% if perms.meals.add_skuingredient %}
+                    <button type="button"
+                            id="addRowButton"
+                            class="btn btn-primary">
+                        <span class="fa fa-plus"></span> Add row
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
     <table class="table">
         <thead class="thead-light">
         <tr>
@@ -71,9 +85,9 @@
             </tr>
         {% endfor %}
         <div class="alert alert-danger" id="emptyAlert" style="display: none;">
-  There is no ingredient in this formula. Click on "Add row" to
-  add another ingredient to this SKU.
-  </div>
+            There is no ingredient in this formula. Click on "Add row" to
+            add another ingredient to this SKU.
+        </div>
         </tbody>
     </table>
     <div class="btn-group" id="oldButton">
@@ -88,8 +102,8 @@
 
     {#Render an empty form to be picked up by JavaScript#}
     <div style="display: none;" id="emptyFormDiv">
-{{ formset.empty_form }}
-</div>
+        {{ formset.empty_form }}
+    </div>
     <script src="{% static 'meals/formula/edit_formula.js' %}"></script>
     <script src="{% static 'meals/sku/inline_formula_add.js' %}"></script>
 </div>

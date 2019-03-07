@@ -31,6 +31,8 @@
 </div>
 </div>
 
+<h4>U4G Tasks</h4>
+{% if u4g_tasks %}
 <div class="row mt-3">
 <div class="col-sm-12">
     <p>
@@ -57,7 +59,12 @@
     </table>
 </div>
 </div>
+{% else %}
+    <p>All tasks have been grabbed. Great job!</p>
+{% endif %}
 
+<h4>Assigned Tasks</h4>
+{% if assigned_to %}
 <div class="row mt-3">
 <div class="col-sm-12">
     <p>
@@ -76,18 +83,17 @@
     </thead>
     <tbody>
     {% for task in assigned_to %}
-    {% if task|get_value:'Completed?' == 'FALSE' %}
     <tr>
         <td>{{ task|get_value:'#' }}</td>
         <td>{{ task|get_value:'Task' }}</td>
         <td>{{ task|get_value:'Deadline' }} ({{ task|get_value:'Deadline'|naturaltime }})</td>
     </tr>
-    {% endif %}
     {% endfor %}
     </tbody>
     </table>
 </div>
 </div>
+{% endif %}
 
 </div>
 </body>

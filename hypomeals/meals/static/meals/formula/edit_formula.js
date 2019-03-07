@@ -215,6 +215,7 @@ $(function () {
         loadingSpinner.toggle(false);
         formulaModalBody.trigger("modal:change", [$(data.resp)]);
     }
+    addFormulaButton.off("click");
 
     addFormulaButton.click(function () {
         $.getJSON(addFormulaUrl, {})
@@ -226,6 +227,7 @@ $(function () {
     });
 
     function formulaModalSaveButtonClicked() {
+      formulaModalForm = $("#formulaForm");
       if (formulaModalForm === undefined) {
           return;
       }
@@ -239,19 +241,18 @@ $(function () {
                   if ("alert" in data) {
                       alert(data.alert);
                   }
-                  fomrulaModalDiv.modal("hide");
+                  $("#formulaDiv").modal("hide");
                   let name = data.name;
                   let formulaSelector = $("#id_formula");
-                  let newOption = $("<option>").text(name)
-                                               .attr("value", name)
-                                               .appendTo(formulaSelector);
+                  $("<option>").text(name)
+                               .attr("value", name)
+                               .appendTo($(formulaSelector));
               }
-              modalBody.trigger("modal:change", [$(data.resp)]);
+              formulaModalBody.trigger("modal:change", [$(data.resp)]);
           },
       })
   }
 
   formulaModalSaveButton.off("click");
   formulaModalSaveButton.click(formulaModalSaveButtonClicked);
-
 });
