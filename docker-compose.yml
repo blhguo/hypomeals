@@ -14,33 +14,25 @@ services:
         build: ./hypomeals
         command: /code/initserver.sh
         user: nobody
-        environment:
-            - "DJANGO_SETTINGS_MODULE=HypoMeals.settings_prod"
-            - "DJANGO_DB_HOST=db"
-            - "DJANGO_DB_PORT=5432"
-            - "CELERY_REDIS_HOST=redis"
-            - "CELERY_REDIS_PORT=6379"
+        env_file:
+            - web-vars.env
         volumes:
             - ./hypomeals:/code
             - ./static:/srv/static
     redis:
         image: "redis:5.0.3"
-        # volumes:
+        volumes:
+            - ./hypomeals/logs:/var/log/redis
         #     - ./redis/data:/data
         expose:
             - "6379"
-        ports:
-            - "6379:6379"
+        # ports:
+        #     - "6379:6379"
     web:
         build: ./hypomeals
         user: nobody
-        environment:
-            - "DJANGO_SETTINGS_MODULE=HypoMeals.settings_prod"
-            - "DJANGO_DB_HOST=db"
-            - "DJANGO_DB_PORT=5432"
-            - "HOSTNAME=127.0.0.1"
-            - "CELERY_REDIS_HOST=redis"
-            - "CELERY_REDIS_PORT=6379"
+        env_file:
+            - web-vars.env
         command: /code/runserver.sh
         volumes:
             - ./hypomeals:/code
@@ -53,12 +45,8 @@ services:
     celery:
         build: ./hypomeals
         user: nobody
-        environment:
-            - "DJANGO_SETTINGS_MODULE=HypoMeals.settings_prod"
-            - "DJANGO_DB_HOST=db"
-            - "DJANGO_DB_PORT=5432"
-            - "CELERY_REDIS_HOST=redis"
-            - "CELERY_REDIS_PORT=6379"
+        env_file:
+            - web-vars.env
         command: /code/runcelery.sh
         volumes:
             - ./hypomeals:/code
@@ -68,12 +56,8 @@ services:
     celery-beat:
         build: ./hypomeals
         user: nobody
-        environment:
-            - "DJANGO_SETTINGS_MODULE=HypoMeals.settings_prod"
-            - "DJANGO_DB_HOST=db"
-            - "DJANGO_DB_PORT=5432"
-            - "CELERY_REDIS_HOST=redis"
-            - "CELERY_REDIS_PORT=6379"
+        env_file:
+            - web-vars.env
         command: /code/runcelerybeat.sh
         volumes:
             - ./hypomeals:/code
