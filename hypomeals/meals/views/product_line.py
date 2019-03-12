@@ -7,11 +7,14 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
+from django.urls import reverse
 from django.views.decorators.http import require_GET
 
 from meals import auth
 from meals.forms import EditProductLineForm
 from meals.models import ProductLine
+
+from urllib.parse import urlencode
 
 logger = logging.getLogger(__name__)
 
@@ -123,3 +126,19 @@ def view_pl_skus(request, pk):
         error = f"Product Line with ID '{pk}' not found."
         resp = error
     return JsonResponse({"error": error, "resp": resp})
+
+
+@login_required
+def generate_sales_report(request):
+    target_pls = set(map(int, json.loads(request.GET.get("toTarget", "[]"))))
+    qs = ProductLine.objects.filter(pk__in=target_pls)
+    num_targeted = qs.count()
+    logger.info("Sales report generated on %d Product Lines", num_targeted)
+    #TODO: This line needs to be edited to fit Alex's stuff
+    base_url = reverse('ingredient')
+    qs_names = [tmp.name for tmp in qs]
+    query_string = urlencode({'product_lines': qs_names})
+    url = '{}?{}'.format(base_url, query_string)
+    # TODO: I"m not sure if it's normal or not, but the querystringis formatted strangely
+    # looks like "/ingredient?product_lines=%5B%27CheesyCheese%27%2C+%27asdasdasdasd%27%5D"
+    return redirect(url)
