@@ -34,8 +34,9 @@ def sales_drilldown(request, sku_pk):
         else:
             sales = Paginator(Sale.objects.all(), 50)
     else:
+        sku = Sku.objects.get(pk=sku_pk)
         params = {
-            "sku": sku_pk,
+            "sku": sku,
             "customer": "",
             "page_num": 1,
             "num_per_page": 50,
