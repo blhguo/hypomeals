@@ -7,6 +7,7 @@ from pathlib import Path
 
 from django import forms
 from django.contrib.auth.models import Group
+from django.contrib.admin.widgets import AdminDateWidget
 from django.core.exceptions import FieldDoesNotExist
 from django.core.exceptions import ValidationError
 from django.core.files import File
@@ -577,6 +578,10 @@ class SaleFilterForm(forms.Form, utils.BootstrapFormControlMixin):
         help_text="Enter Customer name",
     )
 
+    start = forms.DateTimeField(widget=AdminDateWidget())
+
+    end = forms.DateTimeField(widget=AdminDateWidget())
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -605,6 +610,13 @@ class SaleFilterForm(forms.Form, utils.BootstrapFormControlMixin):
             '''
         if params["customer"]:
             query_filter &= Q(customer__name__in=params["customer"])
+        if params['start'] and params['end']:
+            start_year = params['start'].isocalendar()[0]
+            start_week = params['start'].isocalendar()[1]
+            end_year = params['end'].isocalendar()[0]
+            end_week = params['end'].isocalendar()[1]
+            #TODO someone should help me check this boolean expresion idk if it works
+            query_filter &= ((Q(year__lt=end_year) or (Q(year__in=end_year) and Q(week__lte=end_week))) and (Q(year__gt=start_year) or (Q(year__in=start_year) and Q(week__gt=start_week))))
         query = Sale.objects.filter(query_filter)
         if num_per_page == -1:
             num_per_page = query.count()

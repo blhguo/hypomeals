@@ -1,6 +1,9 @@
 import json
 import logging
 import time
+import datetime
+
+from dateutil import relativedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -36,6 +39,8 @@ def sales_drilldown(request, sku_pk):
             "customer": "",
             "page_num": 1,
             "num_per_page": 50,
+            "start": datetime.datetime.now() - relativedelta.relativedelta(years=1),
+            "end": datetime.datetime.now(),
         }
         if "customer" in request.GET:
             customer_name = request.GET["customer"]

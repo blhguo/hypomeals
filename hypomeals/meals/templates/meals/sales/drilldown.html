@@ -74,10 +74,17 @@
     {% endif %}
 </div>
 <div class="form-group">
-    <label for="{{ form.sku.id_for_label }}">Sku Search:</label>
-    {{ form.sku }}
-    {% if form.sku.errors %}
-    <small>{{ form.sku.errors }}</small>
+    <label for="{{ form.start.id_for_label }}">Start date:</label>
+    {{ form.start }}
+    {% if form.start.errors %}
+    <small>{{ form.start.errors }}</small>
+    {% endif %}
+</div>
+<div class="form-group">
+    <label for="{{ form.end.id_for_label }}">End date:</label>
+    {{ form.end }}
+    {% if form.end.errors %}
+    <small>{{ form.end.errors }}</small>
     {% endif %}
 </div>
 <div class="form-group">

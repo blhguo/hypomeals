@@ -21,6 +21,7 @@ urlpatterns = [
     path("generate_report", views.generate_sales_report, name="generate_sales_report"),
     # Sales
     path("drilldown/<int:sku_pk>", views.sales_drilldown, name="drilldown"),
+    path("ac-customers", views.autocomplete_customers, name="autocomplete_customers"),
     # SKU views
     path("sku", views.sku, name="sku"),
     path("remove-skus", views.remove_skus, name="remove_skus"),
