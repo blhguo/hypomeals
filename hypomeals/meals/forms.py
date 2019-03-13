@@ -21,6 +21,7 @@ from meals import utils
 from meals.constants import ADMINS_GROUP, USERS_GROUP
 from meals.importers import CollisionOccurredException
 from meals.models import (
+    Customer,
     FormulaIngredient,
     SkuManufacturingLine,
     ManufacturingLine,
@@ -29,6 +30,7 @@ from meals.models import (
     GoalSchedule,
     User,
     Sku,
+    Sale,
     Ingredient,
     ProductLine,
     Upc,
@@ -545,6 +547,68 @@ class EditIngredientForm(forms.ModelForm):
         instance.save()
         self.save_m2m()
         return instance
+
+
+class SaleFilterForm(forms.Form, utils.BootstrapFormControlMixin):
+    NUM_PER_PAGE_CHOICES = [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
+
+    page_num = forms.IntegerField(
+        widget=forms.HiddenInput(), initial=1, min_value=1, required=False
+    )
+    num_per_page = forms.ChoiceField(choices=NUM_PER_PAGE_CHOICES, required=True)
+    '''
+    sku = SkuAutocompletedField(
+        Sku,
+        data_source=reverse_lazy("autocomplete_skus"),
+        attr="name",
+        return_qs=True,
+        required=False,
+        label="SKUs",
+        help_text="Optionally specify a comma-separated list of SKUs that "
+        "this manufacturing line produces.",
+        widget=forms.TextInput(attrs={"placeholder": "Start typing..."}),
+    )
+    '''
+    customer = CsvAutocompletedField(
+        model=Customer,
+        data_source=reverse_lazy("autocomplete_customers"),
+        required=False,
+        attr="name",
+        help_text="Enter Customer name",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["customer"].widget.attrs["placeholder"] = "Start typing..."
+        #self.fields["sku"].widget.attrs["placeholder"] = "Start typing..."
+
+    def query(self) -> Paginator:
+        # Generate the correct query, execute it, and return the requested page.
+        # Requirement 2.3.2.1
+        # Modified according to https://piazza.com/class/jpvlvyxg51d1nc?cid=40
+        params = self.cleaned_data
+        num_per_page = int(params.get("num_per_page", 50))
+        query_filter = Q()
+        # TODO this if bracket will rpobably be deleted, filtering should be based only on customer
+        '''
+        if params["keyword"]:
+            query_filter &= (
+                Q(name__icontains=params["keyword"])
+                | Q(number__icontains=params["keyword"])
+                | Q(unit_upc__upc_number__icontains=params["keyword"])
+                | Q(case_upc__upc_number__icontains=params["keyword"])
+            )
+            
+        if params["sku"]:
+            query_filter &= Q(sku__pk__in=params["sku"]) | Q(sku__name__in=params["sku"])
+            '''
+        if params["customer"]:
+            query_filter &= Q(customer__name__in=params["customer"])
+        query = Sale.objects.filter(query_filter)
+        if num_per_page == -1:
+            num_per_page = query.count()
+        return Paginator(query.distinct(), num_per_page)
 
 
 class SkuFilterForm(forms.Form, utils.BootstrapFormControlMixin):

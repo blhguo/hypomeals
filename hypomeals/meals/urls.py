@@ -19,6 +19,8 @@ urlpatterns = [
     ),
     path("view-pl-skus/<int:pk>", views.view_pl_skus, name="view_pl_skus"),
     path("generate_report", views.generate_sales_report, name="generate_sales_report"),
+    # Sales
+    path("drilldown/<int:sku_pk>", views.sales_drilldown, name="drilldown"),
     # SKU views
     path("sku", views.sku, name="sku"),
     path("remove-skus", views.remove_skus, name="remove_skus"),
