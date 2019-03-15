@@ -29,6 +29,7 @@ def sales_drilldown(request, sku_pk):
     if request.method == "POST":
         form = SaleFilterForm(request.POST)
         print("made it")
+        print(form.cleaned_data)
         if form.is_valid():
             print("in here")
             sales = form.query()
