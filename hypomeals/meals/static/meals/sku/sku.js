@@ -22,6 +22,7 @@ $(function () {
         window.location.href = skuUrl;
     }
 
+
     skuCheckboxes.change(function () {
         removeButton.attr("disabled",
             $(".sku-checkbox:checked").length === 0);

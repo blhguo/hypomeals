@@ -16,7 +16,7 @@ from django.views.decorators.http import require_GET
 
 from meals import auth
 from meals.forms import SaleFilterForm
-from meals.models import Sale, Sku
+from meals.models import Sale, Sku, Customer
 
 from urllib.parse import urlencode
 
@@ -24,20 +24,26 @@ logger = logging.getLogger(__name__)
 
 
 @login_required
-@require_GET
 def sales_drilldown(request, sku_pk):
     start = time.time()
     if request.method == "POST":
         form = SaleFilterForm(request.POST)
+        print("made it")
         if form.is_valid():
+            print("in here")
             sales = form.query()
+            print(sales)
         else:
+            print("not valid")
             sales = Paginator(Sale.objects.all(), 50)
     else:
         sku = Sku.objects.get(pk=sku_pk)
+        cust_input = ''
+        for cust in Customer.objects.all():
+            cust_input += cust.name + ", "
         params = {
-            "sku": sku,
-            "customer": "",
+            "sku": sku.name,
+            "customer": cust_input,
             "page_num": 1,
             "num_per_page": 50,
             "start": datetime.datetime.now() - relativedelta.relativedelta(years=1),
@@ -59,13 +65,14 @@ def sales_drilldown(request, sku_pk):
         # number of pages, just start over from the first page.
         page = 1
         form.initial["page_num"] = 1
+    revenues = [sale.price * sale.sales for sale in sales.page(page)]
     end = time.time()
     return render(
         request,
         template_name="meals/sales/drilldown.html",
         context={
             "sku_pk": sku_pk,
-            "sales": sales.page(page),
+            "sales": zip(sales.page(page), revenues),
             "form": form,
             "pages": range(1, sales.num_pages + 1),
             "current_page": page,

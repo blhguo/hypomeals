@@ -74,6 +74,13 @@
     {% endif %}
 </div>
 <div class="form-group">
+    <label for="{{ form.sku.id_for_label }}">Sku:</label>
+    {{ form.sku }}
+    {% if form.sku.errors %}
+    <small>{{ form.sku.errors }}</small>
+    {% endif %}
+</div>
+<div class="form-group">
     <label for="{{ form.start.id_for_label }}">Start date:</label>
     {{ form.start }}
     {% if form.start.errors %}
@@ -171,10 +178,10 @@
 </tr>
 </thead>
 <tbody class="table-striped">
-{% for sale in sales %}
+{% for sale, revenue in sales %}
 <tr>
     {% if request.user.is_admin %}
-    <td><input type="checkbox" class="sku-checkbox" id="{{ sku.number }}"> </td>
+    <td><input type="checkbox" class="drilldown-checkbox" id="{{ sku.number }}"> </td>
     {% endif %}
     <td>{{ sale.sku.name }}</td>
     <td>{{ sale.year }}</td>
@@ -183,7 +190,7 @@
     <td>{{ sale.customer.name }}</td>
     <td>{{ sale.sales }}</td>
     <td>{{ sale.price }}</td>
-    <td>Add math here with JS</td>
+    <td>{{ revenue }}</td>
 </tr>
 {% empty %}
     <div class="alert alert-danger">
@@ -260,17 +267,15 @@
 
 <!-- Hidden div with template data -->
 <div style="display: none;">
-<a href="{% url 'autocomplete_ingredients' %}" id="acIngredientUrl"></a>
-<a href="{% url 'autocomplete_product_lines' %}" id="acProductLineUrl"></a>
-<input id="ingredientsInputId" value="{{ form.ingredients.id_for_label }}">
-<input id="productLinesInputId" value="{{ form.product_lines.id_for_label }}">
+<a href="{% url 'autocomplete_customers' %}" id="acCustomerUrl"></a>
 <input id="pageNumInputId" value="{{ form.page_num.id_for_label }}">
-<a href="{% url 'sku' %}" id="skuUrl"></a>
-<a href="{% url 'remove_skus' %}" id="removeSkuUrl"></a>
-<a href="{% url 'view_formula' 0 %}" id="viewFormulaUrl"></a>
-<a href="{% url 'view_lines'%}" id="viewLinesUrl"></a>
-<a href="{% url 'edit_lines'%}" id="editLinesUrl"></a>
-<a href="{% url 'sku'%}" id="skuUrl"></a>
+<input id="skuInputId" value="{{ form.sku.id_for_label }}">
+<input id="startInputId" value="{{ form.start.id_for_label }}">
+<input id="endInputId" value="{{ form.end.id_for_label }}">
+<input id="customerInputId" value="{{ form.customer.id_for_label }}">
+
+{#    "sales url refers to alex's stuff" #}
+<a href="{% url 'drilldown' sku_pk%}" id="salesUrl"></a>
 </div>
 
 {% endblock %}
@@ -278,4 +283,5 @@
 {% block scriptend %}
 <script src="{% static 'meals/common.js' %}"></script>
 <script src="{% static 'meals/sku/sku.js' %}"></script>
+<script src="{% static 'meals/sales/drilldown.js' %}"></script>
 {% endblock %}
