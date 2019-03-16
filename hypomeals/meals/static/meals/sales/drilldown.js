@@ -35,6 +35,6 @@ $(function () {
         $(`#${pageNumInputId}`).val(page);
         drilldownFilterForm.submit();
     });
-        registerAutocomplete(skuInputId, acSkusUrl, false);
+        registerAutocomplete(customerInputId, acCustomerUrl, false);
 
 });
