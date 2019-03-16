@@ -2,6 +2,7 @@
 import logging
 import re
 
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
@@ -348,6 +349,35 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
             (shortname, shortname) for shortname in self.line_shortnames
         ]
 
+    @property
+    def sales_ready(self):
+        now = timezone.now()
+        num_years = now.year - settings.SALES_YEAR_START + 1
+        return self.sales.distinct("year").values("year").count() == num_years
+
+    def get_sales(self):
+        """
+        Schedules to retrieve all sales record from the sales system, in a sequential
+        manner, for the years 1999 to 2019. Note that due to requirements, this cannot
+        be parallelized.
+
+        Note: if Sales data already exists for a SKU and a particular year, they will be
+        deleted.
+        :param sku_number: the sku to retrieve sales records
+        :return: a dict mapping from year number an `AsyncResult` instance which, upon a
+            `.get()` call, returns the number of records retrieved.
+        """
+        now = timezone.now()
+        from meals.tasks import get_sku_sales_for_year as task
+        results = {
+            year: task.apply_async(
+                args=(self.number, year), countdown=settings.SALES_TIMEOUT
+            )
+            for year in range(1999, now.year + 1)
+        }
+
+        return results
+
     def __repr__(self):
         return f"<SKU #{self.number}: {self.name}>"
 
@@ -375,10 +405,18 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
             ("product_line__name", "Product Line"),
         ]
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, no_sales=False, **kwargs):
+        """
+        Saves the Sku instance to database, filling in its primary key value if
+        necessary.
+        :param no_sales a kw-only parameter which, if set to True, suppresses the
+            retrieval of sales records from the sales system.
+        """
         if not self.number:
             self.number = utils.next_id(Sku)
-        return super().save(*args, **kwargs)
+        super().save(*args, **kwargs)
+        if not no_sales:
+            self.get_sales()
 
 
 class Formula(
@@ -654,3 +692,64 @@ class GoalSchedule(
 
     def __str__(self):
         return f"{self.goal_item.goal.name} @ {self.start_time.strftime('%Y-%m-%d')}"
+
+
+class Customer(models.Model):
+
+    name = models.CharField(max_length=1000, blank=False, unique=True)
+
+    def __str__(self):
+        return f"<Customer #{self.pk}: {self.name}>"
+
+    __repr__ = __str__
+
+
+class Sale(models.Model):
+
+    sku = models.ForeignKey(
+        Sku,
+        on_delete=models.CASCADE,
+        related_name="sales",
+        related_query_name="sale",
+        blank=False,
+    )
+    year = models.IntegerField(blank=False)
+    week = models.IntegerField(blank=False)
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.CASCADE,
+        related_name="sales",
+        related_query_name="sale",
+        blank=False,
+    )
+    sales = models.DecimalField(
+        max_digits=20,
+        decimal_places=6,
+        validators=[
+            MinValueValidator(
+                limit_value=0.000001, message="Sales records must be positive."
+            )
+        ],
+    )
+    price = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        validators=[
+            MinValueValidator(
+                limit_value=0.01, message="Price per case in sales must be positive."
+            )
+        ],
+    )
+    # Sales records retrieved will not change. Hence "auto_now_add".
+    retrieval_time = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return (
+            f"<Sale #{self.pk}: {self.sku.number} -> {self.customer.pk} "
+            f"({self.year}/{self.week}) {self.sales}@{self.price}>"
+        )
+
+    __repr__ = __str__
+
+    class Meta:
+        ordering = ["year", "week", "sku__number", "customer__pk"]

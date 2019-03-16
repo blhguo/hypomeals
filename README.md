@@ -3,14 +3,13 @@
 
 HypoMeals is a sophisticated food manufacturing management software. It features SKU and ingredients managment, product lines, and much more.
 
-## Developer Guide
-
 ### Prerequisites
 
 * [Docker Commmunity Edition](https://hub.docker.com/search/?type=edition&offering=community)
 * [Docker Compose 1.8](https://docs.docker.com/compose/install/) or above. Depending on the host OS, this may or may not be bundled with Docker.
 * [Python 3.7](https://www.python.org/) or above
 * [Git](https://git-scm.com/)
+* [Redis](https://redis.io/download)
 * (Optional) [PyCharm Professional](https://www.jetbrains.com/pycharm/)
 
 ### Architecture
@@ -41,19 +40,23 @@ The `Ingredient` model, similarly, represents the ingredients. The `vendor` fiel
 
 **Note:** similar to `Sku`, this model also overrides the default `save()` method to supply a number if a user did not provide one.
 
-##### SkuIngredient
+##### Formula
 
-Also known as "Formula", this model is a multi-valued relation between `Sku` and `Ingredient` models.
+This model represents a formula. The formula's ingredients are recorded in a separate model called `FormulaIngredient`.
 
-##### ManufactureGoal / ManufactureDetail
+##### Goal
 
-These are auxiliary models to save and retrieve user's saved manufacturing goals.
+This model represents a goal. The goal's items are represented in a separate model called `GoalItem`. The items, if scheduled, will map to a `GoalSchedule`.
+
+##### Sale
+
+This model represents a sale to a customer. It contains a foreign-key relationship with the `Customer` model, and records the year, week, quantity of sales.
 
 #### Permission and Authentication
 
-The project uses Django's built-in authentication system, with a custom user model (defined in `models.py` as `User`). Initially all users are added to the `Users` group, which only grants permission to view all objects (i.e., instances of models). An administrator (or a "superuser"), on the other hand, is allowed to add, change, delete, and view all objects.
+The project uses Django's built-in authentication system, with a custom user model (defined in `models.py` as `User`). Initially all users are added to the `Users` group, which only grants permission to view all objects (i.e., instances of models). A user can also be added to an `Admins` group, which is allowed to add, change, delete, and view all objects.
 
-Permission checking is done by the `@permission_required` decorator, or the `@auth.permission_required_ajax` decorator, if the view accepts AJAX requests.
+Permission checking is done by the `@auth.user_is_admin` decorator, which checks whether the user belongs to the `Admins` group, or is a `superuser` (in Django's term). Finer grain permission control may be implemented in the future.
 
 Users without the required permission to access a particular resource will be redirected to the `403.html` page, where an error message is displayed. If the request was an AJAX one, a `JsonResponse` containing the error message is returned.
 
@@ -87,9 +90,27 @@ This file contains some helpful utility functions, decorators, and helper classe
 
 This file defines some utility functions / decorators related to authentication and permission checking. For example, the `@permission_required_ajax` decorator is defined in this file.
 
+##### `sales.py`
+
+This file contains code for the Sales subsystem that interfaces with the company's sales interface.
+
 #### Logs
 
 We heavily configured the various loggers used by Django to maximize the information provided for debugging purposes. **The use of `print` statements are therefore discouraged**. Check out `hypomeals/HypoMeals/settings.py` to see how the logs are configured. 
+
+If you are using Docker to deploy the application, logs of Nginx (the reverse proxy) and 
+
+#### Celery and Redis
+
+Part of the project involves the use of asynchronous tasks, such as the ones to fetch sales records from a web interface separate from this system. Such tasks, due to their time-consuming nature, cannot be run within the Django process without severely degrading the user's experience.
+
+As a result, the Celery project is integrated into the system to provide distributive, asynchronous execution of "tasks" that are unsuitable for execution within the Django process. Refer to the [Celery project's user guide](http://docs.celeryproject.org/en/latest/userguide) for more information on the project.
+
+On a high level, Django and Celery runs side-by-side as two processes. They communicate through [Redis](https://redis.io) as a message broker. Code in Django does not invoke Celery functions directly, but rather sends a message to a specified channel in Redis. This message is then picked up by a Celery dispatcher, again, running as a separate process, and executed in one of the workers.
+
+The Celery worker, although distinct from the main Django process, has access to the same database (and therefore ORM) of the main Django project, allowing seemless operation on the Django side.
+
+Additionally, yet another separate process, called Celery Beat, runs a scheduler service based on Django's database system as a backend, to periodically run a set of tasks at specified times, for example, to refresh daily sales records for the current year as they update.
 
 ### Code Style
 
@@ -109,14 +130,9 @@ When you think a feature is completed, submit a Merge Request to the `master` br
 
 **Reviewers:** if you approve something, you're also responsible for it. So be cool, and don't be afraid to reject a merge request if you see something wrong.
 
-## Getting Started
+### Optional Dependencies
 
-To get started, first clone the repository onto your computer
-
-```bash
-git clone git@gitlab.oit.duke.edu:hypomeals/hypomeals.git
-cd hypomeals
-```
+The system has several optional dependencies. Without these dependencies, some features in the project cannot be enabled, but the overall functionality of the application remains present.
 
 #### HTTPS Certificates
 
@@ -135,8 +151,6 @@ nginx
 
 However, the certificates are issued with an extension called `Subject Alternative Name`s, and will certify three hosts: `vcm-4081.vm.duke.edu` (the production server), `127.0.0.1` and `localhost`. What that means is that, although your browser may warn about untrusted issuer, it **should not** warn about an invalid common name, if the project is being deployed locally.
 
-Once ther certificates are obtained, there are then two ways to run the project: using Docker directly, or setting up a virtual environment.
-
 ##### Changing the domain name
 
 If you wish to deploy on a different server with a different domain name, you will need to provide your own certificates. 
@@ -145,30 +159,59 @@ First, place the certificates in the `nginx/certs` directory. Then, you will nee
 
 **Note:** the `nginx/certs` directory is automatically mapped to the correct location in the Docker container.
 
+#### OAuth
+
+The system uses OAuth to interface with Duke's NetID authentication service to support Single Sign-On. For security purposes, a file, called `oauth_config.json` that contains all the OAuth secrets and configurations, must be obtained separately, and placed under Django's base directory. If this file is absent, Single Sign-On will be disabled.
+
+#### Google Cloud Services
+
+The system uses Google Cloud Services for storage of user-uploaded static files (e.g. images). For security purposes, a clients secret file that contains the service account information of the project must be obtained separated, and placed under Django's base directory, for this support to be enabled.
+
+### Getting Started
+
+To get started, first clone the repository onto your computer
+
+```bash
+git clone git@gitlab.oit.duke.edu:hypomeals/hypomeals.git
+cd hypomeals
+```
+
+There are then two ways of running the project for development:
+
 #### Virtual Environment (Recommended)
 
 A virtual environment may be much better suited for development, because some IDEs can automatically detect and run the Django project, if the environment is set up correctly. To set up a new virtual environment on a Unix host, use these commands under the root directory of the project:
 
 ```bash
 # This will set up a fresh environment under a directory named venv/
-python -m venv venv/
+$ python -m venv venv/
 # This will "activate" the new virtual environment
-source venv/bin/activate
+$ source venv/bin/activate
 ```
 
 For tutorials and guides on setting up virtual environments on other OSes, check the [official documentation](https://docs.python.org/3/library/venv.html#module-venv).
 
 Once the virtual environment is activated, install all project requirements:
 
+```bash
+$ pip install -r hypomeals/requirements.txt
 ```
-pip install -r hypomeals/requirements.txt
+
+Then, two dependent services, Redis and Celery, must be run. **Note** that this step may be replaced by running them both in Docker as discussed in the next section.
+
+```bash
+$ cd hypomeals/  # This is the Django base directory
+$ redis-server
+$ celery -A HypoMeals worker -l info
+# Optionally, run the Celery Beat scheduler
+$ celery -A HypoMeals beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
 ```
 
 Then, to start the Django development server, use the command:
 
 ```bash
-cd hypomeals/
-python manage.py runserver 8000
+$ cd hypomeals/
+$ python manage.py runserver 8000
 ```
 
 Finally, to see the website, go to `http://127.0.0.1:8000` on your browser. 
@@ -183,4 +226,43 @@ sudo docker-compose up
 
 **Note:** `sudo` may not be required on Windows or macOS computers.
 
-Once the containers are all set up, visit `https://127.0.0.1` on your host computer. Due to restrictions on Docker containers, it is not possible to set up automatic protocol upgrade to SSL. You must therefore enter `https:` as the protocol name explicitly.
+Once the containers are all set up, visit `https://127.0.0.1` on your host computer. Due to restrictions on Docker containers, it is not possible to set up automatic protocol upgrade to SSL. You must therefore enter `https:` as the scheme explicitly.
+
+##### Running individual services with Docker
+
+Individual services may also be run using Docker, either for testing purposes or for developmental support. For example, to start only Redis and Celery / Celery Beat services, first edit `docker-compose.yml` to uncomment the `ports` section of the `redis` service, then use the command:
+
+```bash
+$ sudo docker-compose up -d redis celery celery-beat
+```
+
+After this, a Django instance running in a virtual environment native to the OS will be able to leverage these services, without having to run them separately.
+
+### Configuration Options
+
+The project supports various configuration options, through the use of environment variables. For virtual environments, simply set environment variables with the `export` command, if you are using a Unix-based shell. For Windows, [here](https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_environment_variables?view=powershell-6) is a tutorial for setting environment variables in PowerShell. For Docker users, environment variables can be (and are) set in the `docker-compose.yml` file through the `environment` subsection in each service.
+
+The following configuration options are available:
+
+#### Database
+
+* `DJANGO_DB_HOST`: the hostname of a PostgreSQL database. Default: `vcm-4081.vm.duke.edu`
+* `DJANGO_DB_PORT`: the port for a PostgreSQL database. Default: 5432
+* `DJANGO_USE_LOCAL_DB`: a legacy option. If set to 1, equivalent to `DJANGO_DB_HOST=localhost`
+
+#### Email
+
+* `DJANGO_EMAIL_HOST`: the hostname of an SMTP server. Default: `smtp.mailgun.org`
+* `DJANGO_EMAIL_PORT`: the port to an SMTP server. Default: 587
+* `DJANGO_EMAIL_USE_TLS`: if 1, will try to use a TLS connection when connecting to the SMTP server. Default: 1
+* `DJANGO_EMAIL_PASSWORD`: the password to the SMTP server. Default: empty
+* `DJANGO_EMAIL_FROM`: the "From" field of an Email. Default: `webmaster@localhost`
+
+#### Celery
+
+* `CELERY_REDIS_HOST`: the hostname of a Redis server. Default: `localhost`
+* `CELERY_REDIS_PORT`: the port of a Redis server. Default: 6379
+
+#### Other
+
+* `HOSTNAME`: the hostname of the server the system is running on. Default: `vcm-4081.vm.duke.edu`.
