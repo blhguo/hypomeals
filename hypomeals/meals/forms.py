@@ -557,19 +557,11 @@ class SaleFilterForm(forms.Form, utils.BootstrapFormControlMixin):
         widget=forms.HiddenInput(), initial=1, min_value=1, required=False
     )
     num_per_page = forms.ChoiceField(choices=NUM_PER_PAGE_CHOICES, required=True)
-    '''
-    sku = SkuAutocompletedField(
-        Sku,
-        data_source=reverse_lazy("autocomplete_skus"),
-        attr="name",
-        return_qs=True,
-        required=False,
-        label="SKUs",
-        help_text="Optionally specify a comma-separated list of SKUs that "
-        "this manufacturing line produces.",
-        widget=forms.TextInput(attrs={"placeholder": "Start typing..."}),
+
+    sku = forms.IntegerField(
+        required=False
     )
-    '''
+
     customer = CsvAutocompletedField(
         model=Customer,
         data_source=reverse_lazy("autocomplete_customers"),
@@ -609,8 +601,6 @@ class SaleFilterForm(forms.Form, utils.BootstrapFormControlMixin):
         # Requirement 2.3.2.1
         # Modified according to https://piazza.com/class/jpvlvyxg51d1nc?cid=40
         params = self.cleaned_data
-        print(params)
-        print("error")
         num_per_page = int(params.get("num_per_page", 50))
         query_filter = Q()
         # TODO this if bracket will rpobably be deleted, filtering should be based only on customer
@@ -622,11 +612,10 @@ class SaleFilterForm(forms.Form, utils.BootstrapFormControlMixin):
                 | Q(unit_upc__upc_number__icontains=params["keyword"])
                 | Q(case_upc__upc_number__icontains=params["keyword"])
             )
-            
-        if params["sku"]:
-            print(params['sku'])
-            query_filter &= Q(sku__name__in=params['sku'])
             '''
+        if params["sku"]:
+            print(params["sku"])
+            query_filter &= Q(sku__number=params['sku'])
         if params["customer"]:
             query_filter &= Q(customer__name__in=params["customer"])
         if params['start'] and params['end']:

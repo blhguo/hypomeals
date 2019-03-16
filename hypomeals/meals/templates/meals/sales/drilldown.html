@@ -74,13 +74,6 @@
     {% endif %}
 </div>
 <div class="form-group">
-    <label for="{{ form.sku.id_for_label }}">Sku:</label>
-    {{ form.sku }}
-    {% if form.sku.errors %}
-    <small>{{ form.sku.errors }}</small>
-    {% endif %}
-</div>
-<div class="form-group">
     <label for="{{ form.start.id_for_label }}">Start date:</label>
     {{ form.start }}
     {% if form.start.errors %}
@@ -207,6 +200,31 @@
 </div>
 </div>
 </form>
+<div style="width:15%; float:left">
+<canvas id="revenueLineChart" width="40" height="40"></canvas>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.min.js"></script>
+<script>
+    var ctx = document.getElementById("revenueLineChart");
+    var lbls = jQuery.parseJSON('{{ chart_data_x|escapejs }}');
+    var data = jQuery.parseJSON('{{ chart_data_y|escapejs }}');
+    {#var lineLabel = jQuery.parseJSON('{{ chart_data_labels|escapejs }}');#}
+    var revenueLineChart = new Chart(ctx,
+        {
+            type: "line",
+            data: {
+                    labels: lbls,
+                    datasets: [{
+                        data: data,
+                        borderColor: "#c45850"
+                    }]},
+            options: {
+                    legend: {
+                        display: false
+                    }}});
+</script>
+</div>
 </div>
 <!-- Modal -->
 
@@ -285,4 +303,5 @@
 <script src="{% static 'meals/common.js' %}"></script>
 <script src="{% static 'meals/sku/sku.js' %}"></script>
 <script src="{% static 'meals/sales/drilldown.js' %}"></script>
+
 {% endblock %}
