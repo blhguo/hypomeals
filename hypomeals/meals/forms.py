@@ -603,16 +603,6 @@ class SaleFilterForm(forms.Form, utils.BootstrapFormControlMixin):
         params = self.cleaned_data
         num_per_page = int(params.get("num_per_page", 50))
         query_filter = Q()
-        # TODO this if bracket will rpobably be deleted, filtering should be based only on customer
-        '''
-        if params["keyword"]:
-            query_filter &= (
-                Q(name__icontains=params["keyword"])
-                | Q(number__icontains=params["keyword"])
-                | Q(unit_upc__upc_number__icontains=params["keyword"])
-                | Q(case_upc__upc_number__icontains=params["keyword"])
-            )
-            '''
         if params["sku"]:
             print(params["sku"])
             query_filter &= Q(sku__number=params['sku'])
@@ -623,8 +613,14 @@ class SaleFilterForm(forms.Form, utils.BootstrapFormControlMixin):
             start_week = params['start'].isocalendar()[1]
             end_year = params['end'].isocalendar()[0]
             end_week = params['end'].isocalendar()[1]
-            #TODO someone should help me check this boolean expresion idk if it works
-            query_filter &= ((Q(year__lt=end_year) or (Q(year__in=end_year) and Q(week__lte=end_week))) and (Q(year__gt=start_year) or (Q(year__in=start_year) and Q(week__gt=start_week))))
+            #TODO someone should help me check
+            # this boolean expresion idk if it works
+            query_filter &= ((Q(year__lt=end_year) or
+                              (Q(year__in=end_year) and
+                               Q(week__lte=end_week))) and
+                             (Q(year__gt=start_year) or
+                              (Q(year__in=start_year) and
+                               Q(week__gt=start_week))))
         query = Sale.objects.filter(query_filter)
         if num_per_page == -1:
             num_per_page = query.count()

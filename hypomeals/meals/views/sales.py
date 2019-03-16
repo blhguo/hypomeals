@@ -1,4 +1,3 @@
-import json
 import jsonpickle
 import logging
 import time
@@ -6,20 +5,12 @@ import datetime
 
 from dateutil import relativedelta
 
-from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.http import JsonResponse
-from django.shortcuts import render, redirect, get_list_or_404
-from django.template.loader import render_to_string
-from django.urls import reverse
-from django.views.decorators.http import require_GET
+from django.shortcuts import render,
 
-from meals import auth
 from meals.forms import SaleFilterForm
 from meals.models import Sale, Sku, Customer
-
-from urllib.parse import urlencode
 
 logger = logging.getLogger(__name__)
 
