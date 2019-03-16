@@ -557,7 +557,7 @@ class SaleFilterForm(forms.Form, utils.BootstrapFormControlMixin):
         widget=forms.HiddenInput(), initial=1, min_value=1, required=False
     )
     num_per_page = forms.ChoiceField(choices=NUM_PER_PAGE_CHOICES, required=True)
-
+    '''
     sku = SkuAutocompletedField(
         Sku,
         data_source=reverse_lazy("autocomplete_skus"),
@@ -569,7 +569,7 @@ class SaleFilterForm(forms.Form, utils.BootstrapFormControlMixin):
         "this manufacturing line produces.",
         widget=forms.TextInput(attrs={"placeholder": "Start typing..."}),
     )
-
+    '''
     customer = CsvAutocompletedField(
         model=Customer,
         data_source=reverse_lazy("autocomplete_customers"),
@@ -622,10 +622,11 @@ class SaleFilterForm(forms.Form, utils.BootstrapFormControlMixin):
                 | Q(unit_upc__upc_number__icontains=params["keyword"])
                 | Q(case_upc__upc_number__icontains=params["keyword"])
             )
-            '''
+            
         if params["sku"]:
             print(params['sku'])
             query_filter &= Q(sku__name__in=params['sku'])
+            '''
         if params["customer"]:
             query_filter &= Q(customer__name__in=params["customer"])
         if params['start'] and params['end']:

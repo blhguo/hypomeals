@@ -28,8 +28,9 @@ def sales_drilldown(request, sku_pk):
     start = time.time()
     if request.method == "POST":
         form = SaleFilterForm(request.POST)
+        print(request.POST)
         print("made it")
-        print(form.cleaned_data)
+        print(form)
         if form.is_valid():
             print("in here")
             sales = form.query()
@@ -43,7 +44,7 @@ def sales_drilldown(request, sku_pk):
         for cust in Customer.objects.all():
             cust_input += cust.name + ", "
         params = {
-            "sku": sku.name,
+            #"sku": sku.name,
             "customer": cust_input,
             "page_num": 1,
             "num_per_page": 50,
