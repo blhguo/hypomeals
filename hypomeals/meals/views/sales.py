@@ -7,7 +7,7 @@ from dateutil import relativedelta
 
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.shortcuts import render,
+from django.shortcuts import render
 
 from meals.forms import SaleFilterForm
 from meals.models import Sale, Sku, Customer
