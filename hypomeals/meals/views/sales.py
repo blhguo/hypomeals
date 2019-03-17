@@ -22,21 +22,13 @@ def sales_drilldown(request, sku_pk):
         sku = Sku.objects.get(pk=sku_pk)
         body = request.POST.copy()
         body["sku"] = sku.number
-        print(body)
         form = SaleFilterForm(body)
-        print(request.POST)
-        print("made it")
-        print(form)
         if form.is_valid():
-            print("in here")
             sales = form.query()
-            print(sales)
         else:
-            print("not valid")
             sales = Paginator(Sale.objects.all(), 50)
     else:
         sku = Sku.objects.get(pk=sku_pk)
-        #print(sku.name)
         cust_input = ''
         for cust in Customer.objects.all():
             cust_input += cust.name + ", "
