@@ -10,7 +10,9 @@ $(function () {
     const salesUrl = $("#salesUrl").attr("href");
     let selectAllCheckbox = $("#selectAll");
     let submitButton = $("#submitButton");
+    let exportButton = $("#exportButton");
     let drilldownFilterForm = $("#drilldownFilterForm");
+
 
     $("[data-toggle='tooltip']").tooltip();
 
@@ -28,6 +30,14 @@ $(function () {
         drilldownFilterForm.submit();
     });
 
+    exportButton.on("click", function() {
+        const original = drilldownFilterForm.attr("action");
+        drilldownFilterForm.attr("action", original + "?export=1")
+            .submit()
+            .attr("action", original);
+
+        return false;
+    });
 
     /************** Pagination ****************/
     $("#pageList").find("a").on("click", function () {

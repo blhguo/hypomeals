@@ -6,7 +6,7 @@
 {% block title %}Review Sales{% endblock %}
 
 {% block body %}
-< class="container-fluid m-auto">
+<div class="container-fluid m-auto">
 <form method="post" action="{% url 'drilldown' sku_pk %}" id="drilldownFilterForm">
 {% csrf_token %}
 <div class="row">
@@ -110,39 +110,11 @@
 
 
 {#<!-- Export buttons -->#}
-{#<hr>#}
-{#<h3>Export</h3>#}
-{#<div class="form-check mb-2 w-100">#}
-{#    <input class="form-check-input"#}
-{#           type="checkbox"#}
-{#           id="exportFormulaCheckbox">#}
-{#    <label class="form-check-label"#}
-{#           for="exportFormulaCheckbox">#}
-{#        Include formulas#}
-{#        <span class="badge badge-pill badge-info"#}
-{#              data-toggle="tooltip"#}
-{#              data-placement="right"#}
-{#              data-html="true"#}
-{#              title="Selecting this option will generate a ZIP file containing a <pre>formulas.csv</pre>">i</span>#}
-{#    </label>#}
-{#</div>#}
-{#<div class="form-check mb-2 w-100">#}
-{#    <input class="form-check-input"#}
-{#           type="checkbox"#}
-{#           id="exportProductLineCheckbox">#}
-{#    <label class="form-check-label"#}
-{#           for="exportProductLineCheckbox">#}
-{#        Include separate Product Lines file#}
-{#        <span class="badge badge-pill badge-info"#}
-{#              data-toggle="tooltip"#}
-{#              data-placement="right"#}
-{#              data-html="true"#}
-{#              title="Selecting this option will generate a ZIP file containing a <pre>product_lines.csv</pre>">i</span>#}
-{#    </label>#}
-{#</div>#}
-{#<button class="btn btn-primary w-100" id="exportButton">#}
-{#    <span class="fas fa-download"></span> Export Current Search#}
-{#</button>#}
+<hr>
+<h3>Export</h3>
+<button class="btn btn-primary w-100" id="exportButton">
+    <span class="fas fa-download"></span> Export Current Search
+</button>
 </div>
 </div>
 
@@ -184,9 +156,9 @@
     <td>{{ sale.week }}</td>
     <td>{{ sale.customer.pk }}</td>
     <td>{{ sale.customer.name }}</td>
-    <td>{{ sale.sales }}</td>
-    <td>{{ sale.price }}</td>
-    <td>{{ revenue }}</td>
+    <td>{{ sale.sales|quantize:2 }}</td>
+    <td>{{ sale.price|quantize:2 }}</td>
+    <td>{{ revenue|quantize:2 }}</td>
 </tr>
 {% empty %}
     <div class="alert alert-danger">

@@ -11,6 +11,7 @@ from django.shortcuts import render
 
 from meals.forms import SaleFilterForm
 from meals.models import Sale, Sku, Customer
+from ..bulk_export import export_drilldown
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,8 @@ logger = logging.getLogger(__name__)
 @login_required
 def sales_drilldown(request, sku_pk):
     start = time.time()
+    export = request.GET.get("export", "0") == '1'
+    logger.info("Exporting Sales")
     if request.method == "POST":
         sku = Sku.objects.get(pk=sku_pk)
         body = request.POST.copy()
@@ -69,6 +72,8 @@ def sales_drilldown(request, sku_pk):
             yret[index] = str(float(yret[index]) + float(revenue))
         labelret.append(str(sale.customer.name))
     end = time.time()
+    if export:
+        return export_drilldown(sales.object_list)
     return render(
         request,
         template_name="meals/sales/drilldown.html",
