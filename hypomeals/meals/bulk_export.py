@@ -54,8 +54,8 @@ FILE_TYPE_TO_FIELDS = {
     "sales": {
         "year": "Year",
         "week": "Week Number",
-        "customer": "Customer Number",
-        "customer": "Customer Name",
+        "customer.number": "Customer Number",
+        "customer.name": "Customer Name",
         "sales": "Number of Sales",
         "price": "Price per Case",
     }
@@ -82,7 +82,13 @@ HEADERS = {
     "ingredients": ["Ingr#", "Name", "Vendor Info", "Size", "Cost", "Comment"],
     "product_lines": ["Name"],
     "formulas": ["Formula#", "Name", "Ingr#", "Quantity", "Comment"],
-    "sales": ["Year", "Week Number", "Customer Number", "Customer Name", "Number of Sales", "Price per Case", "Revenue"],
+    "sales": ["Year",
+              "Week Number",
+              "Customer Number",
+              "Customer Name",
+              "Number of Sales",
+              "Price per Case",
+              "Revenue"],
 }
 
 FILE_TYPES = {
@@ -143,7 +149,7 @@ def _export_objs(stream, file_type, objects):
                     + str(getattr(obj, "unit.symbol"))
                 )
             elif header == "Revenue":
-                result = str(float(getattr(obj, "sales")) * float(getattr(obj, "price")))
+                result = str(float(getattr(obj, "sales"))*float(getattr(obj, "price")))
             elif header == "Customer Name":
                 result = str(getattr(getattr(obj, "customer"), "name"))
             elif header == "Customer Number":
