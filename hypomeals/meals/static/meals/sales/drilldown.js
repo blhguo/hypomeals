@@ -13,9 +13,6 @@ $(function () {
     let exportButton = $("#exportButton");
     let drilldownFilterForm = $("#drilldownFilterForm");
 
-
-    $("[data-toggle='tooltip']").tooltip();
-
     function refreshPage() {
         window.location.href = salesUrl;
     }
@@ -45,6 +42,7 @@ $(function () {
         $(`#${pageNumInputId}`).val(page);
         drilldownFilterForm.submit();
     });
-  registerAutocomplete($(`#${customerInputId}`), acCustomerUrl, true);
+    
+  registerAutocomplete($(`#${customerInputId}`), acCustomerUrl, false);
 
 });
