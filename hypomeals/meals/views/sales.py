@@ -10,7 +10,7 @@ from django.core.paginator import Paginator
 from django.shortcuts import render
 
 from meals.forms import SaleFilterForm
-from meals.models import Sale, Sku, Customer
+from meals.models import Sku, Customer
 from ..bulk_export import export_drilldown
 
 logger = logging.getLogger(__name__)
