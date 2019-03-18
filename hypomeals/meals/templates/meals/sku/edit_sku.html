@@ -64,6 +64,13 @@ ul.ui-autocomplete {
        data-target="#formulaDiv">
         Add a Formula Inline
     </a>
+    <a class="btn btn-link"
+       id="editFormulaButton"
+       href="#"
+       data-toggle="modal"
+       data-target="#formulaDiv">
+        Edit a Formula Inline
+    </a>
     </div>
     <div class="btn-group">
     {% if editing %}
@@ -123,6 +130,7 @@ ul.ui-autocomplete {
 </div>
 <div style="display: none;">
   <a href="{% url 'add_formula' %}" id="addFormulaUrl"></a>
+  <a href="{% url 'edit_formula' 0%}" id="addFormulaUrl"></a>
 </div>
 {% endblock %}
 
@@ -162,7 +170,7 @@ $(function() {
 });
 </script>
 <script src="{% static 'meals/common.js' %}"></script>
-<script src="{% static 'meals/formula/edit_formula.js' %}"></script>
+<script src="{% static 'meals/sku/edit_sku.js' %}"></script>
 {% endblock %}
 
 {% block sku_active %}active{% endblock %}
