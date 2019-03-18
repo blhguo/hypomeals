@@ -13,3 +13,15 @@ reportlab
 cachetools
 gunicorn
 requests
+Werkzeug
+django_extensions
+pyOpenSSL
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+gspread
+oauth2client
+celery[redis]
+django-celery-results
+django-celery-beat
+lxml

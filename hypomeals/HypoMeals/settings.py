@@ -12,9 +12,9 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 import json
 import os
 
+import gspread
 from google.oauth2 import service_account
-
-# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
+from oauth2client.service_account import ServiceAccountCredentials
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -34,15 +34,32 @@ AUTH_USER_MODEL = "meals.User"
 LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"
 
-# File Storage on Google Cloud
+# Email settings
+EMAIL_HOST = os.getenv("DJANGO_EMAIL_HOST", "smtp.mailgun.org")
+EMAIL_PORT = int(os.getenv("DJANGO_EMAIL_PORT", "587"))
+EMAIL_USE_TLS = os.getenv("DJANGO_EMAIL_USE_TLS", "1") == "1"
+EMAIL_HOST_USER = os.getenv("DJANGO_EMAIL_USER")
+EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_PASSWORD")
+EMAIL_FROM_ADDR = os.getenv("DJANGO_EMAIL_FROM")
+
+# Google stuff
+GOOGLE_SHEETS_SCOPES = [
+    "https://spreadsheets.google.com/feeds",
+    "https://www.googleapis.com/auth/drive",
+]
 
 GOOGLE_APPLICATION_CREDENTIALS = os.path.join(BASE_DIR, "hypomeals-2f7acfcfe59c.json")
 DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
 GS_BUCKET_NAME = "hypomeals"
+GOOGLE_SHEET_SPREADSHEET_NAME = "ECE458 Group 8 Task Sheet"
 if os.path.exists(GOOGLE_APPLICATION_CREDENTIALS):
     GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
         GOOGLE_APPLICATION_CREDENTIALS
     )
+    GOOGLE_SHEETS_OAUTH_CLIENT = ServiceAccountCredentials.from_json_keyfile_name(
+        GOOGLE_APPLICATION_CREDENTIALS, scopes=GOOGLE_SHEETS_SCOPES
+    )
+    GOOGLE_SHEETS_CLIENT = gspread.authorize(GOOGLE_SHEETS_OAUTH_CLIENT)
 else:
     # If this file is not configured, we are likely in test mode and will / should
     # never access Google cloud anyway. So just go ahead and ignore it.
@@ -78,6 +95,9 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_extensions",
+    "django_celery_results",
+    "django_celery_beat",
 ]
 
 MIDDLEWARE = [
@@ -241,3 +261,18 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = "/static/"
+
+
+# Celery
+CELERY_RESULT_BACKEND = "django-db"
+CELERY_REDIS_HOST = os.getenv("CELERY_REDIS_HOST", "localhost")
+CELERY_REDIS_PORT = os.getenv("CELERY_REDIS_PORT", "6379")
+CELERY_BROKER_URL = f"redis://{CELERY_REDIS_HOST}:{CELERY_REDIS_PORT}/0"
+
+# Sales
+SALES_INTERFACE_URL = "http://hypomeals-sales.colab.duke.edu:8080/"
+SALES_REQUEST_CONNECT_TIMEOUT = 5
+SALES_REQUEST_READ_TIMEOUT = 30
+SALES_REQUEST_MAX_RETRIES = 5
+SALES_TIMEOUT = 30
+SALES_YEAR_START = 1999

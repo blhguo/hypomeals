@@ -15,17 +15,8 @@ from meals.bulk_import import (
     clear_transaction,
     force_save,
 )
-from meals.exceptions import CollisionOccurredException
+from meals.importers import CollisionOccurredException
 from ..forms import ImportForm
-
-IMPORT_PERMISSIONS = (
-    "meals.add_sku",
-    "meals.change_sku",
-    "meals.add_ingredient",
-    "meals.change_ingredient",
-    "meals.add_skuingredient",
-    "meals.change_skuingredient",
-)
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +76,8 @@ def import_page(request):
             except CollisionOccurredException:
                 redirect("collision")
             if file_form.imported:
-                return import_success(request, inserted=file_form.cleaned_data)
+                inserted, ignored = file_form.cleaned_data
+                return import_success(request, inserted=inserted, ignored=ignored)
             return redirect("collision")
 
     clear_transaction(request.session.session_key)
@@ -106,11 +98,10 @@ def collision(request):
     force = request.GET.get("force", "0") == "1"
     if not force:
         transaction = get_transaction(request.session.session_key)
-
         rendered_transaction = []
         total_conflicts = 0
         for filename in sorted(transaction.keys()):
-            _, collisions = transaction[filename]
+            collisions = transaction[filename].collisions
             total_conflicts += len(collisions)
             rendered_transaction.append(
                 (filename, [_render_collision(c) for c in collisions])
@@ -124,9 +115,11 @@ def collision(request):
                 "total_conflicts": total_conflicts,
             },
         )
-    inserted, updated = force_save(session_key=request.session.session_key, force=force)
+    inserted, updated, ignored = force_save(
+        session_key=request.session.session_key, force=force
+    )
     if inserted or updated:
-        return import_success(request, inserted, updated)
+        return import_success(request, inserted, updated, ignored)
     messages.error(
         request, "Unable to finish import. Please contact the administrator."
     )
@@ -134,14 +127,20 @@ def collision(request):
 
 
 @login_required
-def import_success(request, inserted=None, updated=None):
+def import_success(request, inserted=None, updated=None, ignored=None):
     if inserted is None:
         inserted = {}
     if updated is None:
         updated = {}
+    if ignored is None:
+        ignored = {}
     response = render(
         request,
         template_name="meals/import/import_success.html",
-        context={"inserted": inserted.items(), "updated": updated.items()},
+        context={
+            "inserted": inserted.items(),
+            "updated": updated.items(),
+            "ignored": ignored.items(),
+        },
     )
     return response

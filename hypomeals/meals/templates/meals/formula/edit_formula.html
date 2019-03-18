@@ -9,7 +9,7 @@
 <div class="row">
 <div class="col-sm">
     <div class="alert alert-success my-4">
-    {% if perms.meals.change_skuingredient or perms.meals.add_skuingredient %}
+    {% if request.user.is_admin %}
     <h3>Edit Formula #{{ formula.number }}: {{ formula.name }}</h3>
     {% else %}
     <h3>View Formula #{{ formula.number }}: {{ formula.name }}</h3>
@@ -35,14 +35,14 @@
 <div class="row">
 <div class="col-sm mb-4">
     <div class="btn-group float-right" role="group">
-    {% if perms.meals.add_skuingredient %}
+    {% if request.user.is_admin %}
     <button type="button"
             id="addRowButton"
             class="btn btn-primary">
         <span class="fa fa-plus"></span> Add row
     </button>
     {% endif %}
-    {% if perms.meals.add_ingredient %}
+    {% if request.user.is_admin %}
     <button type="button"
             id="createIngrButton"
             data-toggle="modal"
@@ -171,7 +171,7 @@ add another ingredient to this SKU.
 <!-- Hidden div for template data -->
 <div style="display: none;">
 <a href="{% url 'add_ingredient' %}" id="addIngredientUrl"></a>
-{% if perms.meals.change_skuingredient %}
+{% if request.user.is_admin %}
 <input id="hasChangePerm" type="checkbox" checked="checked">
 {% else %}
 <input id="hasChangePerm" type="checkbox">

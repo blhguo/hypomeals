@@ -19,7 +19,7 @@ from django.urls import reverse_lazy
 from meals import bulk_import
 from meals import utils
 from meals.constants import ADMINS_GROUP, USERS_GROUP
-from meals.exceptions import CollisionOccurredException
+from meals.importers import CollisionOccurredException
 from meals.models import (
     FormulaIngredient,
     SkuManufacturingLine,
@@ -176,15 +176,17 @@ class ImportForm(forms.Form, BootstrapFormControlMixin):
 
             csv_files = self._unzip()
         try:
-            inserted = bulk_import.process_csv_files(csv_files, self.session_key)
-            if inserted:
+            inserted, ignored = bulk_import.process_csv_files(
+                csv_files, self.session_key
+            )
+            if inserted or ignored:
                 self._imported = True
         except CollisionOccurredException:
             raise
         except Exception as e:
             raise ValidationError(str(e))
 
-        return inserted
+        return inserted, ignored
 
     @property
     def imported(self):
@@ -624,7 +626,12 @@ class UpcField(forms.CharField):
         # add 0 if number is less than 12 digits
         value = "0" * (12 - len(value)) + value
         if utils.is_valid_upc(value):
-            return value
+            if value[0] not in ["2", "3", "4", "5"]:
+                return value
+            raise ValidationError(
+                "%(value)s does not represent a consumer product",
+                params={"value": value}
+            )
         raise ValidationError(
             "%(value)s is not a valid UPC number", params={"value": value}
         )

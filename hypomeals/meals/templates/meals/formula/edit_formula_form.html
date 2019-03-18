@@ -1,5 +1,18 @@
 {% load staticfiles %}
 <div class="container">
+    <div class="row">
+    <div class="col-sm mb-4">
+    <div class="btn-group float-right" role="group">
+        {% if request.user.is_admin %}
+            <button type="button"
+                    id="addRowButton"
+                    class="btn btn-primary">
+                <span class="fa fa-plus"></span> Add row
+            </button>
+        {% endif %}
+    </div>
+    </div>
+    </div>
     {% if edit %}
         <form id="formulaForm" action="{% url 'edit_formula' formula.number %}"
               method="post">
