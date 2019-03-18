@@ -29,7 +29,7 @@ def sales_drilldown(request, sku_pk):
         if form.is_valid():
             sales = form.query()
         else:
-            sales = Paginator(Sale.objects.all(), 50)
+            sales = Paginator([], 50)
     else:
         sku = Sku.objects.get(pk=sku_pk)
         cust_input = ''
@@ -52,7 +52,7 @@ def sales_drilldown(request, sku_pk):
             sales = form.query()
         else:
             # TODO throw an error, since no SKU was specified (shouldnt ever happen)
-            sales = Paginator(Sale.objects.all(), 50)
+            sales = Paginator([], 50)
     page = getattr(form, "cleaned_data", {"page_num": 1}).get("page_num", 1)
     if page > sales.num_pages:
         # For whatever reason, if the page being requested is larger than the actual

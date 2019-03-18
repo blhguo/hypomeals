@@ -2,6 +2,7 @@ import csv
 import logging
 import tempfile
 import zipfile
+import operator
 from io import BytesIO
 from pathlib import Path
 
@@ -54,7 +55,7 @@ FILE_TYPE_TO_FIELDS = {
     "sales": {
         "year": "Year",
         "week": "Week Number",
-        "customer.number": "Customer Number",
+        "customer.pk": "Customer Number",
         "customer.name": "Customer Name",
         "sales": "Number of Sales",
         "price": "Price per Case",
@@ -150,12 +151,8 @@ def _export_objs(stream, file_type, objects):
                 )
             elif header == "Revenue":
                 result = str(float(getattr(obj, "sales"))*float(getattr(obj, "price")))
-            elif header == "Customer Name":
-                result = str(getattr(getattr(obj, "customer"), "name"))
-            elif header == "Customer Number":
-                result = str(getattr(getattr(obj, "customer"), "pk"))
             else:
-                result = getattr(obj, field_dict[header])
+                result = str(operator.attrgetter(field_dict[header])(obj))
             row[header] = result
         writer.writerow(row)
     #
@@ -250,7 +247,6 @@ def export_drilldown(sales):
     :param sales: the list of sales to be exported
     :return: an HttpResponse containing the exported CSV file
     """
-    print("ntered")
     directory = TEMPDIR / utils.make_token_with_timestamp("sales")
     directory.mkdir(parents=True, exist_ok=True)
     logger.info("Will use directory %s", directory)
@@ -260,7 +256,6 @@ def export_drilldown(sales):
     data = _export_objs(file.open("r+"), "sales", sales)
     response = HttpResponse(data.read(), content_type="text/csv")
     response["Content-Disposition"] = "attachment; filename=sales.csv"
-    print("about to finish")
     return response
 
 

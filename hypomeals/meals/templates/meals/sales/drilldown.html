@@ -156,7 +156,7 @@
     <td>{{ sale.week }}</td>
     <td>{{ sale.customer.pk }}</td>
     <td>{{ sale.customer.name }}</td>
-    <td>{{ sale.sales|quantize:2 }}</td>
+    <td>{{ sale.sales|quantize:0 }}</td>
     <td>{{ sale.price|quantize:2 }}</td>
     <td>{{ revenue|quantize:2 }}</td>
 </tr>
@@ -176,62 +176,8 @@
 </div>
 </form>
 </div>
-<!-- Modal -->
+<!-- Modals here if needed -->
 
-<div class="modal" tabindex="-1" role="dialog" id="modalDiv">
-<div class="modal-dialog modal-lg" role="document">
-<div class="modal-content">
-    <div class="modal-header">
-        <h5 class="modal-title"></h5>
-        <button type="button" class="close" data-dismiss="modal">
-            <span class="fas fa-times"></span>
-        </button>
-    </div>
-    <div class="modal-body" id="modalBody">
-        <div class="d-flex justify-content-center">
-        <div class="spinner-border" role="status" id="loadingSpinner">
-            <span class="sr-only">Loading...</span>
-        </div>
-        </div>
-    </div>
-    <div class="modal-footer">
-        <button type="button"
-                class="btn btn-secondary"
-                data-dismiss="modal">Close</button>
-    </div>
-</div>
-</div>
-</div>
-
-<!-- Another Modal -->
-<div class="modal" tabindex="-1" role="dialog" id="bulkModalDiv">
-<div class="modal-dialog modal-lg" role="document">
-<div class="modal-content">
-    <div class="modal-header">
-        <h5 class="modal-title"></h5>
-        <button type="button" class="close" data-dismiss="modal">
-            <span class="fas fa-times"></span>
-        </button>
-    </div>
-    <div class="modal-body" id="bulkModalBody">
-        <div class="d-flex justify-content-center">
-        <div class="spinner-border" role="status" id="bulkLoadingSpinner">
-            <span class="sr-only">Loading...</span>
-        </div>
-        </div>
-    </div>
-    <div class="modal-footer">
-        <button type="button"
-                class="btn btn-success"
-                data-dismiss="modal"
-                id="bulkModalSave">Save</button>
-        <button type="button"
-                class="btn btn-secondary"
-                data-dismiss="modal">Close</button>
-    </div>
-</div>
-</div>
-</div>
 
 <!-- Hidden div with template data -->
 <div style="display: none;">
@@ -272,6 +218,16 @@
             options: {
                     legend: {
                         display: false
+                    },
+                    scales: {
+                        yAxes: [{
+                            ticks: {
+                                // Include a dollar sign in the ticks
+                                callback: function(value, index, values) {
+                                    return '$' + value;
+                                }
+                            }
+                        }]
                     }}});
 </script>
 {% endblock %}

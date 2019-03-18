@@ -567,7 +567,7 @@ class SaleFilterForm(forms.Form, utils.BootstrapFormControlMixin):
         data_source=reverse_lazy("autocomplete_customers"),
         required=False,
         attr="name",
-        help_text="Enter Customer name",
+        help_text="(if empty, all customer records will be displayed)",
     )
 
     start = forms.DateTimeField(widget=AdminDateWidget())
@@ -604,7 +604,6 @@ class SaleFilterForm(forms.Form, utils.BootstrapFormControlMixin):
         num_per_page = int(params.get("num_per_page", 50))
         query_filter = Q()
         if params["sku"]:
-            print(params["sku"])
             query_filter &= Q(sku__number=params['sku'])
         if params["customer"]:
             query_filter &= Q(customer__name__in=params["customer"])
