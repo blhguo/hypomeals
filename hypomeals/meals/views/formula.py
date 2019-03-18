@@ -128,6 +128,16 @@ def edit_formula(request, formula_number):
                 if saved:
                     FormulaIngredient.objects.bulk_create(saved)
             messages.info(request, f"Successfully inserted {len(saved)} ingredients.")
+            message = f"Formula '{formula.name}' edited successfully"
+            if request.is_ajax():
+                resp = {
+                    "error": None,
+                    "resp": None,
+                    "success": True,
+                    "alert": message,
+                    "name": formula.name,
+                }
+                return JsonResponse(resp)
             return redirect("formula")
     else:
         formulas = FormulaIngredient.objects.filter(formula=formula)
@@ -142,6 +152,16 @@ def edit_formula(request, formula_number):
         formset = FormulaFormset(initial=initial_data)
         form = FormulaNameForm(instance=formula)
 
+    form_html = render_to_string(
+        template_name="meals/formula/edit_formula_form.html",
+        context={"formset": formset, "form": form, "in_flow": in_flow, "edit": False},
+        request=request,
+    )
+
+    if request.is_ajax():
+        resp = {"error": None, "resp": form_html}
+        return JsonResponse(resp)
+
     return render(
         request,
         template_name="meals/formula/edit_formula.html",
@@ -154,6 +174,11 @@ def edit_formula(request, formula_number):
         },
     )
 
+@login_required
+@auth.user_is_admin_ajax(msg="Only an administrator may edit a new formula.")
+def edit_formula_name(request, formula_name):
+    formula = get_object_or_404(Formula, name=formula_name)
+    return edit_formula(request, formula.pk)
 
 @login_required
 @require_GET

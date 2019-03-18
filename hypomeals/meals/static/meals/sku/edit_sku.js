@@ -46,7 +46,8 @@ $(function () {
     editFormulaButton.off("click");
 
     editFormulaButton.click(function () {
-
+        let formulaName = $("#id_formula option:selected").val()
+        let editFormulaUrl = $("#editFormulaUrl").attr("href").replace("0", formulaName)
         $.getJSON(editFormulaUrl, {})
             .done(formulaAjaxDone)
             .fail(function (_, __, errorThrown) {
