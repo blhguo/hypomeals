@@ -23,6 +23,7 @@ def autocomplete_skus(request):
     items = [str(sku) for sku in Sku.objects.filter(name__istartswith=term).distinct()]
     return JsonResponse(items, safe=False)
 
+
 autocomplete_formulas = login_required(
     functools.partial(autocomplete, manager=Formula.objects)
 )

@@ -51,12 +51,9 @@ def sales_drilldown(request, sku_pk):
         if form.is_valid():
             sales = form.query()
         else:
-            # TODO throw an error, since no SKU was specified (shouldnt ever happen)
             sales = Paginator([], 50)
     page = getattr(form, "cleaned_data", {"page_num": 1}).get("page_num", 1)
     if page > sales.num_pages:
-        # For whatever reason, if the page being requested is larger than the actual
-        # number of pages, just start over from the first page.
         page = 1
         form.initial["page_num"] = 1
     revenues = [sale.price * sale.sales for sale in sales.page(page)]

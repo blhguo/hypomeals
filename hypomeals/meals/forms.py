@@ -574,32 +574,12 @@ class SaleFilterForm(forms.Form, utils.BootstrapFormControlMixin):
 
     end = forms.DateTimeField(widget=AdminDateWidget())
 
-    # class Meta:
-    #     model = Ingredient
-    #     fields = [
-    #         "page_num",
-    #         "num_per_page",
-    #         "sku",
-    #         "customer",
-    #         "start",
-    #         "end",
-    #     ]
-    #     help_texts = {
-    #         "sku": "Enter your SKU target here",
-    #         "customer": "Enter the customer target here",
-    #         "start": "A start date (year month date)",
-    #         "end": "An end date (year month date)",
-    #     }
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control mb-2"
 
     def query(self) -> Paginator:
-        # Generate the correct query, execute it, and return the requested page.
-        # Requirement 2.3.2.1
-        # Modified according to https://piazza.com/class/jpvlvyxg51d1nc?cid=40
         params = self.cleaned_data
         num_per_page = int(params.get("num_per_page", 50))
         query_filter = Q()
