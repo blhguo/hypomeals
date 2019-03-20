@@ -31,6 +31,12 @@
     {{ form.non_field_errors }}
     </div>
     {% endif %}
+        {% if form.errors %}
+    <div class="alert alert-danger">
+    <h5 style="color: red">Errors were detected</h5>
+    {{ form.errors }}
+    </div>
+    {% endif %}
     {% for field in form %}
         <div class="form-group">
         {{ field.label_tag }}

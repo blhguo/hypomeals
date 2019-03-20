@@ -69,6 +69,11 @@ fabric.properties
 hypomeals-2f7acfcfe59c.json
 oauth_config.json
 hypomeals-a5a72f65b399.json
+google_sheets_credentials.json
+google_sheets_token.pickle
 
 # Virtual Environment
 hypomeal/
+
+# Temporary files
+celerybeat.pid

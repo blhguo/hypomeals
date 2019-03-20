@@ -56,14 +56,14 @@
 </div>
 <div class="col-sm-4">
     <div class="btn-group my-4" style="float:right;">
-        {% if perms.meals.add_ingredient %}
+        {% if request.user.is_admin %}
         <a id="addFormulaButton"
            href="{%  url 'add_formula' %}"
            class="btn btn-primary">
             <span class="fa fa-plus"></span> Add a new Formula
         </a>
         {% endif %}
-        {% if perms.meals.delete_ingredient %}
+        {% if request.user.is_admin %}
         <button type="button"
                 class="btn btn-danger"
                 disabled
@@ -147,25 +147,27 @@
 <table class="table">
     <thead class="thead-light">
     <tr>
-        {% if perms.meals.delete_ingredient %}
+        {% if request.user.is_admin %}
         <th><input type="checkbox" id="selectAllCheckbox"> </th>
         {% endif %}
         <th>Formula#</th>
         <th>Name</th>
         <th>Ingredients</th>
+        <th>SKUs</th>
         <th>Comment</th>
     </tr>
     </thead>
     <tbody class="table-striped">
     {% for formula in formulas %}
     <tr>
-        {% if perms.meals.delete_ingredient %}
+        {% if request.user.is_admin %}
         <td><input type="checkbox" class="formula-checkbox" id="{{ formula.number }}"> </td>
         {% endif %}
         <td>{{ formula.number }}</td>
         <td>
             <a href="{% url "edit_formula" formula.number %}"
-               {% if perms.meals.change_ingredient %}
+               class="btn btn-link"
+               {% if request.user.is_admin %}
                title="Click on the name to edit this formula."
                {% else %}
                title="You don't have permission to edit this formula."
@@ -179,7 +181,7 @@
             <div class="btn-group">
             <a class="btn btn-link viewFormula"
                href="#"
-               {% if not perms.meals.view_formulaingredient %}
+               {% if not request.user.is_admin %}
                disabled="disabled"
                data-toggle="tooltip"
                data-placement="left"
@@ -190,11 +192,13 @@
                id="{{ formula.number }}">
                 View
             </a>
-            {% if perms.meals.change_skuingredient and perms.meals.add_skuingredient %}
+            {% if request.user.is_admin %}
             <a class="btn btn-link" href="{% url "edit_formula" formula.number %}">Edit</a>
             {% endif %}
-            <a class="btn btn-link" href="{% url 'sku'%}?formula={{ formula.name }}">View Skus</a>
             </div>
+        </td>
+        <td>
+            <a class="btn btn-link" href="{% url 'sku'%}?formula={{ formula.name }}">View</a>
         </td>
         <td>{{ formula.comment|truncatewords:20 }}</td>
     </tr>

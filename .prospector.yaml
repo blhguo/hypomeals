@@ -18,6 +18,7 @@ pylint:
     - too-many-locals
     - no-value-for-parameter
     - mixed-line-endings
+    - cyclic-import
 
 mccabe:
   run: true

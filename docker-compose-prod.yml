@@ -1,0 +1,73 @@
+version: '3'
+
+services:
+    db:
+        build: ./postgres
+        environment:
+            POSTGRES_PASSWORD: "Hyp0Mea1sR0cks!"
+        restart: always
+        volumes:
+            - db-data:/var/lib/postgresql/data
+    web-init:
+        build: ./hypomeals
+        command: /code/initserver.sh
+        user: nobody
+        env_file:
+            - web-vars-prod.env
+        volumes:
+            - ./hypomeals/logs:/code/logs
+            - ./static:/srv/static
+    redis:
+        image: "redis:5.0.3"
+        volumes:
+            - ./hypomeals/logs:/var/log/redis
+        #     - ./redis/data:/data
+        expose:
+            - "6379"
+    web:
+        build: ./hypomeals
+        user: nobody
+        env_file:
+            - web-vars-prod.env
+        command: /code/runserver.sh
+        volumes:
+            - ./hypomeals/logs:/code/logs
+        expose:
+            - "8000"
+        depends_on:
+            - celery
+            - celery-beat
+    celery:
+        build: ./hypomeals
+        user: nobody
+        env_file:
+            - web-vars-prod.env
+        command: /code/runcelery.sh
+        volumes:
+            - ./hypomeals/logs:/code/logs
+        depends_on:
+            - redis
+    # This is a scheduler service that runs the daily jobs
+    celery-beat:
+        build: ./hypomeals
+        user: nobody
+        env_file:
+            - web-vars-prod.env
+        command: /code/runcelerybeat.sh
+        volumes:
+            - ./hypomeals/logs:/code/logs
+        depends_on:
+            - redis
+    nginx:
+        image: nginx:latest
+        ports:
+            - "443:443"
+        volumes:
+            - ./nginx/config:/etc/nginx/conf.d
+            - ./nginx/certs:/etc/nginx/certs:ro
+            - ./static:/srv/static/
+            - ./hypomeals/logs/:/var/log/nginx/
+        depends_on:
+            - web
+volumes:
+    db-data:

@@ -45,7 +45,7 @@ def add_formula(request):
                     "resp": None,
                     "success": True,
                     "alert": message,
-                    "name": "test",
+                    "name": instance.name,
                 }
                 return JsonResponse(resp)
             return redirect("formula")

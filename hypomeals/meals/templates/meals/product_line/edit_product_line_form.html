@@ -20,7 +20,7 @@
 <div class="row mb-4">
     <div class="col-sm">
     {% if editing %}
-    <form method="post" action="{% url 'edit_product_line' product_line_name %}" id="editProductLineForm">
+    <form method="post" action="{% url 'edit_product_line' product_line_number %}" id="editProductLineForm">
     {% else %}
     <form method="post" action="{% url 'add_product_line' %}" id="editProductLineForm">
     {% endif %}
@@ -29,6 +29,12 @@
     <div class="alert alert-danger">
     <h5 style="color: red">Please correct the following errors before proceeding:</h5>
     {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+    {% if form.errors %}
+    <div class="alert alert-danger">
+    <h5 style="color: red">Errors were detected</h5>
+    {{ form.errors }}
     </div>
     {% endif %}
     {% for field in form %}

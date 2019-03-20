@@ -3,14 +3,14 @@
 import logging
 import time
 from collections import defaultdict
+from typing import Dict, Tuple
 
 from cachetools import TTLCache
 from django.db import transaction
 from django.db.models.fields.related import RelatedField
 
 from meals import utils
-from meals.exceptions import CollisionOccurredException
-from meals.importers import IMPORTERS
+from meals.importers import IMPORTERS, Importer, CollisionOccurredException
 from .models import Sku, FormulaIngredient, ProductLine, Ingredient
 
 logger = logging.getLogger(__name__)
@@ -22,33 +22,35 @@ FILE_TYPES = {
     "product_lines": ProductLine,
     "formulas": FormulaIngredient,
 }
-MODEL_TO_FILE_TYPES = {v: k for k, v in FILE_TYPES.items()}
-TOPOLOGICAL_ORDER = ["product_lines", "ingredients", "skus", "formulas"]
+TOPOLOGICAL_ORDER = ["product_lines", "ingredients", "formulas", "skus"]
 # A self expiring cache for 30 minutes
 TRANSACTION_CACHE = TTLCache(maxsize=10, ttl=1800)
 
 
 @transaction.atomic
 @utils.log_exceptions(logger=logger)
-def process_csv_files(files, session_key):
+def process_csv_files(files, session_key: str) -> Tuple[Dict[str, int], Dict[str, int]]:
     inserted = defaultdict(lambda: 0)
+    ignored = defaultdict(lambda: 0)
     for file_type in TOPOLOGICAL_ORDER:
         if file_type in files:
             stream = files[file_type]
             if not stream:
                 continue
-            importer = IMPORTERS[file_type]()
+            importer = IMPORTERS[file_type](stream.name)
             logger.info("Processing %s: %s", file_type, stream)
             lines = stream.read().decode("UTF-8").splitlines()
-            instances, collisions = importer.do_import(lines, filename=stream.name)
-            inserted[file_type] = len(instances)
-            if collisions:
+            try:
+                num_inserted, _, num_ignored = importer.do_import(lines)
+            except CollisionOccurredException:
                 if session_key not in TRANSACTION_CACHE:
                     TRANSACTION_CACHE[session_key] = {}
-                TRANSACTION_CACHE[session_key][stream.name] = (instances, collisions)
-                raise CollisionOccurredException
+                TRANSACTION_CACHE[session_key][stream.name] = importer
+                raise
+            inserted[importer.model_name] = num_inserted
+            ignored[importer.model_name] = num_ignored
 
-    return inserted
+    return inserted, ignored
 
 
 def _save_instance(instance):
@@ -67,33 +69,26 @@ def _save_instance(instance):
 
 
 @transaction.atomic
-def _force_save(tx):
+def _force_save(tx: Dict[str, Importer]):
     start = time.time()
-    inserted = defaultdict(lambda: 0)
-    updated = defaultdict(lambda: 0)
-    for instances, collisions in tx.values():
-        for instance in instances:
-            _save_instance(instance)
-            file_type = MODEL_TO_FILE_TYPES[instance._meta.model]
-            inserted[file_type] += 1
-        for collision in collisions:
-            old, new = collision.old_record, collision.new_record
-            old.delete()
-            _save_instance(new)
-            file_type = MODEL_TO_FILE_TYPES[old._meta.model]
-            updated[file_type] += 1
+    inserted = {}
+    updated = {}
+    ignored = {}
+    for filename, importer in tx.items():
+        inserted[filename], updated[filename], ignored[filename] = importer.commit()
     end = time.time()
     logger.info(
-        "Inserted %d, updated %d records in %6.3f seconds",
+        "Inserted %d, updated %d, ignored %d records in %6.3f seconds",
         sum(inserted.values()),
         sum(updated.values()),
+        sum(ignored.values()),
         end - start,
     )
-    return inserted, updated
+    return inserted, updated, ignored
 
 
 def force_save(session_key, force=False):
-    result = {}, {}
+    result = {}, {}, {}
     if session_key in TRANSACTION_CACHE:
         logger.info("Found ongoing transaction.")
         if force:

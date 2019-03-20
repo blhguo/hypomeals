@@ -14,9 +14,9 @@
 <div class="col-sm-12 mt-4 mb-2">
     <div class="alert alert-success">
     <h3>Import Successful</h3>
-    <p>Your file(s) have been successfully imported. The number of records inserted
-    updated are shown below.</p>
-    <a href="{% url 'index' %}" class="btn btn-link">Return to Dashboard</a>
+    <p>Your file(s) have been successfully imported. The number of records
+    inserted, updated, or ignored, are shown below.</p>
+    <a href="{% url 'index' %}">Return to Dashboard</a>
     </div>
 </div>
 </div>
@@ -32,13 +32,15 @@
     <th>Type</th>
     <th># Inserted</th>
 </tr>
+</thead>
+<tbody>
 {% for model_name, num in inserted %}
 <tr>
     <td><b>{{ model_name|capfirst }}</b></td>
     <td>{{ num }}</td>
 </tr>
 {% endfor %}
-</thead>
+</tbody>
 </table>
 {% endif %}
 
@@ -50,15 +52,41 @@
     <th>Type</th>
     <th># Updated</th>
 </tr>
+</thead>
+
+<tbody>
 {% for model_name, num in updated %}
 <tr>
     <td><b>{{ model_name|capfirst }}</b></td>
     <td>{{ num }}</td>
 </tr>
 {% endfor %}
-{% endif %}
-</thead>
+</tbody>
 </table>
+{% endif %}
+
+{% if ignored %}
+<h3>Ignored</h3>
+<table class="table">
+<thead class="thead-light">
+<tr>
+    <th>Type</th>
+    <th># Ignored</th>
+</tr>
+</thead>
+
+<tbody>
+{% for model_name, num in ignored %}
+<tr>
+    <td><b>{{ model_name|capfirst }}</b></td>
+    <td>{{ num }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+
+
 </div>
 </div>
 </div>

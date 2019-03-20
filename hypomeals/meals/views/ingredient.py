@@ -123,7 +123,8 @@ def remove_ingredients(request):
     to_remove = jsonpickle.loads(request.POST.get("to_remove", "[]"))
     try:
         with transaction.atomic():
-            num_deleted, _ = Ingredient.objects.filter(pk__in=to_remove).delete()
+            _, deleted = Ingredient.objects.filter(pk__in=to_remove).delete()
+            num_deleted = deleted["meals.Ingredient"]
         return JsonResponse(
             {"error": None, "resp": f"Successfully removed {num_deleted} Ingredients"}
         )
