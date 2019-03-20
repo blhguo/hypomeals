@@ -8,6 +8,7 @@ urlpatterns = [
     # Normal views
     path("", views.index, name="index"),
     path("error", TemplateView.as_view(template_name="meals/error.html"), name="error"),
+    path("admin/settings", views.admin_settings, name="admin_settings"),
     # Product Line Views
     path("product-lines", views.product_line, name="product_line"),
     path(

@@ -1,17 +1,19 @@
 import json
 import logging
+import sys
 from urllib import parse as urlparse
 
 import requests
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import logout
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import JsonResponse
 from django.middleware import csrf
 from django.shortcuts import render, redirect, resolve_url, get_list_or_404
 from django.urls import reverse
 from django.utils.http import is_safe_url
+from django.views.debug import technical_500_response, ExceptionReporter
 from django.views.decorators.debug import sensitive_post_parameters
 
 from meals import auth, utils
@@ -195,3 +197,24 @@ def remove_users(request):
         )
     num_deleted, _ = user_objs.delete()
     return f"Successfully deleted {num_deleted} users."
+
+
+@login_required
+@user_passes_test(lambda user: user.is_superuser)
+def admin_settings(request):
+    """
+    This is a technical page that mimics the Django exception page. No exception
+    is actually raised but this page prints out a bunch of useful information.
+
+    Only visible to the superuser (not even admin).
+    """
+
+    class DummyException(Exception):
+        pass
+
+    try:
+        raise DummyException(
+            "This is a dummy exception only for displaying technical information."
+        )
+    except DummyException:
+        return technical_500_response(request, *sys.exc_info())
