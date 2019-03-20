@@ -154,7 +154,7 @@ def edit_formula(request, formula_number):
 
     form_html = render_to_string(
         template_name="meals/formula/edit_formula_form.html",
-        context={"formset": formset, "form": form, "in_flow": in_flow, "edit": False},
+        context={"formset": formset, "form": form, "in_flow": in_flow, "edit": True, "formula": formula},
         request=request,
     )
 
