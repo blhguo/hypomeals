@@ -7,9 +7,65 @@
 {% block title %}Formulas{% endblock %}
 
 {% block body %}
-    {% for pl_name, sku_info in sales_summary %}
+    {% for pl_name, sku_summary, sku_info in sales_summary %}
         <div>{{ pl_name }}</div>
 
+        <table class="table">
+            <thead class="thead-light">
+                <tr>
+                    <th>Sku#</th>
+                    <th>Sku Name</th>
+                    <th>Yearly Revenue</th>
+                    <th>Avg Manufacture Run Size</th>
+                    <th>Ingredient Cost</th>
+                    <th>Manufacture Run Cost</th>
+                    <th>COGS</th>
+                    <th>Avg Revenue</th>
+                    <th>Avg Profit</th>
+                    <th>Profit Margin</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for number, name, rev_sum, avg_run_size, ingredient_cost_per_case, setup_cost_per_case, run_cost_per_case, cogs, avg_rev_per_case, avg_profit_per_case, profit_margin in sku_summary %}
+                    <tr>
+                        <td class="align-middle">
+                            {{ number }}
+                        </td>
+                        <td class="align-middle">
+                            {{ name }}
+                        </td>
+                        <td class="align-middle">
+                            {{ rev_sum }}
+                        </td>
+                        <td class="align-middle">
+                            {{ avg_run_size }}
+                        </td>
+                        <td class="align-middle">
+                            {{ ingredient_cost_per_case }}
+                        </td>
+                        <td class="align-middle">
+                            {{ setup_cost_per_case }}
+                        </td>
+                        <td class="align-middle">
+                            {{ run_cost_per_case }}
+                        </td>
+                        <td class="align-middle">
+                            {{ cogs }}
+                        </td>
+                        <td class="align-middle">
+                            {{ avg_rev_per_case }}
+                        </td>
+                        <td class="align-middle">
+                            {{ avg_profit_per_case }}
+                        </td>
+                        <td class="align-middle">
+                            {{ profit_margin }}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+
+        </table>
         <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapse{{ pl_name }}" aria-expanded="false" aria-controls="collapse{{ pl.name }}">
             10 Years Revenue Details
         </button>
