@@ -31,7 +31,7 @@ services:
         #     - ./redis/data:/data
         expose:
             - "6379"
-        port:
+        ports:
             - "6379:6379"
     web:
         build: ./hypomeals
