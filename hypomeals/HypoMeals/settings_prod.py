@@ -1,4 +1,4 @@
-#pylint: disable-msg=unused-wildcard-import
+#pylint: disable-msg=unused-wildcard-import,
 
 import os
 from .settings import *  # noqa
@@ -6,5 +6,6 @@ from .settings import *  # noqa
 DEBUG = False
 
 HOSTNAME = os.getenv("HOSTNAME", "vcm-4081.vm.duke.edu")
+ALLOWED_HOSTS.append(HOSTNAME)  # noqa
 OAUTH_REDIRECT_URL = f"https://{HOSTNAME}/accounts/sso"
 STATIC_ROOT = "/srv/static/"

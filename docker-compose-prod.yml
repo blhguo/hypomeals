@@ -2,16 +2,12 @@ version: '3'
 
 services:
     db:
-        image: postgres
+        build: ./postgres
         environment:
             POSTGRES_PASSWORD: "Hyp0Mea1sR0cks!"
-        ports:
-            - "5432:5432"
         restart: always
-        command: -c ssl=on -c ssl_cert_file=/var/lib/postgresql/certs/vcm-4081.vm.duke.edu.pem -c ssl_key_file=/var/lib/postgresql/certs/vcm-4081.vm.duke.edu.key
         volumes:
             - db-data:/var/lib/postgresql/data
-            - ./nginx/certs:/var/lib/postgresql/certs:ro
     web-init:
         build: ./hypomeals
         command: /code/initserver.sh
@@ -19,7 +15,7 @@ services:
         env_file:
             - web-vars-prod.env
         volumes:
-            - ./hypomeals:/code
+            - ./hypomeals/logs:/code/logs
             - ./static:/srv/static
     redis:
         image: "redis:5.0.3"
@@ -35,8 +31,7 @@ services:
             - web-vars-prod.env
         command: /code/runserver.sh
         volumes:
-            - ./hypomeals:/code
-            - ./static:/srv/static
+            - ./hypomeals/logs:/code/logs
         expose:
             - "8000"
         depends_on:
@@ -49,7 +44,7 @@ services:
             - web-vars-prod.env
         command: /code/runcelery.sh
         volumes:
-            - ./hypomeals:/code
+            - ./hypomeals/logs:/code/logs
         depends_on:
             - redis
     # This is a scheduler service that runs the daily jobs
@@ -60,7 +55,7 @@ services:
             - web-vars-prod.env
         command: /code/runcelerybeat.sh
         volumes:
-            - ./hypomeals:/code
+            - ./hypomeals/logs:/code/logs
         depends_on:
             - redis
     nginx:
@@ -69,11 +64,10 @@ services:
             - "443:443"
         volumes:
             - ./nginx/config:/etc/nginx/conf.d
-            - ./nginx/certs:/etc/nginx/certs
+            - ./nginx/certs:/etc/nginx/certs:ro
             - ./static:/srv/static/
             - ./hypomeals/logs/:/var/log/nginx/
         depends_on:
             - web
-
 volumes:
     db-data:

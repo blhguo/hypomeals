@@ -142,6 +142,7 @@ DATABASES = {
         "PASSWORD": "Hyp0Mea1sR0cks!",
         "HOST": "127.0.0.1" if USE_LOCAL_DB else DB_HOST,
         "PORT": DB_PORT,
+        "OPTIONS": {"sslmode": "require"},
     }
 }
 

@@ -13,7 +13,7 @@ from django.middleware import csrf
 from django.shortcuts import render, redirect, resolve_url, get_list_or_404
 from django.urls import reverse
 from django.utils.http import is_safe_url
-from django.views.debug import technical_500_response, ExceptionReporter
+from django.views.debug import technical_500_response
 from django.views.decorators.debug import sensitive_post_parameters
 
 from meals import auth, utils
