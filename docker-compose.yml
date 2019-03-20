@@ -52,7 +52,7 @@ services:
         user: nobody
         env_file:
             - web-vars.env
-        command: /code/runcelery.sh
+        command: ["celery", "-A", "HypoMeals", "worker", "-l", "info", "-f", "/code/logs/celery.log"]
         volumes:
             - ./hypomeals:/code
         depends_on:
