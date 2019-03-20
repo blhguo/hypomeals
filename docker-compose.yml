@@ -12,7 +12,7 @@ services:
             POSTGRES_PASSWORD: "Hyp0Mea1sR0cks!"
         restart: always
         volumes:
-            - ./postgres/data:/var/lib/postgresql/data
+            - db-data:/var/lib/postgresql/data
         ports:
             - "5432:5432"
     web-init:
