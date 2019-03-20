@@ -398,6 +398,8 @@ class Formula(
     def __str__(self):
         return self.name
 
+    @property
+
     @classmethod
     def get_sortable_fields(cls):
         return [("number", "Number"), ("name", "Name")]

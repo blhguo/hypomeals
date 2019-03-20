@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+{% extends "meals/base.html" %}
+{% load staticfiles %}
+{% load meals_extras %}
+
+{% block formula_active %}active{% endblock %}
+{% block title %}Formulas{% endblock %}
+
+{% block body %}
+    {% for pl_name, sku_info in sales_summary %}
+        <div>{{ pl_name }}</div>
+
+        <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapse{{ pl_name }}" aria-expanded="false" aria-controls="collapse{{ pl.name }}">
+            10 Years Revenue Details
+        </button>
+        <div class="collapse" id="collapse{{ pl_name }}">
+          <div class="card card-body">
+            <table class="table">
+                <thead class="thead-light">
+                <tr>
+                    <th>Year</th>
+                    <th>Sku#</th>
+                    <th>Sku Name</th>
+                    <th>Total Revenue</th>
+                    <th>Average Revenue / Case</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for year, sku, sku_name, tot_rev, avg_rev in sku_info %}
+                    <tr>
+                        <td class="align-middle">
+                            {{ year }}
+                        </td>
+                        <td class="align-middle">
+                            {{ sku }}
+                        </td>
+                        <td class="align-middle">
+                            {{ sku_name }}
+                        </td>
+                        <td class="align-middle">
+                            {{ tot_rev|quantize }}
+                        </td>
+                        <td class="align-middle">
+                            {{ avg_rev|quantize }}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+          </div>
+        </div>
+    {% endfor %}
+{%  endblock %}

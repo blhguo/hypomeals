@@ -98,4 +98,6 @@ urlpatterns = [
     path("accounts/logout/", views.logout_view, name="logout"),
     path("accounts/sso/authorize", views.sso_start, name="sso"),
     path("accounts/sso", views.sso_landing, name="sso_landing"),
+    # Sales Summary views
+    path("sales-summary/", views.sales_summary, name="sales_summary"),
 ]
