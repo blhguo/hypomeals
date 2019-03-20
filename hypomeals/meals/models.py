@@ -1,6 +1,7 @@
 # pylint: disable-msg=arguments-differ
 import logging
 import re
+from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
@@ -440,6 +441,14 @@ class Formula(
         return self.name
 
     @property
+    def ingredient_cost(self):
+        formula_ingredients = FormulaIngredient.objects.filter(formula=self)
+        ingredient_cost = Decimal(0)
+        for formula_ingredient in formula_ingredients:
+            quantity = formula_ingredient.quantity
+            cost = formula_ingredient.ingredient.cost
+            ingredient_cost += quantity * cost
+        return ingredient_cost
 
     @classmethod
     def get_sortable_fields(cls):

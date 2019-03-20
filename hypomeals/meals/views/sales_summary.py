@@ -43,12 +43,13 @@ def sales_summary(request):
             for activity in activities_sku:
                 manufacture_run_size += activity.quantity
             avg_run_size = manufacture_run_size / len(activities_sku)
-            ingredient_cost_per_case = Decimal(0)
-            for ingredient in sku.formula.ingredients:
-                # FormulaIngredient.objects.filter(sku.formula.ingredients)
-            # No Data For Now
-            run_cost_per_case = 0
-            cogs =
+            # Fake Data For Now
+            setup_cost_per_case = 1000
+            run_cost_per_case = 20
+            ingredient_cost_per_case = sku.formula.ingredient_cost * sku.formula_scale
+            cogs = setup_cost_per_case + run_cost_per_case + ingredient_cost_per_case
+
+            
             sales_summary_result.append((pl.name, sku_ten_year))
 
     return render(
