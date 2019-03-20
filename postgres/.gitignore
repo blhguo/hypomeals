@@ -1,4 +1,5 @@
 # Certs/keys
-*.key
-*.pem
-*.crt
+*
+**/*
+!.gitignore
+!Dockerfile
