@@ -1,8 +1,3 @@
-# WARNING: This docker-compose file contains several settings
-# that might make the resulting containers unsafe or insecure.
-# Use of this file in a production environment is not advised.
-# Use the "docker-compose-prod.yml" version instead.
-
 version: '3'
 
 services:
@@ -13,16 +8,14 @@ services:
         restart: always
         volumes:
             - db-data:/var/lib/postgresql/data
-        ports:
-            - "5432:5432"
     web-init:
         build: ./hypomeals
         command: /code/initserver.sh
         user: nobody
         env_file:
-            - web-vars.env
+            - web-vars-prod.env
         volumes:
-            - ./hypomeals:/code
+            - ./hypomeals/logs:/code/logs
             - ./static:/srv/static
     redis:
         image: "redis:5.0.3"
@@ -31,17 +24,14 @@ services:
         #     - ./redis/data:/data
         expose:
             - "6379"
-        ports:
-            - "6379:6379"
     web:
         build: ./hypomeals
         user: nobody
         env_file:
-            - web-vars.env
+            - web-vars-prod.env
         command: /code/runserver.sh
         volumes:
-            - ./hypomeals:/code
-            - ./static:/srv/static
+            - ./hypomeals/logs:/code/logs
         expose:
             - "8000"
         depends_on:
@@ -51,10 +41,10 @@ services:
         build: ./hypomeals
         user: nobody
         env_file:
-            - web-vars.env
+            - web-vars-prod.env
         command: /code/runcelery.sh
         volumes:
-            - ./hypomeals:/code
+            - ./hypomeals/logs:/code/logs
         depends_on:
             - redis
     # This is a scheduler service that runs the daily jobs
@@ -62,10 +52,10 @@ services:
         build: ./hypomeals
         user: nobody
         env_file:
-            - web-vars.env
+            - web-vars-prod.env
         command: /code/runcelerybeat.sh
         volumes:
-            - ./hypomeals:/code
+            - ./hypomeals/logs:/code/logs
         depends_on:
             - redis
     nginx:
@@ -74,7 +64,7 @@ services:
             - "443:443"
         volumes:
             - ./nginx/config:/etc/nginx/conf.d
-            - ./nginx/certs:/etc/nginx/certs
+            - ./nginx/certs:/etc/nginx/certs:ro
             - ./static:/srv/static/
             - ./hypomeals/logs/:/var/log/nginx/
         depends_on:

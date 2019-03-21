@@ -1,0 +1,5 @@
+# Certs/keys
+*
+**/*
+!.gitignore
+!Dockerfile
