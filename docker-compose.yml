@@ -79,5 +79,10 @@ services:
             - ./hypomeals/logs/:/var/log/nginx/
         depends_on:
             - web
+    backup-agent:
+        build: ./backup
+        volumes:
+            - ./backup/rsnapshot.conf:/etc/rsnapshot.conf:ro
+            - ./hypomeals/logs/backup.log:/var/log/rsnapshot.log
 volumes:
     db-data:
