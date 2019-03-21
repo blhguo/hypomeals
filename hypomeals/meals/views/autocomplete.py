@@ -18,7 +18,6 @@ def autocomplete(request, manager, key="name"):
 
 @login_required
 def autocomplete_skus(request):
-    # SKU names are weird...
     term = request.GET.get("term", "")
     items = [str(sku) for sku in Sku.objects.filter(name__istartswith=term).distinct()]
     return JsonResponse(items, safe=False)
