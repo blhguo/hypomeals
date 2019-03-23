@@ -135,18 +135,18 @@
     {% if request.user.is_admin %}
     <th><input type="checkbox" id="selectAll"> </th>
     {% endif %}
-    <th>Sku name</th>
+    <th>SKU name</th>
     <th>Year</th>
-    <th>Week Number</th>
+    <th>Week #</th>
     <th>Customer Number</th>
     <th>Customer Name</th>
-    <th>Number of Sales</th>
+    <th># of Sales</th>
     <th>Price per Case</th>
     <th>Revenue</th>
 </tr>
 </thead>
 <tbody class="table-striped">
-{% for sale, revenue in sales %}
+{% for sale in sales %}
 <tr>
     {% if request.user.is_admin %}
     <td><input type="checkbox" class="drilldown-checkbox" id="{{ sku.number }}"> </td>
@@ -158,7 +158,7 @@
     <td>{{ sale.customer.name }}</td>
     <td>{{ sale.sales|quantize:0 }}</td>
     <td>{{ sale.price|quantize:2 }}</td>
-    <td>{{ revenue|quantize:2 }}</td>
+    <td>$ {{ sale.revenue|quantize:2 }}</td>
 </tr>
 {% empty %}
     <div class="alert alert-danger">
@@ -188,6 +188,8 @@
 <input id="startInputId" value="{{ form.start.id_for_label }}">
 <input id="endInputId" value="{{ form.end.id_for_label }}">
 <input id="customerInputId" value="{{ form.customer.id_for_label }}">
+<input type="hidden" id="chart_data_x" name="chart_data_x" value="{{ chart_data_x }}">
+<input type="hidden" id="chart_data_y" name="chart_data_y" value="{{ chart_data_y }}">
 
 {#    "sales url refers to alex's stuff" #}
 <a href="{% url 'drilldown' sku_pk%}" id="salesUrl"></a>
@@ -198,36 +200,6 @@
 {% block scriptend %}
 <script src="{% static 'meals/common.js' %}"></script>
 <script src="{% static 'meals/sku/sku.js' %}"></script>
-<script src="{% static 'meals/sales/drilldown.js' %}"></script>
-<script src="//ajax.googleapis.com/ajax/libs/jquery/3.3.0/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.min.js"></script>
-<script>
-    var ctx = document.getElementById("revenueLineChart");
-    var lbls = jQuery.parseJSON('{{ chart_data_x|escapejs }}');
-    var data = jQuery.parseJSON('{{ chart_data_y|escapejs }}');
-    {#var lineLabel = jQuery.parseJSON('{{ chart_data_labels|escapejs }}');#}
-    var revenueLineChart = new Chart(ctx,
-        {
-            type: "line",
-            data: {
-                    labels: lbls,
-                    datasets: [{
-                        data: data,
-                        borderColor: "#c45850"
-                    }]},
-            options: {
-                    legend: {
-                        display: false
-                    },
-                    scales: {
-                        yAxes: [{
-                            ticks: {
-                                // Include a dollar sign in the ticks
-                                callback: function(value, index, values) {
-                                    return '$' + value;
-                                }
-                            }
-                        }]
-                    }}});
-</script>
+<script src="{% static 'meals/sales/drilldown.js' %}"></script>
 {% endblock %}

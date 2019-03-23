@@ -13,7 +13,7 @@ from django.core.exceptions import ValidationError
 from django.core.files import File
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q, BLANK_CHOICE_DASH
+from django.db.models import Q, BLANK_CHOICE_DASH, F
 from django.forms import formset_factory
 from django.urls import reverse_lazy
 
@@ -600,7 +600,7 @@ class SaleFilterForm(forms.Form, utils.BootstrapFormControlMixin):
                              (Q(year__gt=start_year) or
                               (Q(year__in=start_year) and
                                Q(week__gt=start_week))))
-        query = Sale.objects.filter(query_filter)
+        query = Sale.objects.filter(query_filter).annotate(revenue=F("sales") * F("price"))
         if num_per_page == -1:
             num_per_page = query.count()
         return Paginator(query.distinct(), num_per_page)
