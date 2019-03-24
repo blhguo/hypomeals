@@ -59,6 +59,20 @@ class ProductLine(models.Model, utils.ModelFieldsCompareMixin):
 
     name = models.CharField(max_length=100, unique=True, verbose_name="Name")
 
+    @classmethod
+    def get_sortable_fields(cls):
+        """
+        Returns a list of fields that this model is sortable by. For now this is hard-
+        coded because there is no easy way to tell whether it makes sense to sort by
+        a particular field.
+        :return: a list of 2-tuples (field identifier, human-readable name) suitable
+            for use in, for example, a ChoiceField in a form.
+        """
+        return [
+            ("id", "ID"),
+            ("name", "Name"),
+        ]
+
     def __str__(self):
         return self.name
 

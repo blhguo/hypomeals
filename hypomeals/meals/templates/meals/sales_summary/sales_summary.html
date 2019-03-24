@@ -7,9 +7,79 @@
 {% block title %}Formulas{% endblock %}
 
 {% block body %}
-    {% for pl_name, sku_summary, sku_info in sales_summary %}
-        <div>{{ pl_name }}</div>
-
+<form method="post" action="{% url 'sales_summary' %}" id="productLineFilterForm">
+{% csrf_token %}
+    <div class="row">
+    <div class="col-sm-2 my-2">
+        <h3>Search</h3>
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            <p>Please correct the following error:</p>
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+        {{ form.page_num }}
+        <div class="form-group">
+            <label for="{{ form.num_per_page.id_for_label }}">Number per page:</label>
+            {{ form.num_per_page }}
+            {% if form.num_per_page.errors %}
+            <small>{{ form.num_per_page.errors }}</small>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="{{ form.sort_by.id_for_label }}">Sort by:</label>
+            {{ form.sort_by }}
+            {% if form.sort_by.errors %}
+            <small>{{ form.sort_by.errors }}</small>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="{{ form.keyword.id_for_label }}">Search:</label>
+            {{ form.keyword }}
+            {% if form.keyword.errors %}
+            <small>{{ form.keyword.errors }}</small>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="{{ form.product_lines.id_for_label }}">Product Line(s) to be Included:</label>
+            {{ form.product_lines }}
+            <small>{{ form.product_lines.help_text }}</small>
+            {% if form.product_lines.errors %}
+            <small>{{ form.product_lines.errors }}</small>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="{{ form.product_lines.id_for_label }}">Customer(s) to be Included:</label>
+            {{ form.customers }}
+            <small>{{ form.customers.help_text }}</small>
+            {% if form.customers.errors %}
+            <small>{{ form.customers.errors }}</small>
+            {% endif %}
+        </div>
+        <div class="btn-group w-100" role="group">
+        <button id="submitButton" class="btn btn-success w-100">
+            <span class="fas fa-filter"></span> Filter
+        </button>
+        <button id="resetAllButton" class="btn btn-danger w-100">
+            <span class="fas fa-trash-alt"></span> Reset
+        </button>
+        </div>
+        <hr>
+        <h3>Export</h3>
+        <button class="btn btn-primary w-100" id="exportButton">
+            <span class="fas fa-download"></span> Export Current Search
+        </button>
+    </div>
+    <div class="col-sm-10 my-2">
+    {% for pl_name, sku_summary in sales_summary %}
+        {% if sku_summary %}
+        {% ifchanged %}
+            <div>
+                <nav class="navbar navbar-light bg-light">
+                    <span class="navbar-brand mb-0 h1">Product Lines: {{ pl_name }}</span>
+                </nav>
+            </div>
+        {% endifchanged %}
         <table class="table">
             <thead class="thead-light">
                 <tr>
@@ -18,15 +88,17 @@
                     <th>Yearly Revenue</th>
                     <th>Avg Manufacture Run Size</th>
                     <th>Ingredient Cost</th>
+                    <th>Setup Cost</th>
                     <th>Manufacture Run Cost</th>
                     <th>COGS</th>
                     <th>Avg Revenue</th>
                     <th>Avg Profit</th>
                     <th>Profit Margin</th>
+                    <th>10 Year Details</th>
                 </tr>
             </thead>
             <tbody>
-                {% for number, name, rev_sum, avg_run_size, ingredient_cost_per_case, setup_cost_per_case, run_cost_per_case, cogs, avg_rev_per_case, avg_profit_per_case, profit_margin in sku_summary %}
+                {% for number, name, rev_sum, avg_run_size, ingredient_cost_per_case, setup_cost_per_case, run_cost_per_case, cogs, avg_rev_per_case, avg_profit_per_case, profit_margin, sku_info in sku_summary %}
                     <tr>
                         <td class="align-middle">
                             {{ number }}
@@ -35,75 +107,103 @@
                             {{ name }}
                         </td>
                         <td class="align-middle">
-                            {{ rev_sum }}
+                            {{ rev_sum|quantize }}
                         </td>
                         <td class="align-middle">
-                            {{ avg_run_size }}
+                            {{ avg_run_size|quantize }}
                         </td>
                         <td class="align-middle">
-                            {{ ingredient_cost_per_case }}
+                            {{ ingredient_cost_per_case|quantize }}
                         </td>
                         <td class="align-middle">
-                            {{ setup_cost_per_case }}
+                            {{ setup_cost_per_case|quantize }}
                         </td>
                         <td class="align-middle">
-                            {{ run_cost_per_case }}
+                            {{ run_cost_per_case|quantize }}
                         </td>
                         <td class="align-middle">
-                            {{ cogs }}
+                            {{ cogs|quantize }}
                         </td>
                         <td class="align-middle">
-                            {{ avg_rev_per_case }}
+                            {{ avg_rev_per_case|quantize }}
                         </td>
                         <td class="align-middle">
-                            {{ avg_profit_per_case }}
+                            {{ avg_profit_per_case|quantize }}
                         </td>
                         <td class="align-middle">
-                            {{ profit_margin }}
+                            {{ profit_margin|quantize }}
+                        </td>
+                        <td class="align-middle">
+                            <button class="btn btn-primary" type="button" data-toggle="modal" data-target="#modal{{ number }}">
+                                10 Years Details
+                            </button>
+                            <div class="modal fade"  id="modal{{ number }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                              <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                  <div class="modal-header">
+                                    <h5 class="modal-title" id="exampleModalLabel">10 Year Revenue Details</h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                      <span aria-hidden="true">&times;</span>
+                                    </button>
+                                  </div>
+                                  <div class="modal-body">
+                                    <table class="table">
+                                        <thead class="thead-light">
+                                        <tr>
+                                            <th>Year</th>
+                                            <th>Sku#</th>
+                                            <th>Sku Name</th>
+                                            <th>Total Revenue</th>
+                                            <th>Average Revenue / Case</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        {% for year, sku, sku_name, tot_rev, avg_rev in sku_info %}
+                                            <tr>
+                                                <td class="align-middle">
+                                                    {{ year }}
+                                                </td>
+                                                <td class="align-middle">
+                                                    {{ sku }}
+                                                </td>
+                                                <td class="align-middle">
+                                                    {{ sku_name }}
+                                                </td>
+                                                <td class="align-middle">
+                                                    {{ tot_rev|quantize }}
+                                                </td>
+                                                <td class="align-middle">
+                                                    {{ avg_rev|quantize }}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                        </tbody>
+                                    </table>
+                                  </div>
+                                  <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
                         </td>
                     </tr>
                 {% endfor %}
             </tbody>
-
         </table>
-        <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapse{{ pl_name }}" aria-expanded="false" aria-controls="collapse{{ pl.name }}">
-            10 Years Revenue Details
-        </button>
-        <div class="collapse" id="collapse{{ pl_name }}">
-          <div class="card card-body">
-            <table class="table">
-                <thead class="thead-light">
-                <tr>
-                    <th>Year</th>
-                    <th>Sku#</th>
-                    <th>Sku Name</th>
-                    <th>Total Revenue</th>
-                    <th>Average Revenue / Case</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for year, sku, sku_name, tot_rev, avg_rev in sku_info %}
-                    <tr>
-                        <td class="align-middle">
-                            {{ year }}
-                        </td>
-                        <td class="align-middle">
-                            {{ sku }}
-                        </td>
-                        <td class="align-middle">
-                            {{ sku_name }}
-                        </td>
-                        <td class="align-middle">
-                            {{ tot_rev|quantize }}
-                        </td>
-                        <td class="align-middle">
-                            {{ avg_rev|quantize }}
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-          </div>
-        </div>
+        {% endif %}
     {% endfor %}
+    </div>
+    </div>
+</form>
+
+<div style="display: none;">
+<a href="{% url 'sales_summary' %}" id="salesSummaryUrl"></a>
+</div>
+
 {%  endblock %}
+
+{% block scriptend %}
+    <script src="{% static 'meals/common.js' %}"></script>
+    <script src="{% static 'meals/sale-summary/sale_summary.js' %}"></script>
+{% endblock %}
