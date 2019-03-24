@@ -19,6 +19,10 @@ urlpatterns = [
         "edit-product-line/<int:pk>", views.edit_product_line, name="edit_product_line"
     ),
     path("view-pl-skus/<int:pk>", views.view_pl_skus, name="view_pl_skus"),
+    path("generate_report", views.generate_sales_report, name="generate_sales_report"),
+    # Sales
+    path("drilldown/<int:sku_pk>", views.sales_drilldown, name="drilldown"),
+    path("ac-customers", views.autocomplete_customers, name="autocomplete_customers"),
     # SKU views
     path("sku", views.sku, name="sku"),
     path("remove-skus", views.remove_skus, name="remove_skus"),

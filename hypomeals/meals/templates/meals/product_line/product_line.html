@@ -36,7 +36,14 @@
             <span class="fas fa-minus"></span> Remove selected
         </button>
         {% endif %}
-
+        {% if request.user.is_admin %}
+        <button data-href="{% url 'generate_sales_report' %}"
+                disabled
+                id="generateButton"
+                class="btn btn-success">
+            <span class="fas fa-align-justify"></span> Generate Sales Report
+        </button>
+        {% endif %}
     </div>
 </div>
 </div>

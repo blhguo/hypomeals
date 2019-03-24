@@ -150,7 +150,6 @@ def remove_skus(request):
 @auth.permission_required_ajax(perm="meals.delete_sku")
 def view_lines(request):
     skus = json.loads(request.GET.get("skus", "[]"))
-    print(skus)
     all_set = set()
     partial_set = set()
     none_set = set()

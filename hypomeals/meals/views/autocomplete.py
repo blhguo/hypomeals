@@ -3,7 +3,7 @@ import functools
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 
-from meals.models import Ingredient, ProductLine, Sku, ManufacturingLine, User, Formula
+from meals.models import Ingredient, ProductLine, Sku, ManufacturingLine, User, Formula, Customer
 
 
 def autocomplete(request, manager, key="name"):
@@ -18,7 +18,6 @@ def autocomplete(request, manager, key="name"):
 
 @login_required
 def autocomplete_skus(request):
-    # SKU names are weird...
     term = request.GET.get("term", "")
     items = [str(sku) for sku in Sku.objects.filter(name__istartswith=term).distinct()]
     return JsonResponse(items, safe=False)
@@ -38,4 +37,7 @@ autocomplete_manufacturing_lines = login_required(
 )
 autocomplete_users = login_required(
     functools.partial(autocomplete, manager=User.objects, key="username")
+)
+autocomplete_customers = login_required(
+    functools.partial(autocomplete, manager=Customer.objects, key="name")
 )

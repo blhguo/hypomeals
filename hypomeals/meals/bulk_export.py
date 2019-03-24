@@ -2,6 +2,7 @@ import csv
 import logging
 import tempfile
 import zipfile
+import operator
 from io import BytesIO
 from pathlib import Path
 
@@ -14,6 +15,7 @@ from .models import (
     ProductLine,
     FormulaIngredient,
     SkuManufacturingLine,
+    Sale,
 )
 
 logger = logging.getLogger(__name__)
@@ -50,6 +52,14 @@ FILE_TYPE_TO_FIELDS = {
         "quantity": "Quantity",
         "formula.comment": "Comment",
     },
+    "sales": {
+        "year": "Year",
+        "week": "Week Number",
+        "customer.pk": "Customer Number",
+        "customer.name": "Customer Name",
+        "sales": "Number of Sales",
+        "price": "Price per Case",
+    }
 }
 FILE_TYPE_TO_FIELDS_REV = {}
 for key, value in FILE_TYPE_TO_FIELDS.items():
@@ -73,6 +83,13 @@ HEADERS = {
     "ingredients": ["Ingr#", "Name", "Vendor Info", "Size", "Cost", "Comment"],
     "product_lines": ["Name"],
     "formulas": ["Formula#", "Name", "Ingr#", "Quantity", "Comment"],
+    "sales": ["Year",
+              "Week Number",
+              "Customer Number",
+              "Customer Name",
+              "Number of Sales",
+              "Price per Case",
+              "Revenue"],
 }
 
 FILE_TYPES = {
@@ -80,6 +97,7 @@ FILE_TYPES = {
     "ingredients": Ingredient,
     "product_lines": ProductLine,
     "formulas": FormulaIngredient,
+    "sales": Sale
 }
 
 FILE_TYPE_TO_FILENAME = {file_type: f"{file_type}.csv" for file_type in FILE_TYPES}
@@ -131,8 +149,10 @@ def _export_objs(stream, file_type, objects):
                     + " "
                     + str(getattr(obj, "unit.symbol"))
                 )
+            elif header == "Revenue":
+                result = str(float(getattr(obj, "sales"))*float(getattr(obj, "price")))
             else:
-                result = getattr(obj, field_dict[header])
+                result = str(operator.attrgetter(field_dict[header])(obj))
             row[header] = result
         writer.writerow(row)
     #
@@ -218,6 +238,24 @@ def export_ingredients(ingredients):
     data = _export_objs(file.open("r+"), "ingredients", ingredients)
     response = HttpResponse(data.read(), content_type="text/csv")
     response["Content-Disposition"] = "attachment; filename=ingredients.csv"
+    return response
+
+
+def export_drilldown(sales):
+    """
+    Exports a list of sales as a temporary CSV file
+    :param sales: the list of sales to be exported
+    :return: an HttpResponse containing the exported CSV file
+    """
+    directory = TEMPDIR / utils.make_token_with_timestamp("sales")
+    directory.mkdir(parents=True, exist_ok=True)
+    logger.info("Will use directory %s", directory)
+    file = directory / FILE_TYPE_TO_FILENAME["sales"]
+    file.touch(exist_ok=True)
+    logger.info("Will export sales to %s", file)
+    data = _export_objs(file.open("r+"), "sales", sales)
+    response = HttpResponse(data.read(), content_type="text/csv")
+    response["Content-Disposition"] = "attachment; filename=sales.csv"
     return response
 
 

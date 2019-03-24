@@ -14,7 +14,7 @@ from django.views.decorators.http import require_GET, require_POST
 from meals import auth
 from meals.forms import FormulaFormset, FormulaFilterForm, FormulaNameForm
 from meals.models import FormulaIngredient
-from meals.models import Formula
+from meals.models import Formula, Sku
 from ..bulk_export import export_formulas
 
 logger = logging.getLogger(__name__)
@@ -182,6 +182,10 @@ def remove_formulas(request):
     to_remove = jsonpickle.loads(request.POST.get("to_remove", "[]"))
     try:
         with transaction.atomic():
+            temp = Formula.objects.filter(pk__in=to_remove)
+            temp_arr = [(temp_sku.formula in temp) for temp_sku in Sku.objects.all()]
+            if any(temp_arr):
+                return JsonResponse({"error": "Unsuccessful", "resp": "Not removed, related SKUs exist"})
             num_deleted, result = Formula.objects.filter(pk__in=to_remove).delete()
             logger.info("removed %d Formulas: %s", num_deleted, result)
         return JsonResponse(
