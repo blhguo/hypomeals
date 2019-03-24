@@ -1,5 +1,6 @@
 $(function() {
     let removeButton = $("#removeButton");
+    let generateButton = $("#generateButton");
     let plCheckboxes = $(".selectProductLineCheckboxes");
     let selectAllCheckbox = $("#selectAllCheckbox");
     let pageUrl = window.location.href;
@@ -11,6 +12,8 @@ $(function() {
     }
 
     plCheckboxes.change(function() {
+        generateButton.prop("disabled",
+            $(".selectProductLineCheckboxes:checked").length  === 0);
         removeButton.prop("disabled",
             $(".selectProductLineCheckboxes:checked").length  === 0);
     });
@@ -39,6 +42,35 @@ $(function() {
             function() {
                 $.getJSON(url, {
                     toRemove: JSON.stringify(toRemove),
+                }).done(function(data, textStatus) {
+                    if (!showNetworkError(data, textStatus)) {
+                        return;
+                    }
+                    if ("error" in data && data.error) {
+                        makeModalAlert("Error", data.error);
+                    }
+                    makeModalAlert("Success", data.resp, refreshPage);
+                })
+            });
+
+    });
+
+    generateButton.on("click", function(ev) {
+        ev.preventDefault();
+        let toTarget = $(".selectProductLineCheckboxes:checked")
+            .toArray()
+            .map((pl) => $(pl).attr("data-pl-id"));
+        if (toTarget.length === 0) {
+            makeModalAlert("Error",
+                "You must select at least one product line.");
+            return;
+        }
+        let url = $(this).attr("data-href");
+        makeModalAlert("Confirm",
+            `Are you sure you want to generate a report using ${toTarget.length} Product Line(s)?`,
+            function() {
+                $.getJSON(url, {
+                    toTarget: JSON.stringify(toTarget),
                 }).done(function(data, textStatus) {
                     if (!showNetworkError(data, textStatus)) {
                         return;

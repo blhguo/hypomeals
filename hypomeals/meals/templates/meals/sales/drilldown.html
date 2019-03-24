@@ -1,0 +1,204 @@
+{% extends "meals/base.html" %}
+{% load staticfiles %}
+{% load humanize %}
+{% load meals_extras %}
+
+{% block sku_active %}active{% endblock %}
+{% block title %}Review Sales{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.0.1/css/tempusdominus-bootstrap-4.min.css" />
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid m-auto">
+<form method="post" action="{% url 'drilldown' sku.number %}" id="drilldownFilterForm">
+{% csrf_token %}
+<div class="row">
+<div class="col-sm-8">
+<nav>
+    <ul class="pagination my-4" id="pageList">
+    {% if sales.has_previous %}
+        <li class="page-item">
+        <a class="page-link" data-page="{{ sales.previous_page_number }}" href="#">
+            <span>&laquo;</span>
+        </a>
+        </li>
+    {% else %}
+        <li class="page-item disabled">
+        <a class="page-link" href="#">
+            <span>&laquo;</span>
+        </a>
+        </li>
+    {% endif %}
+
+    {% for page in pages %}
+        {% if current_page == page %}
+        <li class="page-item active">
+        {% else %}
+        <li class="page-item">
+        {% endif %}
+        <a class="page-link" data-page="{{ page }}" href="#">
+        {{ page }}
+        </a>
+        </li>
+    {% endfor %}
+
+    {% if sales.has_next %}
+        <li class="page-item">
+        <a class="page-link" data-page="{{ sales.next_page_number }}" href="#">
+            <span>&raquo;</span>
+        </a>
+        </li>
+    {% else %}
+        <li class="page-item disabled">
+        <a class="page-link" href="#">
+            <span>&raquo;</span>
+        </a>
+        </li>
+    {% endif %}
+    </ul>
+</nav>
+</div>
+</div>
+<div class="row">
+<div class="col-sm-2 my-2">
+<h3>Filter</h3>
+{% if form.non_field_errors %}
+<div class="alert alert-danger">
+    <p>Please correct the following error:</p>
+    {{ form.non_field_errors }}
+</div>
+{% endif %}
+{{ form.page_num }}
+<div class="form-group">
+    <label for="{{ form.num_per_page.id_for_label }}">Number per page:</label>
+    {{ form.num_per_page }}
+    {% if form.num_per_page.errors %}
+    <small>{{ form.num_per_page.errors }}</small>
+    {% endif %}
+</div>
+<div class="form-group">
+    <label for="{{ form.start.id_for_label }}">Start date:</label>
+    {{ form.start }}
+    {% if form.start.errors %}
+    <small>{{ form.start.errors }}</small>
+    {% endif %}
+</div>
+<div class="form-group">
+    <label for="{{ form.end.id_for_label }}">End date:</label>
+    {{ form.end }}
+    {% if form.end.errors %}
+    <small>{{ form.end.errors }}</small>
+    {% endif %}
+</div>
+<div class="form-group">
+    <label for="{{ form.customer.id_for_label }}">Customer name:</label>
+    {{ form.customer }}
+    <small>{{ form.customer.help_text }}</small>
+    {% if form.customer.errors %}
+    <small>{{ form.customer.errors }}</small>
+    {% endif %}
+</div>
+<div class="btn-group w-100" role="group">
+<button id="submitButton" class="btn btn-success w-100">
+    <span class="fas fa-filter"></span> Filter
+</button>
+<button id="resetAllButton" class="btn btn-danger w-100">
+    <span class="fas fa-trash-alt"></span> Reset
+</button>
+</div>
+<hr>
+<h3>At a Glance</h3>
+<br>
+<canvas id="revenueLineChart" width="40" height="40"></canvas>
+<div>
+
+
+{#<!-- Export buttons -->#}
+<hr>
+<h3>Export</h3>
+<button class="btn btn-primary w-100" id="exportButton">
+    <span class="fas fa-download"></span> Export Current Search
+</button>
+</div>
+</div>
+
+
+<!-- Table column -->
+<div class="col-sm-10 my-2">
+{% if messages %}
+<div class="alert alert-success" id="messagesDiv">
+{% for message in messages %}
+<p {% if message.tags %}class="{{ message.tags }}{% endif %}">{{ message }}</p>
+{% endfor %}
+</div>
+{% endif %}
+
+<h3 class="mb-3">Sales Report for SKU #{{ sku.pk }}: {{ sku.name }}</h3>
+
+<div style="overflow: scroll;">
+<table class="table">
+<thead class="thead-light">
+<tr>
+    <th>Year</th>
+    <th>Week #</th>
+    <th>Customer Name</th>
+    <th># Sales</th>
+    <th>Price per Case</th>
+    <th>Revenue</th>
+</tr>
+</thead>
+<tbody class="table-striped">
+{% for sale in sales %}
+<tr>
+    <td>{{ sale.year }}</td>
+    <td>{{ sale.week }}</td>
+    <td>{{ sale.customer.name }}</td>
+    <td>{{ sale.sales|quantize:0 }}</td>
+    <td>$ {{ sale.price|quantize:2|intcomma }}</td>
+    <td>$ {{ sale.revenue|quantize:2|intcomma }}</td>
+</tr>
+{% empty %}
+    <div class="alert alert-danger">
+        <p>No results were found. Please modify your search parameters and try again.</p>
+    </div>
+{% endfor %}
+</tbody>
+</table>
+</div>
+
+<div>
+<p>Found {{ sales.paginator.count }} matches in {{ duration }} seconds</p>
+</div>
+</div>
+</div>
+</form>
+</div>
+<!-- Modals here if needed -->
+
+
+<!-- Hidden div with template data -->
+<div style="display: none;">
+<input id="pageNumInputId" value="{{ form.page_num.id_for_label }}">
+<input id="skuInputId" value="{{ form.sku.id_for_label }}">
+<input id="startInputId" value="{{ form.start.id_for_label }}">
+<input id="endInputId" value="{{ form.end.id_for_label }}">
+<input id="customerInputId" value="{{ form.customer.id_for_label }}">
+<input type="hidden" id="chart_data_x" name="chart_data_x" value="{{ chart_data_x }}">
+<input type="hidden" id="chart_data_y" name="chart_data_y" value="{{ chart_data_y }}">
+
+{#    "sales url refers to alex's stuff" #}
+<a href="{% url 'drilldown' sku.number%}" id="salesUrl"></a>
+</div>
+
+{% endblock %}
+
+{% block scriptend %}
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.0.1/js/tempusdominus-bootstrap-4.min.js"></script>
+<script src="{% static 'meals/common.js' %}"></script>
+<script src="{% static 'meals/sku/sku.js' %}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.min.js"></script>
+<script src="{% static 'meals/sales/drilldown.js' %}"></script>
+{% endblock %}

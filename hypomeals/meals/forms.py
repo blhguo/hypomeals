@@ -12,7 +12,7 @@ from django.core.exceptions import ValidationError
 from django.core.files import File
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q, BLANK_CHOICE_DASH
+from django.db.models import Q, BLANK_CHOICE_DASH, F
 from django.forms import formset_factory
 from django.urls import reverse_lazy
 
@@ -21,6 +21,7 @@ from meals import utils
 from meals.constants import ADMINS_GROUP, USERS_GROUP
 from meals.importers import CollisionOccurredException
 from meals.models import (
+    Customer,
     FormulaIngredient,
     SkuManufacturingLine,
     ManufacturingLine,
@@ -29,6 +30,7 @@ from meals.models import (
     GoalSchedule,
     User,
     Sku,
+    Sale,
     Ingredient,
     ProductLine,
     Upc,
@@ -547,6 +549,74 @@ class EditIngredientForm(forms.ModelForm):
         return instance
 
 
+class SaleFilterForm(forms.Form, utils.BootstrapFormControlMixin):
+    NUM_PER_PAGE_CHOICES = [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
+
+    page_num = forms.IntegerField(
+        widget=forms.HiddenInput(), initial=1, min_value=1, required=False
+    )
+    num_per_page = forms.ChoiceField(choices=NUM_PER_PAGE_CHOICES, required=True)
+
+    sku = forms.IntegerField(required=False)
+
+    customer = CsvAutocompletedField(
+        model=Customer,
+        data_source=reverse_lazy("autocomplete_customers"),
+        required=False,
+        attr="name",
+        help_text="(if empty, all customer records will be displayed)",
+    )
+
+    start = forms.DateTimeField(widget=forms.DateInput())
+
+    end = forms.DateTimeField(widget=forms.DateInput())
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-control mb-2"
+        self.fields["start"].widget.attrs["type"] = "date"
+        self.fields["end"].widget.attrs["type"] = "date"
+
+    def clean(self):
+        if (
+            "start" in self.cleaned_data
+            and self.cleaned_data["start"]
+            and "end" in self.cleaned_data
+            and self.cleaned_data["end"]
+        ):
+            if self.cleaned_data["end"] < self.cleaned_data["start"]:
+                raise ValidationError("End date cannot be less than start date")
+
+        return self.cleaned_data
+
+    def query(self) -> Paginator:
+        params = self.cleaned_data
+        num_per_page = int(params.get("num_per_page", 50))
+        query_filter = Q()
+        if params["sku"]:
+            query_filter &= Q(sku__number=params["sku"])
+        if params["customer"]:
+            query_filter &= Q(customer__name__in=params["customer"])
+        if params["start"] and params["end"]:
+            start_year, start_week, _ = params["start"].isocalendar()
+            end_year, end_week, _ = params["end"].isocalendar()
+            # year < end_year || (year == end_year && week <= end_week)
+            query_filter &= Q(year__lt=end_year) | (
+                Q(year=end_year) | Q(week__lte=end_week)
+            )
+            # year > start_year || (year == start_year && week >= start_week)
+            query_filter &= Q(year__gt=start_year) | (
+                Q(year=start_year) & Q(week__gte=start_week)
+            )
+        query = Sale.objects.filter(query_filter).annotate(
+            revenue=F("sales") * F("price")
+        )
+        if num_per_page == -1:
+            num_per_page = query.count()
+        return Paginator(query.distinct(), num_per_page)
+
+
 class SkuFilterForm(forms.Form, utils.BootstrapFormControlMixin):
     NUM_PER_PAGE_CHOICES = [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
 
@@ -682,7 +752,7 @@ class UpcField(forms.CharField):
                 return value
             raise ValidationError(
                 "%(value)s does not represent a consumer product",
-                params={"value": value}
+                params={"value": value},
             )
         raise ValidationError(
             "%(value)s is not a valid UPC number", params={"value": value}

@@ -220,6 +220,7 @@
     <th>Manufacturing Lines</th>
     <th>Rate</th>
     <th>Comment</th>
+    <th>Drilldown</th>
 </tr>
 </thead>
 <tbody class="table-striped">
@@ -274,6 +275,11 @@
         {{ sku.manufacturing_rate|quantize:2 }}
     </td>
     <td>{{ sku.comment|truncatewords:20 }}</td>
+    <td>
+        {% if request.user.is_admin %}
+        <a class="btn btn-link" href="{% url 'drilldown' sku.number %}">Drilldown Report</a>
+        {% endif %}
+    </td>
 </tr>
 {% empty %}
     <div class="alert alert-danger">
