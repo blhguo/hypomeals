@@ -1,13 +1,18 @@
 {% extends "meals/base.html" %}
 {% load staticfiles %}
+{% load humanize %}
 {% load meals_extras %}
 
 {% block sku_active %}active{% endblock %}
 {% block title %}Review Sales{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.0.1/css/tempusdominus-bootstrap-4.min.css" />
+{% endblock %}
+
 {% block body %}
 <div class="container-fluid m-auto">
-<form method="post" action="{% url 'drilldown' sku_pk %}" id="drilldownFilterForm">
+<form method="post" action="{% url 'drilldown' sku.number %}" id="drilldownFilterForm">
 {% csrf_token %}
 <div class="row">
 <div class="col-sm-8">
@@ -15,7 +20,7 @@
     <ul class="pagination my-4" id="pageList">
     {% if sales.has_previous %}
         <li class="page-item">
-        <a class="page-link" page="{{ sales.previous_page_number }}" href="#">
+        <a class="page-link" data-page="{{ sales.previous_page_number }}" href="#">
             <span>&laquo;</span>
         </a>
         </li>
@@ -28,20 +33,20 @@
     {% endif %}
 
     {% for page in pages %}
-        {% if current_page == forloop.counter %}
+        {% if current_page == page %}
         <li class="page-item active">
         {% else %}
         <li class="page-item">
         {% endif %}
-        <a class="page-link" page="{{ forloop.counter }}" href="#">
-        {{ forloop.counter }}
+        <a class="page-link" data-page="{{ page }}" href="#">
+        {{ page }}
         </a>
         </li>
     {% endfor %}
 
     {% if sales.has_next %}
         <li class="page-item">
-        <a class="page-link" page="{{ sales.next_page_number }}" href="#">
+        <a class="page-link" data-page="{{ sales.next_page_number }}" href="#">
             <span>&raquo;</span>
         </a>
         </li>
@@ -58,7 +63,7 @@
 </div>
 <div class="row">
 <div class="col-sm-2 my-2">
-<h3>Search</h3>
+<h3>Filter</h3>
 {% if form.non_field_errors %}
 <div class="alert alert-danger">
     <p>Please correct the following error:</p>
@@ -103,7 +108,8 @@
     <span class="fas fa-trash-alt"></span> Reset
 </button>
 </div>
-<br>
+<hr>
+<h3>At a Glance</h3>
 <br>
 <canvas id="revenueLineChart" width="40" height="40"></canvas>
 <div>
@@ -128,19 +134,17 @@
 {% endfor %}
 </div>
 {% endif %}
+
+<h3 class="mb-3">Sales Report for SKU #{{ sku.pk }}: {{ sku.name }}</h3>
+
 <div style="overflow: scroll;">
 <table class="table">
 <thead class="thead-light">
 <tr>
-    {% if request.user.is_admin %}
-    <th><input type="checkbox" id="selectAll"> </th>
-    {% endif %}
-    <th>SKU name</th>
     <th>Year</th>
     <th>Week #</th>
-    <th>Customer Number</th>
     <th>Customer Name</th>
-    <th># of Sales</th>
+    <th># Sales</th>
     <th>Price per Case</th>
     <th>Revenue</th>
 </tr>
@@ -148,17 +152,12 @@
 <tbody class="table-striped">
 {% for sale in sales %}
 <tr>
-    {% if request.user.is_admin %}
-    <td><input type="checkbox" class="drilldown-checkbox" id="{{ sku.number }}"> </td>
-    {% endif %}
-    <td>{{ sale.sku.name }}</td>
     <td>{{ sale.year }}</td>
     <td>{{ sale.week }}</td>
-    <td>{{ sale.customer.pk }}</td>
     <td>{{ sale.customer.name }}</td>
     <td>{{ sale.sales|quantize:0 }}</td>
-    <td>{{ sale.price|quantize:2 }}</td>
-    <td>$ {{ sale.revenue|quantize:2 }}</td>
+    <td>$ {{ sale.price|quantize:2|intcomma }}</td>
+    <td>$ {{ sale.revenue|quantize:2|intcomma }}</td>
 </tr>
 {% empty %}
     <div class="alert alert-danger">
@@ -181,8 +180,6 @@
 
 <!-- Hidden div with template data -->
 <div style="display: none;">
-<a href="{% url 'autocomplete_customers' %}" id="acCustomerUrl"></a>
-<a href="{% url 'autocomplete_skus' %}" id="acSkusUrl">boo</a>
 <input id="pageNumInputId" value="{{ form.page_num.id_for_label }}">
 <input id="skuInputId" value="{{ form.sku.id_for_label }}">
 <input id="startInputId" value="{{ form.start.id_for_label }}">
@@ -192,12 +189,14 @@
 <input type="hidden" id="chart_data_y" name="chart_data_y" value="{{ chart_data_y }}">
 
 {#    "sales url refers to alex's stuff" #}
-<a href="{% url 'drilldown' sku_pk%}" id="salesUrl"></a>
+<a href="{% url 'drilldown' sku.number%}" id="salesUrl"></a>
 </div>
 
 {% endblock %}
 
 {% block scriptend %}
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.0.1/js/tempusdominus-bootstrap-4.min.js"></script>
 <script src="{% static 'meals/common.js' %}"></script>
 <script src="{% static 'meals/sku/sku.js' %}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.min.js"></script>

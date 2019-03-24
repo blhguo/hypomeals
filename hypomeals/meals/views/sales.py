@@ -1,11 +1,8 @@
-import jsonpickle
+import json
 import logging
 import time
-import datetime
-
 from collections import defaultdict
-
-from dateutil import relativedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
@@ -13,17 +10,18 @@ from django.core.paginator import Paginator
 from django.shortcuts import render
 
 from meals.forms import SaleFilterForm
-from meals.models import Sku, Customer
+from meals.models import Sku
 from ..bulk_export import export_drilldown
 
 logger = logging.getLogger(__name__)
+
+GRAPH_DATA_POINTS = 10
 
 
 @login_required
 def sales_drilldown(request, sku_pk):
     start = time.time()
-    export = request.GET.get("export", "0") == '1'
-    logger.info("Exporting Sales")
+    export = request.GET.get("export", "0") == "1"
     if request.method == "POST":
         sku = Sku.objects.get(pk=sku_pk)
         body = request.POST.copy()
@@ -35,14 +33,13 @@ def sales_drilldown(request, sku_pk):
             sales = Paginator([], 50)
     else:
         sku = Sku.objects.get(pk=sku_pk)
-        cust_input = ", ".join(Customer.objects.values_list("name", flat=True))
         params = {
             "sku": sku.number,
-            "customer": cust_input,
+            "customer": "",
             "page_num": 1,
             "num_per_page": 50,
-            "start": datetime.datetime.now() - relativedelta.relativedelta(years=1),
-            "end": datetime.datetime.now(),
+            "start": datetime.now() - timedelta(days=365),
+            "end": datetime.now(),
         }
         if "customer" in request.GET:
             customer_name = request.GET["customer"]
@@ -64,16 +61,23 @@ def sales_drilldown(request, sku_pk):
     end = time.time()
     if export:
         return export_drilldown(sales.object_list)
+    page_start = max(page - 3, 1)
+    page_end = min(page + 4, sales.num_pages + 1)
+
+    x_axis, y_axis = list(revenues.keys()), list(revenues.values())
+    if len(x_axis) > GRAPH_DATA_POINTS:
+        x_axis = x_axis[:: int(len(x_axis) / GRAPH_DATA_POINTS)]
+        y_axis = y_axis[:: int(len(y_axis) / GRAPH_DATA_POINTS)]
     return render(
         request,
         template_name="meals/sales/drilldown.html",
         context={
-            "sku_pk": sku_pk,
+            "sku": sku,
             "sales": sales.page(page),
-            "chart_data_x": jsonpickle.encode([str(key) for key in revenues.keys()]),
-            "chart_data_y": jsonpickle.encode([str(value) for value in revenues.values()]),
+            "chart_data_x": json.dumps(x_axis),
+            "chart_data_y": json.dumps([str(y) for y in y_axis]),
             "form": form,
-            "pages": range(1, sales.num_pages + 1),
+            "pages": range(page_start, page_end),
             "current_page": page,
             "duration": "{:0.3f}".format(end - start),
         },

@@ -7,7 +7,6 @@ from pathlib import Path
 
 from django import forms
 from django.contrib.auth.models import Group
-from django.contrib.admin.widgets import AdminDateWidget
 from django.core.exceptions import FieldDoesNotExist
 from django.core.exceptions import ValidationError
 from django.core.files import File
@@ -558,9 +557,7 @@ class SaleFilterForm(forms.Form, utils.BootstrapFormControlMixin):
     )
     num_per_page = forms.ChoiceField(choices=NUM_PER_PAGE_CHOICES, required=True)
 
-    sku = forms.IntegerField(
-        required=False
-    )
+    sku = forms.IntegerField(required=False)
 
     customer = CsvAutocompletedField(
         model=Customer,
@@ -570,38 +567,51 @@ class SaleFilterForm(forms.Form, utils.BootstrapFormControlMixin):
         help_text="(if empty, all customer records will be displayed)",
     )
 
-    start = forms.DateTimeField(widget=AdminDateWidget())
+    start = forms.DateTimeField(widget=forms.DateInput())
 
-    end = forms.DateTimeField(widget=AdminDateWidget())
+    end = forms.DateTimeField(widget=forms.DateInput())
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control mb-2"
+        self.fields["start"].widget.attrs["type"] = "date"
+        self.fields["end"].widget.attrs["type"] = "date"
+
+    def clean(self):
+        if (
+            "start" in self.cleaned_data
+            and self.cleaned_data["start"]
+            and "end" in self.cleaned_data
+            and self.cleaned_data["end"]
+        ):
+            if self.cleaned_data["end"] < self.cleaned_data["start"]:
+                raise ValidationError("End date cannot be less than start date")
+
+        return self.cleaned_data
 
     def query(self) -> Paginator:
         params = self.cleaned_data
         num_per_page = int(params.get("num_per_page", 50))
         query_filter = Q()
         if params["sku"]:
-            query_filter &= Q(sku__number=params['sku'])
+            query_filter &= Q(sku__number=params["sku"])
         if params["customer"]:
             query_filter &= Q(customer__name__in=params["customer"])
-        if params['start'] and params['end']:
-            start_year = params['start'].isocalendar()[0]
-            start_week = params['start'].isocalendar()[1]
-            end_year = params['end'].isocalendar()[0]
-            end_week = params['end'].isocalendar()[1]
-            #TODO someone should help me check
-            # this boolean expresion idk if it works
-            query_filter &= ((Q(year__lt=end_year) or
-                              (Q(year__in=end_year) and
-                               Q(week__lte=end_week))) and
-                             (Q(year__gt=start_year) or
-                              (Q(year__in=start_year) and
-                               Q(week__gt=start_week))))
+        if params["start"] and params["end"]:
+            start_year, start_week, _ = params["start"].isocalendar()
+            end_year, end_week, _ = params["end"].isocalendar()
+            # year < end_year || (year == end_year && week <= end_week)
+            query_filter &= Q(year__lt=end_year) | (
+                Q(year=end_year) | Q(week__lte=end_week)
+            )
+            # year > start_year || (year == start_year && week >= start_week)
+            query_filter &= Q(year__gt=start_year) | (
+                Q(year=start_year) & Q(week__gte=start_week)
+            )
         query = Sale.objects.filter(query_filter).annotate(
-            revenue=F("sales") * F("price"))
+            revenue=F("sales") * F("price")
+        )
         if num_per_page == -1:
             num_per_page = query.count()
         return Paginator(query.distinct(), num_per_page)
@@ -690,7 +700,7 @@ class UpcField(forms.CharField):
                 return value
             raise ValidationError(
                 "%(value)s does not represent a consumer product",
-                params={"value": value}
+                params={"value": value},
             )
         raise ValidationError(
             "%(value)s is not a valid UPC number", params={"value": value}
