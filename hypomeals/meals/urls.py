@@ -50,7 +50,11 @@ urlpatterns = [
     ),
     path("ac-sku", views.autocomplete_skus, name="autocomplete_skus"),
     path("edit-formula/<int:formula_number>", views.edit_formula, name="edit_formula"),
-    path("edit-formula-name/<str:formula_name>", views.edit_formula_name, name="edit_formula_name"),
+    path(
+        "edit-formula-name/<str:formula_name>",
+        views.edit_formula_name,
+        name="edit_formula_name",
+    ),
     path("add-formula", views.add_formula, name="add_formula"),
     path("view-formula/<int:formula_number>", views.view_formula, name="view_formula"),
     path("formula", views.formula, name="formula"),
