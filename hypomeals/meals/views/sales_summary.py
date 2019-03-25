@@ -97,6 +97,14 @@ def sales_summary(request):
             "sort_by": "name",
             "keyword": "",
         }
+        if "product_lines" in request.GET:
+            target_pls = set(
+                map(int, json.loads(request.GET.get("product_lines", "[]")))
+            )
+            pls = ProductLine.objects.filter(pk__in=target_pls)
+            pl_names = [pl.name for pl in pls]
+            params["product_lines"] = ",".join(pl_names)
+
         if "formula" in request.GET:
             formula_name = request.GET["formula"]
             params["formulas"] = formula_name
@@ -109,12 +117,6 @@ def sales_summary(request):
                 Paginator(ProductLine.objects.all(), 50),
                 Customer.objects.all(),
             )
-
-        if "product_lines" in request.GET:
-            target_pls = set(
-                map(int, json.loads(request.GET.get("product_lines", "[]")))
-            )
-            product_lines = Paginator(ProductLine.objects.filter(pk__in=target_pls), 50)
 
     page = getattr(form, "cleaned_data", {"page_num": 1}).get("page_num", 1)
     if page > product_lines.num_pages:
@@ -156,8 +158,13 @@ def sales_summary(request):
         sales_summary_result.append((pl.name, pl_summary_report))
     if export:
         return export_sales_summary(sales_summary_result)
+    drilldown_params = "?customer=" + form.data["customers"]
     return render(
         request,
         template_name="meals/sales_summary/sales_summary.html",
-        context={"sales_summary": sales_summary_result, "form": form},
+        context={
+            "sales_summary": sales_summary_result,
+            "form": form,
+            "drilldown_params": drilldown_params,
+        },
     )

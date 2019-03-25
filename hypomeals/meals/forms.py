@@ -36,7 +36,8 @@ from meals.models import (
     Upc,
     Vendor,
     Unit,
-    Customer)
+    Customer,
+)
 from meals.utils import BootstrapFormControlMixin, FilenameRegexValidator
 
 logger = logging.getLogger(__name__)
@@ -722,9 +723,8 @@ class ProductLineFilterForm(forms.Form, utils.BootstrapFormControlMixin):
         sort_by = params.get("sort_by", "")
         query_filter = Q()
         if params["keyword"]:
-            query_filter &= (
-                Q(name__icontains=params["keyword"])
-                | Q(id__icontains=params["keyword"])
+            query_filter &= Q(name__icontains=params["keyword"]) | Q(
+                id__icontains=params["keyword"]
             )
         if params["product_lines"]:
             query_filter &= Q(name__in=params["product_lines"])

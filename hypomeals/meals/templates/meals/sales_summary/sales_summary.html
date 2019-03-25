@@ -104,7 +104,7 @@
                             {{ number }}
                         </td>
                         <td class="align-middle">
-                            {{ name }}
+                            <a href="{% url 'drilldown' number %}{{ drilldown_params }}">{{ name }}</a>
                         </td>
                         <td class="align-middle">
                             {{ rev_sum|quantize }}

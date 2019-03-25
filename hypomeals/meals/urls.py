@@ -43,11 +43,7 @@ urlpatterns = [
         views.autocomplete_product_lines,
         name="autocomplete_product_lines",
     ),
-    path(
-        "ac-customers",
-        views.autocomplete_customers,
-        name="autocomplete_customers",
-    ),
+    path("ac-customers", views.autocomplete_customers, name="autocomplete_customers"),
     path("ac-formulas", views.autocomplete_formulas, name="autocomplete_formulas"),
     path("ac-users", views.autocomplete_users, name="autocomplete_users"),
     path("ingredient", views.ingredient, name="ingredient"),
