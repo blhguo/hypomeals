@@ -21,10 +21,10 @@ def sku_summary(sku, rev_sum, num_sales, sku_info):
     manufacture_run_size = Decimal(0)
     for activity in activities_sku:
         manufacture_run_size += activity.quantity
-    if len(activities_sku) == 0:
-        avg_run_size = sku.manufacturing_rate * Decimal(10.0)
-    else:
+    if activities_sku:
         avg_run_size = manufacture_run_size / Decimal(len(activities_sku))
+    else:
+        avg_run_size = sku.manufacturing_rate * Decimal(10.0)
     # Fake Data For Now
     setup_cost_per_case = Decimal(1000) / avg_run_size
     run_cost_per_case = Decimal(20)

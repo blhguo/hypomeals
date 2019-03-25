@@ -195,7 +195,7 @@ def export_sales(summary_stream, yearly_stream, objects):
     yearly_writer = csv.DictWriter(yearly_stream, fieldnames=yearly_headers)
     summary_writer.writeheader()
     yearly_writer.writeheader()
-    for pl, pl_summary in objects:
+    for _, pl_summary in objects:
         for sku_summary in pl_summary:
             row = {}
             for i, header in enumerate(summary_headers):

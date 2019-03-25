@@ -21,7 +21,6 @@ from meals import utils
 from meals.constants import ADMINS_GROUP, USERS_GROUP
 from meals.importers import CollisionOccurredException
 from meals.models import (
-    Customer,
     FormulaIngredient,
     SkuManufacturingLine,
     ManufacturingLine,
