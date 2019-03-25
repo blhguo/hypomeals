@@ -3,8 +3,15 @@ import functools
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 
-from meals.models import Ingredient, ProductLine, Sku, ManufacturingLine, User, Formula, \
-    Customer
+from meals.models import (
+    Ingredient,
+    ProductLine,
+    Sku,
+    ManufacturingLine,
+    User,
+    Formula,
+    Customer,
+)
 
 
 def autocomplete(request, manager, key="name"):

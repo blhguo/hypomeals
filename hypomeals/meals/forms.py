@@ -714,6 +714,7 @@ class ProductLineFilterForm(forms.Form, utils.BootstrapFormControlMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["product_lines"].widget.attrs["placeholder"] = "Start typing..."
+        self.fields["customers"].widget.attrs["placeholder"] = "Start typing..."
 
     def query(self):
         params = self.cleaned_data

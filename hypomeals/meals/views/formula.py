@@ -185,7 +185,9 @@ def remove_formulas(request):
             temp = Formula.objects.filter(pk__in=to_remove)
             temp_arr = [(temp_sku.formula in temp) for temp_sku in Sku.objects.all()]
             if any(temp_arr):
-                return JsonResponse({"error": "Unsuccessful", "resp": "Not removed, related SKUs exist"})
+                return JsonResponse(
+                    {"error": "Unsuccessful", "resp": "Not removed, related SKUs exist"}
+                )
             num_deleted, result = Formula.objects.filter(pk__in=to_remove).delete()
             logger.info("removed %d Formulas: %s", num_deleted, result)
         return JsonResponse(

@@ -1,5 +1,6 @@
 import logging
 import datetime
+import json
 from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
@@ -10,6 +11,7 @@ from django.shortcuts import render
 from meals.bulk_export import export_sales_summary
 from meals.forms import ProductLineFilterForm
 from meals.models import ProductLine, Customer, Sku, Sale, GoalItem
+from meals.constants import MINUTES_PER_SKU
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +22,7 @@ def sku_summary(sku, rev_sum, num_sales, sku_info):
     for activity in activities_sku:
         manufacture_run_size += activity.quantity
     if len(activities_sku) == 0:
-        avg_run_size = Decimal(1.0)
+        avg_run_size = sku.manufacturing_rate * Decimal(10.0)
     else:
         avg_run_size = manufacture_run_size / Decimal(len(activities_sku))
     # Fake Data For Now
@@ -28,23 +30,63 @@ def sku_summary(sku, rev_sum, num_sales, sku_info):
     run_cost_per_case = Decimal(20)
     ingredient_cost_per_case = sku.formula.ingredient_cost * sku.formula_scale
     cogs = setup_cost_per_case + run_cost_per_case + ingredient_cost_per_case
-    avg_rev_per_case = rev_sum / num_sales
+    if num_sales == 0:
+        avg_rev_per_case = Decimal(0)
+    else:
+        avg_rev_per_case = rev_sum / num_sales
     avg_profit_per_case = avg_rev_per_case - cogs
     profit_margin = avg_rev_per_case / cogs - 1
-    return (sku.number, sku.name, rev_sum, avg_run_size, ingredient_cost_per_case,
-            setup_cost_per_case, run_cost_per_case, cogs, avg_rev_per_case,
-            avg_profit_per_case, profit_margin, sku_info)
+    return (
+        sku.number,
+        sku.name,
+        rev_sum,
+        avg_run_size,
+        ingredient_cost_per_case,
+        setup_cost_per_case,
+        run_cost_per_case,
+        cogs,
+        avg_rev_per_case,
+        avg_profit_per_case,
+        profit_margin,
+        sku_info,
+    )
+
+
+def sku_ready():
+    skus = Sku.objects.all()
+    ready = True
+    for sku in skus:
+        ready &= sku.sales_ready
+    return ready
+
+
+def time_estimate():
+    cnt = 0
+    for sku in Sku.objects.all():
+        if not sku.sales_ready:
+            cnt += 1
+    return cnt * MINUTES_PER_SKU
 
 
 @login_required
 def sales_summary(request):
     export = request.GET.get("export", "0") == "1"
+    if not sku_ready():
+        return render(
+            request,
+            template_name="meals/sales_summary/sku_not_ready.html",
+            context={"time_estimate": time_estimate()},
+        )
+
     if request.method == "POST":
         form = ProductLineFilterForm(request.POST)
         if form.is_valid():
             product_lines, customers = form.query()
         else:
-            product_lines, customers = Paginator(Sku.objects.all(), 50), Customer.objects.all()
+            product_lines, customers = (
+                Paginator(Sku.objects.all(), 50),
+                Customer.objects.all(),
+            )
     else:
         params = {
             "product_lines": "",
@@ -63,7 +105,17 @@ def sales_summary(request):
         if form.is_valid():
             product_lines, customers = form.query()
         else:
-            product_lines, customers = Paginator(ProductLine.objects.all(), 50), Customer.objects.all()
+            product_lines, customers = (
+                Paginator(ProductLine.objects.all(), 50),
+                Customer.objects.all(),
+            )
+
+        if "product_lines" in request.GET:
+            target_pls = set(
+                map(int, json.loads(request.GET.get("product_lines", "[]")))
+            )
+            product_lines = Paginator(ProductLine.objects.filter(pk__in=target_pls), 50)
+
     page = getattr(form, "cleaned_data", {"page_num": 1}).get("page_num", 1)
     if page > product_lines.num_pages:
         # For whatever reason, if the page being requested is larger than the actual
@@ -82,14 +134,21 @@ def sales_summary(request):
             sku_ten_year = []
             rev_sum = Decimal(0)
             num_sales = Decimal(0)
-            sales_all = Sale.objects.filter(sku=sku, customer__in=customers, year__gte=begin_year).order_by("year").values(
-                "year").annotate(revenue=Sum(F("sales") * F("price")), count=Sum(F("sales")))
+            sales_all = (
+                Sale.objects.filter(
+                    sku=sku, customer__in=customers, year__gte=begin_year
+                )
+                .order_by("year")
+                .values("year")
+                .annotate(revenue=Sum(F("sales") * F("price")), count=Sum(F("sales")))
+            )
             for sales_per_year in sales_all:
                 year = sales_per_year["year"]
                 sales_tot = sales_per_year["revenue"]
                 num_tot = sales_per_year["count"]
                 sku_ten_year.append(
-                    (year, sku.number, sku.name, sales_tot, sales_tot / num_tot))
+                    (year, sku.number, sku.name, sales_tot, sales_tot / num_tot)
+                )
                 rev_sum += sales_tot
                 num_sales += num_tot
             sku_summary_report = sku_summary(sku, rev_sum, num_sales, sku_ten_year)
@@ -100,8 +159,5 @@ def sales_summary(request):
     return render(
         request,
         template_name="meals/sales_summary/sales_summary.html",
-        context={
-            "sales_summary": sales_summary_result,
-            "form": form,
-        },
+        context={"sales_summary": sales_summary_result, "form": form},
     )

@@ -134,11 +134,8 @@ def generate_sales_report(request):
     qs = ProductLine.objects.filter(pk__in=target_pls)
     num_targeted = qs.count()
     logger.info("Sales report generated on %d Product Lines", num_targeted)
-    #TODO: This line needs to be edited to fit Alex's stuff
-    base_url = reverse('ingredient')
-    qs_names = [tmp.name for tmp in qs]
-    query_string = urlencode({'product_lines': qs_names})
-    url = '{}?{}'.format(base_url, query_string)
-    # TODO: I"m not sure if it's normal or not, but the querystringis formatted strangely
-    # looks like "/ingredient?product_lines=%5B%27CheesyCheese%27%2C+%27asdasdasdasd%27%5D"
-    return redirect(url)
+    base_url = reverse("sales_summary")
+    qs_pks = [tmp.pk for tmp in qs]
+    query_string = urlencode({"product_lines": qs_pks})
+    url = "{}?{}".format(base_url, query_string)
+    return JsonResponse({"error": None, "resp": url})

@@ -11,6 +11,10 @@ $(function() {
         window.location.href = pageUrl;
     }
 
+    function newPage(url) {
+        window.location.href = url;
+    }
+
     plCheckboxes.change(function() {
         generateButton.prop("disabled",
             $(".selectProductLineCheckboxes:checked").length  === 0);
@@ -75,10 +79,7 @@ $(function() {
                     if (!showNetworkError(data, textStatus)) {
                         return;
                     }
-                    if ("error" in data && data.error) {
-                        makeModalAlert("Error", data.error);
-                    }
-                    makeModalAlert("Success", data.resp, refreshPage);
+                    newPage(data.resp);
                 })
             });
     });
