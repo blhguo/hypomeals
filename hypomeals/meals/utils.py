@@ -526,3 +526,17 @@ def ajax_view(func):
             return redirect("error")
 
     return wrapper
+
+
+def chunked_read(file, chunk_size=1024):
+    """
+    Read a large file in chunks to reduce memory pressure
+    :param file: a file-like object supporting at least "read"
+    :param chunk_size: the chunk size to use. Default is 1024 bytes.
+    :return: any data read, up to chunk_size, otherwise None
+    """
+    while True:
+        data = file.read(chunk_size)
+        if not data:
+            break
+        yield data

@@ -48,7 +48,7 @@ GOOGLE_SHEETS_SCOPES = [
     "https://www.googleapis.com/auth/drive",
 ]
 
-GOOGLE_APPLICATION_CREDENTIALS = os.path.join(BASE_DIR, "hypomeals-2f7acfcfe59c.json")
+GOOGLE_APPLICATION_CREDENTIALS = os.path.join(BASE_DIR, "hypomeals-write-only.json")
 DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
 GS_BUCKET_NAME = "hypomeals"
 GOOGLE_SHEET_SPREADSHEET_NAME = "ECE458 Group 8 Task Sheet"
@@ -277,3 +277,10 @@ SALES_REQUEST_READ_TIMEOUT = 30
 SALES_REQUEST_MAX_RETRIES = 5
 SALES_TIMEOUT = 30
 SALES_YEAR_START = 1999
+
+# Backups
+BACKUP_STORAGE_DIR = "backup/"  # will be stored on Google Cloud Storage
+BACKUP_DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
+BACKUP_TIMEOUT = 5 * 60  # 5 minutes
+BACKUP_NOTIFY_EMAIL = "moyehan@gmail.com"
+BACKUP_SSH_KEY = "backup.key"

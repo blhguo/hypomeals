@@ -571,13 +571,6 @@ class SaleFilterForm(forms.Form, utils.BootstrapFormControlMixin):
 
     end = forms.DateTimeField(widget=forms.DateInput())
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for field in self.fields.values():
-            field.widget.attrs["class"] = "form-control mb-2"
-        self.fields["start"].widget.attrs["type"] = "date"
-        self.fields["end"].widget.attrs["type"] = "date"
-
     def clean(self):
         if (
             "start" in self.cleaned_data
