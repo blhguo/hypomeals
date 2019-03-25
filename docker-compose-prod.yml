@@ -46,15 +46,12 @@ services:
         user: nobody
         env_file:
             - web-vars-prod.env
-        environment:
-            - DJANGO_EMAIL_USER=${DJANGO_EMAIL_USER}
-            - DJANGO_EMAIL_FROM=${DJANGO_EMAIL_FROM}
-            - DJANGO_EMAIL_PASSWORD=${DJANGO_EMAIL_PASSWORD}
         command: /code/runcelery.sh
         volumes:
             - ./hypomeals/logs:/code/logs
             - ./credentials/backup.key:/code/backup.key:ro
             - ./credentials/hypomeals-write-only.json:/code/hypomeals-write-only.json:ro
+            - ./credentials/email_config.json:/code/email_config.json:ro
         depends_on:
             - redis
     celery-beat:
