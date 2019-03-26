@@ -38,9 +38,18 @@ LOGIN_REDIRECT_URL = "/"
 EMAIL_HOST = os.getenv("DJANGO_EMAIL_HOST", "smtp.mailgun.org")
 EMAIL_PORT = int(os.getenv("DJANGO_EMAIL_PORT", "587"))
 EMAIL_USE_TLS = os.getenv("DJANGO_EMAIL_USE_TLS", "1") == "1"
-EMAIL_HOST_USER = os.getenv("DJANGO_EMAIL_USER")
-EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_PASSWORD")
-EMAIL_FROM_ADDR = os.getenv("DJANGO_EMAIL_FROM")
+
+EMAIL_CONFIG_FILE = os.path.join(BASE_DIR, "email_config.json")
+if os.path.exists(EMAIL_CONFIG_FILE):
+    with open(EMAIL_CONFIG_FILE) as f:
+        email_config = json.load(f)
+        EMAIL_HOST_USER = email_config["user"]
+        EMAIL_HOST_PASSWORD = email_config["password"]
+        EMAIL_FROM_ADDR = email_config["from"]
+else:
+    EMAIL_HOST_USER = os.getenv("DJANGO_EMAIL_USER")
+    EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_PASSWORD")
+    EMAIL_FROM_ADDR = os.getenv("DJANGO_EMAIL_FROM")
 
 # Google stuff
 GOOGLE_SHEETS_SCOPES = [
@@ -48,7 +57,7 @@ GOOGLE_SHEETS_SCOPES = [
     "https://www.googleapis.com/auth/drive",
 ]
 
-GOOGLE_APPLICATION_CREDENTIALS = os.path.join(BASE_DIR, "hypomeals-2f7acfcfe59c.json")
+GOOGLE_APPLICATION_CREDENTIALS = os.path.join(BASE_DIR, "hypomeals-write-only.json")
 DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
 GS_BUCKET_NAME = "hypomeals"
 GOOGLE_SHEET_SPREADSHEET_NAME = "ECE458 Group 8 Task Sheet"
@@ -73,7 +82,7 @@ DB_PORT = os.getenv("DJANGO_DB_PORT", "5432")
 
 OAUTH_CONFIG_FILE = os.path.join(BASE_DIR, "oauth_config.json")
 if os.path.exists(OAUTH_CONFIG_FILE):
-    with open(os.path.join(BASE_DIR, "oauth_config.json")) as oauth_config:
+    with open(OAUTH_CONFIG_FILE) as oauth_config:
         OAUTH_CONFIG = json.load(oauth_config)
         OAUTH_SECRET_KEY = OAUTH_CONFIG["secret_key"]
         OAUTH_CLIENT_ID = OAUTH_CONFIG["client_id"]
@@ -277,3 +286,10 @@ SALES_REQUEST_READ_TIMEOUT = 30
 SALES_REQUEST_MAX_RETRIES = 5
 SALES_TIMEOUT = 30
 SALES_YEAR_START = 1999
+
+# Backups
+BACKUP_STORAGE_DIR = "backup/"  # will be stored on Google Cloud Storage
+BACKUP_DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
+BACKUP_TIMEOUT = 5 * 60  # 5 minutes
+BACKUP_NOTIFY_EMAIL = "moyehan@gmail.com"
+BACKUP_SSH_KEY = "backup.key"
