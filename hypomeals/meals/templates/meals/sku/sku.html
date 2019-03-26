@@ -219,6 +219,8 @@
     <th>Formula Scale Factor</th>
     <th>Manufacturing Lines</th>
     <th>Rate</th>
+    <th>Setup Cost</th>
+    <th>Run Cost</th>
     <th>Comment</th>
     <th>Drilldown</th>
 </tr>
@@ -273,6 +275,12 @@
     </td>
     <td>
         {{ sku.manufacturing_rate|quantize:2 }}
+    </td>
+    <td>
+        {{ sku.setup_cost|quantize:2 }}
+    </td>
+    <td>
+        {{ sku.run_cost|quantize:2 }}
     </td>
     <td>{{ sku.comment|truncatewords:20 }}</td>
     <td>

@@ -317,6 +317,32 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
             )
         ],
     )
+    setup_cost = models.DecimalField(
+        verbose_name="Manufacturing Setup Cost",
+        max_digits=20,
+        decimal_places=6,
+        blank=False,
+        default=1.0,
+        help_text="The foxed retooling cost to prepare a manufacturing line",
+        validators=[
+            MinValueValidator(
+                limit_value=0.000001, message="The manufacturing rate must be positive."
+            )
+        ],
+    )
+    run_cost = models.DecimalField(
+        verbose_name="Manufacturing Run Cost",
+        max_digits=20,
+        decimal_places=6,
+        blank=False,
+        default=1.0,
+        help_text="The cost per case to manufacture a SKU separate from ingredient cost",
+        validators=[
+            MinValueValidator(
+                limit_value=0.000001, message="The manufacturing rate must be positive."
+            )
+        ],
+    )
     comment = models.CharField(max_length=4000, verbose_name="Comment", blank=True)
 
     @classmethod
