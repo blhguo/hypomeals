@@ -11,15 +11,14 @@ $(function() {
         window.location.href = pageUrl;
     }
 
-    function newPage(url) {
+    function redirect(url) {
         window.location.href = url;
     }
 
     plCheckboxes.change(function() {
-        generateButton.prop("disabled",
-            $(".selectProductLineCheckboxes:checked").length  === 0);
-        removeButton.prop("disabled",
-            $(".selectProductLineCheckboxes:checked").length  === 0);
+        let numChecked = $(".selectProductLineCheckboxes:checked").length;
+        generateButton.prop("disabled", numChecked === 0);
+        removeButton.prop("disabled", numChecked === 0);
     });
 
     selectAllCheckbox.on("change", function(ev) {
@@ -79,7 +78,7 @@ $(function() {
                     if (!showNetworkError(data, textStatus)) {
                         return;
                     }
-                    newPage(data.resp);
+                    redirect(data.resp);
                 })
             });
     });

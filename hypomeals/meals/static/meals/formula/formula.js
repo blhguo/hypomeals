@@ -1,6 +1,7 @@
 $(function() {
   /********* Remove Formula Functionality ***********/
   let removeFormulasUrl = $("#removeFormulasUrl").attr("href");
+  let pageNumberInput = $("input[name=page_num]");
   let removeButton = $("#removeFormulaButton");
   let formulaCheckboxes = $(".formula-checkbox");
   let selectAllCheckbox = $("#selectAllCheckbox");
@@ -8,8 +9,6 @@ $(function() {
   let submitButton = $("#submitButton");
   const formulaUrl = $("#formulaUrl").attr("href");
   const formulaFilterForm = $("#formulaFilterForm");
-  const ingredientsInputId = $("#ingredientsInputId").val();
-  const acIngredientsUrl = $("#acIngredientsUrl").attr("href");
 
 
   $("[data-toggle='tooltip']").tooltip();
@@ -40,7 +39,7 @@ $(function() {
 
   $("#pageList").find("a").on("click", function() {
       let page = $(this).attr("page");
-      $(`#${pageNumInputId}`).val(page);
+      pageNumberInput.val(page);
       $("#formulaFilterForm").submit();
   });
 
@@ -65,32 +64,56 @@ $(function() {
   }
 
   removeButton.on("click", function(ev) {
-      let toRemove = [];
-      formulaCheckboxes.each(function(i, cb) {
-          if (cb.checked) {
-              toRemove.push(cb.id);
-          }
-      });
-      if (toRemove.length < 0) return;
+      let toRemove = $(".formula-checkbox:checked")
+          .toArray()
+          .map((cb) => $(cb).attr("data-formula-id"));
+      if (toRemove.length <= 0) return;
       makeModalAlert(`Remove ${toRemove.length} Formula(s)`,
-          `Are you sure you want to remove ${toRemove.length} Formula(s)?\n` +
+          `Are you sure you want to remove ${toRemove.length} Formula(s)? ` +
+          "Note that you may not remove formulas that have SKUs associated with them.\n" +
           "This cannot be undone.", function() {
           removeFormulas(toRemove);
           });
   });
 
+   /************* View Formula ***********/
+
+    let viewFormulaButtons = $(".viewFormula");
+    let loadingSpinner = $("#loadingSpinner");
+
+    function viewFormula(e) {
+        e.preventDefault();
+        let url = $(this).attr("href");
+        let modal = makeModalAlert("View Formula", loadingSpinner);
+        modal.find(".modal-dialog").addClass("modal-lg");
+        $.getJSON(url, {})
+            .done(function (data, textStatus) {
+                if (!showNetworkError(data, textStatus)) {
+                    return;
+                }
+                if ("error" in data && data.error != null) {
+                    alert(data.error);
+                    modal.modal("hide");
+                    return;
+                }
+                modal.find("#loadingSpinner").toggle(false);
+                $(data.resp).appendTo(modal.find(".modal-body"));
+            });
+        return false;
+    }
+
+    viewFormulaButtons.click(viewFormula);
+
   /****************** View Sku *******************/
   let viewSkuButtons = $(".viewSkuButtons");
   let viewSkuUrl = $("#editSkuUrl").attr("href");
-  let loadingSpinner = $("#loadingSpinner");
 
-  function viewFormula() {
+  function viewSkus() {
       let skuNumber = $(this).attr("id");
       let url = viewSkuUrl.replace("0", String(skuNumber));
       window.location.href = url;
   }
-  viewSkuButtons.click(viewFormula);
-  registerAutocomplete($(`#${ingredientsInputId}`), acIngredientsUrl, true);
+  viewSkuButtons.click(viewSkus);
 
   let exportButton = $("#exportButton");
 

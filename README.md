@@ -134,18 +134,13 @@ When you think a feature is completed, submit a Merge Request to the `master` br
 
 The system has several optional dependencies. Without these dependencies, some features in the project cannot be enabled, but the overall functionality of the application remains present.
 
-#### HTTPS Certificates
+#### Credentials
 
-The project uses the HTTPS protocol. For security reasons, the certificates and private keys are not included in the repository. **They must be obtained separately before running the project.** The certificates are distributed in a file named `certs.zip`: it contains a directory named `certs` which must be placed under the `nginx/` directory. In order words, the directory tree of the `nginx/` directory should look like:
+This project integrates with various other systems, and as a result, may require separate credentials that may not be version-controlled. These credentials should all be stored under the `credentials/` directory. The following subsections discuss the details of each kind of credentials found in this directory.
 
-```
-nginx
-├── certs
-│   ├── vcm-4081.vm.duke.edu.key
-│   └── vcm-4081.vm.duke.edu.pem
-└── config
-    └── web-app.conf
-```
+##### HTTPS Certificates
+
+The project uses the HTTPS protocol. For security reasons, the certificates and private keys are not included in the repository. **They must be obtained separately before running the project.** The certificates are distributed in a file named `certs.zip`: all of the files in this archive must be placed under the `credentials/` directory.
 
 **Note:** the certificates are self-issued, which means most modern browsers will warn you that the certificate is not trusted. This is fine, and the warning should be dismissed.
 
@@ -155,13 +150,13 @@ However, the certificates are issued with an extension called `Subject Alternati
 
 If you wish to deploy on a different server with a different domain name, you will need to provide your own certificates. 
 
-First, place the certificates in the `nginx/certs` directory. Then, you will need to edit the file `nginx/config/web-app.conf` and point the `ssl_certificate` and `ssl_certificate_key` parameters to the correct filenames.
+First, place the certificates in the `credentials/` directory. Then, you will need to edit the file `nginx/config/web-app.conf` and point the `ssl_certificate` and `ssl_certificate_key` parameters to the correct filenames.
 
-**Note:** the `nginx/certs` directory is automatically mapped to the correct location in the Docker container.
+**Note:** the `credentials/` directory is automatically mapped to the correct location (`/etc/nginx/certs/`) in the Docker container, with read-only permissions.
 
-#### OAuth
+##### OAuth
 
-The system uses OAuth to interface with Duke's NetID authentication service to support Single Sign-On. For security purposes, a file, called `oauth_config.json` that contains all the OAuth secrets and configurations, must be obtained separately, and placed under Django's base directory. If this file is absent, Single Sign-On will be disabled.
+The system uses OAuth to interface with Duke's NetID authentication service to support Single Sign-On. For security purposes, a file, called `oauth_config.json` that contains all the OAuth secrets and configurations, must be obtained separately, and placed under the `credentials/` directory. If this file is absent, Single Sign-On will be disabled.
 
 #### Google Cloud Services
 
@@ -207,10 +202,13 @@ $ celery -A HypoMeals worker -l info
 $ celery -A HypoMeals beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
 ```
 
-Then, to start the Django development server, use the command:
+After this, an environment variable must be set to choose a database to connect to. Refer to the "Configuration Options" section for more details. For now, simply point it to any PostgreSQL instance.
+
+Finally, to start the Django development server, use the command:
 
 ```bash
 $ cd hypomeals/
+$ python manage.py migrate
 $ python manage.py runserver 8000
 ```
 
@@ -230,39 +228,74 @@ Once the containers are all set up, visit `https://127.0.0.1` on your host compu
 
 ##### Running individual services with Docker
 
-Individual services may also be run using Docker, either for testing purposes or for developmental support. For example, to start only Redis and Celery / Celery Beat services, first edit `docker-compose.yml` to uncomment the `ports` section of the `redis` service, then use the command:
+Individual services may also be run using Docker, either for testing purposes or for developmental support. For example, to start only Redis and Celery / Celery Beat services, use the command:
 
 ```bash
-$ sudo docker-compose up -d redis celery celery-beat
+$ sudo docker-compose up -d redis celery-beat
 ```
 
 After this, a Django instance running in a virtual environment native to the OS will be able to leverage these services, without having to run them separately.
 
-### Configuration Options
+### System Administration
 
-The project supports various configuration options, through the use of environment variables. For virtual environments, simply set environment variables with the `export` command, if you are using a Unix-based shell. For Windows, [here](https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_environment_variables?view=powershell-6) is a tutorial for setting environment variables in PowerShell. For Docker users, environment variables can be (and are) set in the `docker-compose.yml` file through the `environment` subsection in each service.
+As a fully-featured, sophisticated inventory and business insights system, HypoMeals is robust but highly configurable. This section discusses the procedures a sysadmin may use to administer this system.
+
+#### Configuration Options
+
+The project supports various configuration options, through the use of environment variables. For virtual environments, simply set environment variables with the `export` command, if you are using a Unix-based shell. For Windows, [here](https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_environment_variables?view=powershell-6) is a tutorial for setting environment variables in PowerShell. For Docker users, a set of environment variables are provided via the files `web-vars.env` and `web-vars-prod.env`, for developer and production uses, respectively.
 
 The following configuration options are available:
 
-#### Database
+##### Database
 
 * `DJANGO_DB_HOST`: the hostname of a PostgreSQL database. Default: `vcm-4081.vm.duke.edu`
 * `DJANGO_DB_PORT`: the port for a PostgreSQL database. Default: 5432
 * `DJANGO_USE_LOCAL_DB`: a legacy option. If set to 1, equivalent to `DJANGO_DB_HOST=localhost`
 
-#### Email
+##### Email
 
 * `DJANGO_EMAIL_HOST`: the hostname of an SMTP server. Default: `smtp.mailgun.org`
 * `DJANGO_EMAIL_PORT`: the port to an SMTP server. Default: 587
 * `DJANGO_EMAIL_USE_TLS`: if 1, will try to use a TLS connection when connecting to the SMTP server. Default: 1
+* `DJANGO_EMAIL_USER`: the username to the SMTP server. Default: empty
 * `DJANGO_EMAIL_PASSWORD`: the password to the SMTP server. Default: empty
 * `DJANGO_EMAIL_FROM`: the "From" field of an Email. Default: `webmaster@localhost`
 
-#### Celery
+##### Celery
 
 * `CELERY_REDIS_HOST`: the hostname of a Redis server. Default: `localhost`
 * `CELERY_REDIS_PORT`: the port of a Redis server. Default: 6379
 
-#### Other
+##### Other
 
 * `HOSTNAME`: the hostname of the server the system is running on. Default: `vcm-4081.vm.duke.edu`.
+
+#### Backup
+
+To ensure resilience against failures and disasters, the system is equipped with a full backup service. Every day at 1 AM, the backup service runs automatically, taking a full database snapshot, and storing it in Google Cloud Storage. The credentials used by the backup system is read-write-only: this ensures that even if the admin account is compromised, the backups cannot be deleted from the storage service. The backup service sends an email to notify the administrator that the backup has been completed successfully.
+
+Backups will be named after the time that the backup service starts running. For example, a backup taken at 1:00 AM, March 24, 2019 will be named
+
+```
+backup-2019-03-24T01:00:<seconds>.<microseconds>  # (micro)seconds might vary
+```
+
+A separate service, with a separate credential, is run alongside the main backup service, to rotate the backups. By default, 7 daily backups, 4 weekly backups, and 12 monthly backups are retained, in which the 8th daily backup is automatically promoted to a weekly backup, the 5th weekly backup to a monthly backup, and the 13th month backup is deleted.
+
+To take a backup, a backup job must be set up as a "Periodic task" in the system in the admin panel. The task's name will be `meals.tasks.backup_all`. This task will have a cron specifier of "0 1 * * *" such that it runs at 1 AM every day. This task doesn't require any arguments to run, and should remain in the "Enabled" status.
+
+##### Taking a backup manually
+
+To take a manual backup, simply create another `meals.tasks.backup_all` task and set it to run every second. Then, check the box to mark it as a "One-off task", such that it is disabled automatically after running once.
+
+Note that a backup taken manually will count towards the staggered retention discussed above.
+
+##### Restoring from a backup
+
+To restore from a database backup, an administrator must first download the desired backup from Google Cloud Storage, onto the server running HypoMeals. This can be done either via the [web interface](https://console.cloud.google.com/storage/browser?project=hypomeals), or using the `gsutil` command. Once the file is downloaded, issue the following command in the project base directory:
+
+```bash
+$ sudo docker-compose -f docker-compose-prod.yml exec -T -u postgres db psql < /path/to/backup/file
+```
+
+Backups may be restored without introducing additional downtime to the server.

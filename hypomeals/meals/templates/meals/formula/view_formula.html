@@ -1,29 +1,33 @@
+{% load meals_extras %}
+
 <div class="container">
+<div class="row">
+<div class="col-sm-12">
+    <div class="alert alert-success">
+    <h5>Formula #{{ formula.number }}:
+        <a href="{% url 'edit_formula' formula.number %}">{{ formula.name }}</a>
+    </h5>
+    View ingredients of the formula below. To edit the formula, click on its name.
+    </div>
+</div>
+</div>
 <div class="row">
 <div class="col-sm-12">
     <table class="table">
     <thead class="thead-light">
     <tr>
-        <th>Formula Name</th>
         <th>Ingredient</th>
         <th>Quantity</th>
-        <th>Unit</th>
     </tr>
     </thead>
     <tbody id="formsetTable">
-    {% for formula in formulas %}
+    {% for ingredient in formula.formulaingredient_set.all %}
     <tr>
         <td class="align-middle">
-            {{ formula.formula.name }}
+            {{ ingredient.ingredient }}
         </td>
         <td class="align-middle">
-            {{ formula.ingredient }}
-        </td>
-        <td class="align-middle">
-            {{ formula.quantity }}
-        </td>
-        <td class="align-middle">
-            {{ formula.unit.symbol }}
+            {{ ingredient.quantity|quantize }} {{ ingredient.unit.symbol }}
         </td>
     </tr>
     {% empty %}

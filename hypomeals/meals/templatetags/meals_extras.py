@@ -32,3 +32,7 @@ def values_list(queryset, param):
 def get_value(dct, key):
     """Gets a value from a dictionary, or None if the key doesn't exist"""
     return dct.get(key)
+
+@register.filter
+def percentage(x, decimal_places=2):
+    return quantize(x * 100, decimal_places=decimal_places)

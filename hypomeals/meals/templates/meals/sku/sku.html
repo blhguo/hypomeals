@@ -58,16 +58,6 @@
 <div class="col-sm-4">
 <div class="btn-group my-4" style="float: right;">
     {% if request.user.is_admin %}
-    <button type="button" class="btn btn-info viewFormula"
-       disabled
-       id="bulkButton"
-       href="#"
-       data-toggle="modal"
-       data-target="#bulkModalDiv">
-        Bulk Edit Manufacturing Lines
-    </button>
-    {%  endif %}
-    {% if request.user.is_admin %}
     <a id="addSkuButton"
         href="{% url 'add_sku' %}"
         class="btn btn-primary">
@@ -85,6 +75,13 @@
         <span class="fa fa-minus"></span> Remove selected
     </button>
     {% endif %}
+    {% if request.user.is_admin %}
+    <button type="button" class="btn btn-info"
+       disabled
+       id="bulkButton">
+        Bulk Edit Manufacturing Lines
+    </button>
+    {%  endif %}
 </div>
 </div>
 </div>
@@ -120,7 +117,7 @@
     {% endif %}
 </div>
 <div class="form-group">
-    <label for="{{ form.ingredients.id_for_label }}">Contains ingredient(s):</label>
+    <label for="{{ form.ingredients.id_for_label }}">Contain ingredient(s):</label>
     {{ form.ingredients }}
     <small>{{ form.ingredients.help_text }}</small>
     {% if form.ingredients.errors %}
@@ -128,7 +125,7 @@
     {% endif %}
 </div>
 <div class="form-group">
-    <label for="{{ form.product_lines.id_for_label }}">Belongs to product line(s):</label>
+    <label for="{{ form.product_lines.id_for_label }}">Belong to product line(s):</label>
     {{ form.product_lines }}
     <small>{{ form.product_lines.help_text }}</small>
     {% if form.product_lines.errors %}
@@ -136,7 +133,7 @@
     {% endif %}
 </div>
 <div class="form-group">
-    <label for="{{ form.formulas.id_for_label }}">Belongs to formula(s):</label>
+    <label for="{{ form.formulas.id_for_label }}">Use formula(s):</label>
     {{ form.formulas }}
     <small>{{ form.formulas.help_text }}</small>
     {% if form.formulas.errors %}
@@ -206,33 +203,48 @@
 <thead class="thead-light">
 <tr>
     {% if request.user.is_admin %}
-    <th><input type="checkbox" id="selectAll"> </th>
+    <th>
+        <div class="custom-control custom-checkbox">
+        <input type="checkbox"
+               id="selectAll"
+               class="custom-control-input">
+        <label for="selectAll" class="custom-control-label"></label>
+        </div>
+    </th>
     {% endif %}
     <th>SKU#</th>
     <th>Name</th>
-    <th>Case UPC#</th>
-    <th>Unit UPC#</th>
-    <th>Unit Size</th>
-    <th>Count Per Case</th>
-    <th>Product Line</th>
-    <th>Formula</th>
-    <th>Formula Scale Factor</th>
-    <th>Manufacturing Lines</th>
+    <th nowrap>Case UPC#</th>
+    <th nowrap>Unit UPC#</th>
+    <th nowrap>Unit Size</th>
+    <th nowrap>Count Per Case</th>
+    <th nowrap>Product Line</th>
+    <th nowrap>Formula</th>
+    <th nowrap>Formula Scale Factor</th>
+    <th nowrap>Manufacturing Lines</th>
     <th>Rate</th>
     <th>Setup Cost</th>
     <th>Run Cost</th>
-    <th>Comment</th>
     <th>Drilldown</th>
+    <th>Sales</th>
+    <th style="width: 25rem;">Comment</th>
 </tr>
 </thead>
-<tbody class="table-striped">
+<tbody class="">
 {% for sku in skus %}
 <tr>
     {% if request.user.is_admin %}
-    <td><input type="checkbox" class="sku-checkbox" id="{{ sku.number }}"> </td>
+    <td>
+        <div class="custom-control custom-checkbox">
+        <input type="checkbox" data-sku-id="{{ sku.number }}"
+               id="checkbox-{{ sku.number }}"
+               class="custom-control-input sku-checkbox">
+        <label for="checkbox-{{ sku.number }}" class="custom-control-label"></label>
+        </div>
+    </td>
     {% endif %}
     <td>{{ sku.number }}</td>
-    <td>
+    <td nowrap>
         <a href="{% url 'edit_sku' sku.number %}"
            {% if request.user.is_admin %}
            title="Click on the name to edit this SKU."
@@ -249,25 +261,19 @@
     <td>{{ sku.unit_size }}</td>
     <td>{{ sku.count }}</td>
     <td>{{ sku.product_line.name }}</td>
-    <td>
-        <div class="btn-group">
-        <a class="btn btn-link viewFormula"
-           href="#"
-           {% if not request.user.is_admin %}
-           disabled="disabled"
-           data-toggle="tooltip"
-           data-placement="left"
-           title="You don't have permission to view the formulas."
-           {% endif %}
-           data-toggle="modal"
-           data-target="#modalDiv"
-           id="{{ sku.formula.number }}">
-            View
+    <td nowrap>
+    {% if sku.formula %}
+        <a class="viewFormula" href="{% url 'view_formula' sku.formula.number %}">
+            {{ sku.formula.name }}
         </a>
-        {% if request.user.is_admin %}
-        <a class="btn btn-link" href="{% url 'edit_formula' sku.formula.number %}">Edit</a>
-        {% endif %}
-        </div>
+    {% else %}
+        N/A
+        <span data-toggle="tooltip"
+                 data-placement="left"
+                 class="badge badge-pill badge-info"
+                 title="This SKU does not have an associated formula yet.">i
+        </span>
+    {% endif %}
     </td>
     <td>{{ sku.formula_scale|quantize:2 }}</td>
     <td>
@@ -282,12 +288,10 @@
     <td>
         {{ sku.run_cost|quantize:2 }}
     </td>
-    <td>{{ sku.comment|truncatewords:20 }}</td>
     <td>
-        {% if request.user.is_admin %}
-        <a class="btn btn-link" href="{% url 'drilldown' sku.number %}">Drilldown Report</a>
-        {% endif %}
+        <a href="{% url 'drilldown' sku.number %}">Report</a>
     </td>
+    <td style="min-width: 25rem;">{{ sku.comment|truncatewords:20 }}</td>
 </tr>
 {% empty %}
     <div class="alert alert-danger">
@@ -306,60 +310,11 @@
 </div>
 </form>
 </div>
+
 <!-- Modal -->
-
-<div class="modal" tabindex="-1" role="dialog" id="modalDiv">
-<div class="modal-dialog modal-lg" role="document">
-<div class="modal-content">
-    <div class="modal-header">
-        <h5 class="modal-title"></h5>
-        <button type="button" class="close" data-dismiss="modal">
-            <span class="fas fa-times"></span>
-        </button>
-    </div>
-    <div class="modal-body" id="modalBody">
-        <div class="d-flex justify-content-center">
-        <div class="spinner-border" role="status" id="loadingSpinner">
-            <span class="sr-only">Loading...</span>
-        </div>
-        </div>
-    </div>
-    <div class="modal-footer">
-        <button type="button"
-                class="btn btn-secondary"
-                data-dismiss="modal">Close</button>
-    </div>
-</div>
-</div>
-</div>
-
-<!-- Another Modal -->
-<div class="modal" tabindex="-1" role="dialog" id="bulkModalDiv">
-<div class="modal-dialog modal-lg" role="document">
-<div class="modal-content">
-    <div class="modal-header">
-        <h5 class="modal-title"></h5>
-        <button type="button" class="close" data-dismiss="modal">
-            <span class="fas fa-times"></span>
-        </button>
-    </div>
-    <div class="modal-body" id="bulkModalBody">
-        <div class="d-flex justify-content-center">
-        <div class="spinner-border" role="status" id="bulkLoadingSpinner">
-            <span class="sr-only">Loading...</span>
-        </div>
-        </div>
-    </div>
-    <div class="modal-footer">
-        <button type="button"
-                class="btn btn-success"
-                data-dismiss="modal"
-                id="bulkModalSave">Save</button>
-        <button type="button"
-                class="btn btn-secondary"
-                data-dismiss="modal">Close</button>
-    </div>
-</div>
+<div style="display: none;">
+<div class="spinner-border" role="status" id="loadingSpinner">
+    <span class="sr-only">Loading...</span>
 </div>
 </div>
 

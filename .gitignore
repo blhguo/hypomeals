@@ -50,7 +50,6 @@ flycheck_*.el
 /network-security.data
 
 # Certificates / keys
-nginx/certs
 certs.tar.gz
 certs.zip
 

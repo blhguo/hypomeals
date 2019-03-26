@@ -8,8 +8,9 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import BLANK_CHOICE_DASH
+from django.db.models import BLANK_CHOICE_DASH, Sum, F
 from django.utils import timezone
+from django.utils.functional import cached_property
 from django.utils.text import Truncator
 
 from meals import utils
@@ -38,6 +39,11 @@ class User(AbstractUser):
     @property
     def is_admin(self):
         return self.is_superuser or self.groups.filter(name=ADMINS_GROUP).exists()
+
+    def check_password(self, raw_password):
+        if self.netid:
+            return False
+        return super().check_password(raw_password)
 
 
 class Upc(models.Model, utils.ModelFieldsCompareMixin):
@@ -68,10 +74,7 @@ class ProductLine(models.Model, utils.ModelFieldsCompareMixin):
         :return: a list of 2-tuples (field identifier, human-readable name) suitable
             for use in, for example, a ChoiceField in a form.
         """
-        return [
-            ("id", "ID"),
-            ("name", "Name"),
-        ]
+        return [("id", "ID"), ("name", "Name")]
 
     def __str__(self):
         return self.name
@@ -376,7 +379,7 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
                 return qs[0]
         return None
 
-    @property
+    @cached_property
     def verbose_name(self):
         return f"{self.name}: {self.unit_size} * {self.count} (#{self.number})"
 
@@ -384,8 +387,12 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
     def line_shortnames(self):
         return self.skumanufacturingline_set.values_list("line__shortname", flat=True)
 
-    @property
+    @cached_property
     def line_choices(self):
+        """
+        The value of this property may change, but the chance of that happening within
+        the lifecycle of this particular SKU instance is very close to 0.
+        """
         return BLANK_CHOICE_DASH + [
             (shortname, shortname) for shortname in self.line_shortnames
         ]
@@ -395,6 +402,10 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
         now = timezone.now()
         num_years = now.year - settings.SALES_YEAR_START + 1
         return self.sales.distinct("year").values("year").count() == num_years
+
+    @cached_property
+    def ingredient_cost(self):
+        return self.formula.ingredient_cost * self.formula_scale
 
     def get_sales(self):
         """
@@ -410,6 +421,7 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
         """
         now = timezone.now()
         from meals.tasks import get_sku_sales_for_year as task
+
         results = {
             year: task.apply_async(
                 args=(self.number, year), countdown=settings.SALES_TIMEOUT
@@ -482,13 +494,9 @@ class Formula(
 
     @property
     def ingredient_cost(self):
-        formula_ingredients = FormulaIngredient.objects.filter(formula=self)
-        ingredient_cost = Decimal(0)
-        for formula_ingredient in formula_ingredients:
-            quantity = formula_ingredient.quantity
-            cost = formula_ingredient.ingredient.cost
-            ingredient_cost += quantity * cost
-        return ingredient_cost
+        return self.formulaingredient_set.aggregate(
+            cost=Sum(F("quantity") * F("ingredient__cost"))
+        )["cost"] or Decimal("0")
 
     @classmethod
     def get_sortable_fields(cls):

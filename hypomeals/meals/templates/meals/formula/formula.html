@@ -148,7 +148,14 @@
     <thead class="thead-light">
     <tr>
         {% if request.user.is_admin %}
-        <th><input type="checkbox" id="selectAllCheckbox"> </th>
+        <th>
+            <div class="custom-control custom-checkbox">
+            <input type="checkbox"
+                   id="selectAllCheckbox"
+                   class="custom-control-input">
+            <label for="selectAllCheckbox" class="custom-control-label"></label>
+            </div>
+        </th>
         {% endif %}
         <th>Formula#</th>
         <th>Name</th>
@@ -161,12 +168,18 @@
     {% for formula in formulas %}
     <tr>
         {% if request.user.is_admin %}
-        <td><input type="checkbox" class="formula-checkbox" id="{{ formula.number }}"> </td>
+        <td>
+            <div class="custom-control custom-checkbox">
+            <input type="checkbox" data-formula-id="{{ formula.number }}"
+                   id="checkbox-{{ formula.number }}"
+                   class="custom-control-input formula-checkbox">
+            <label for="checkbox-{{ formula.number }}" class="custom-control-label"></label>
+            </div>
+        </td>
         {% endif %}
         <td>{{ formula.number }}</td>
         <td>
             <a href="{% url "edit_formula" formula.number %}"
-               class="btn btn-link"
                {% if request.user.is_admin %}
                title="Click on the name to edit this formula."
                {% else %}
@@ -179,26 +192,16 @@
         </td>
         <td>
             <div class="btn-group">
-            <a class="btn btn-link viewFormula"
-               href="#"
-               {% if not request.user.is_admin %}
-               disabled="disabled"
-               data-toggle="tooltip"
-               data-placement="left"
-               title="You don't have permission to view the formulas."
-               {% endif %}
+            <a class="viewFormula"
+               href="{% url 'view_formula' formula.number %}"
                data-toggle="modal"
-               data-target="#modalDiv"
-               id="{{ formula.number }}">
+               data-target="#modalDiv">
                 View
             </a>
-            {% if request.user.is_admin %}
-            <a class="btn btn-link" href="{% url "edit_formula" formula.number %}">Edit</a>
-            {% endif %}
             </div>
         </td>
         <td>
-            <a class="btn btn-link" href="{% url 'sku'%}?formula={{ formula.name }}">View</a>
+            <a href="{% url 'sku'%}?formula={{ formula.name }}">View</a>
         </td>
         <td>{{ formula.comment|truncatewords:20 }}</td>
     </tr>
@@ -215,31 +218,12 @@
 </div>
 </div>
 </form>
-<div class="modal" tabindex="-1" role="dialog" id="modalDiv">
-<div class="modal-dialog modal-lg" role="document">
-<div class="modal-content">
-    <div class="modal-header">
-        <h5 class="modal-title"></h5>
-        <button type="button" class="close" data-dismiss="modal">
-            <span class="fas fa-times"></span>
-        </button>
-    </div>
-    <div class="modal-body" id="modalBody">
-        <div class="d-flex justify-content-center">
-        <div class="spinner-border" role="status" id="loadingSpinner">
-            <span class="sr-only">Loading...</span>
-        </div>
-        </div>
-    </div>
-    <div class="modal-footer">
-        <button type="button"
-                class="btn btn-secondary"
-                data-dismiss="modal">Close</button>
-    </div>
-</div>
-</div>
+
 <!-- Hidden div for template data -->
 <div style="display: none;">
+<div class="spinner-border" role="status" id="loadingSpinner">
+    <span class="sr-only">Loading...</span>
+</div>
 <a href="{% url 'remove_formulas' %}" id="removeFormulasUrl"></a>
 <a href="{% url 'formula' %}" id="formulaUrl"></a>
 <a href="{% url 'view_formula' 0 %}" id="viewFormulaUrl"></a>
@@ -252,6 +236,5 @@
 
 {% block scriptend %}
 <script src="{% static 'meals/common.js' %}"></script>
-<script lang="javascript" src="{% static 'meals/sku/sku.js' %}"></script>
 <script src="{% static 'meals/formula/formula.js' %}"></script>
 {%  endblock %}

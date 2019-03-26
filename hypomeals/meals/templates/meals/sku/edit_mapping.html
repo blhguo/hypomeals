@@ -1,0 +1,70 @@
+{% load staticfiles %}
+
+{% block body %}
+    <div id = "ml-content">
+    <div class="alert alert-success" role="alert">
+        For the {{ sku_number }} selected  SKU(s), the manufacturing lines
+        are listed in three groups.<br />
+        Checking a checkbox will map all selected SKU(s) to that manufacturing line.<br />
+        Unchecking a checkbox will unmap all selected SKU(s) to that manufacturing line.<br />
+    </div>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">All selected SKUs can be made on:</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+            <td>
+                {%  for ml in all_set %}
+                    <div class="custom-control custom-checkbox">
+                      <input type="checkbox" class="custom-control-input ml-line-box" id={{ ml.shortname }} checked>
+                      <label class="custom-control-label" for={{ ml.shortname }}>{{ ml.name }}</label>
+                    </div>
+                {%  endfor %}
+            </td>
+        </tr>
+      </tbody>
+    </table>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Some of the selected SKUS can be made on:</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+            <td>
+                {%  for ml in partial_set %}
+                    <div class="custom-control custom-checkbox">
+                      <input type="checkbox" class="custom-control-input indeterminate ml-line-box" id={{ ml.shortname }}>
+                      <label class="custom-control-label" for={{ ml.shortname }}>{{ ml.name }}</label>
+                    </div>
+                {%  endfor %}
+            </td>
+        </tr>
+      </tbody>
+    </table>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">None of the selected SKUs can be made on:</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+            <td>
+                {%  for ml in none_set %}
+                    <div class="custom-control custom-checkbox">
+                      <input type="checkbox" class="custom-control-input ml-line-box" id={{ ml.shortname }}>
+                      <label class="custom-control-label" for={{ ml.shortname }}>{{ ml.name }}</label>
+                    </div>
+                {%  endfor %}
+            </td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+{% endblock %}
+{% block sku_active %}active{% endblock %}

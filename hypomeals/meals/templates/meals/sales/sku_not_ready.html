@@ -1,0 +1,36 @@
+{% extends "meals/base.html" %}
+{% block sales_summary_active %}active{% endblock %}
+
+{% block body %}
+<div class="container m-auto">
+<div class="row">
+<div class="col-sm my-4">
+    <div class="d-flex justify-content-center">
+    <div class="card" style="width: 36rem;">
+    <div class="card-body">
+    <h3 class="card-title">Loading</h3>
+        <div class="d-flex justify-content-start align-items-center">
+            <div class="col-sm-1">
+            <div class="spinner-border" role="status"></div>
+            </div>
+            <div class="col-sm-11">
+            <p class="card-text ml-4">
+                Sales records for one of more SKUs in your selection are still
+                being retrieved. Estimated wait time is {{ time_estimate }}
+                minutes...
+            </p>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <p class="card-text">
+            Click <a href="javascript: window.location.reload()">here</a>
+            to refresh the page.
+        </p>
+    </div>
+    </div>
+    </div>
+</div>
+</div>
+</div>
+{% endblock %}

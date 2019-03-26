@@ -1,8 +1,8 @@
 import csv
 import logging
+import operator
 import tempfile
 import zipfile
-import operator
 from io import BytesIO
 from pathlib import Path
 
@@ -376,5 +376,5 @@ def export_sales_summary(sales_summary_report):
             zip_file.write(file, arcname=file.name)
 
     response = HttpResponse(byte_data.getvalue(), content_type="application/zip")
-    response["Content-Disposition"] = "attachment; filename=archive.zip"
+    response["Content-Disposition"] = "attachment; filename=sales_summary.zip"
     return response

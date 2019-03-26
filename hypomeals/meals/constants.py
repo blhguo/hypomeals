@@ -113,4 +113,6 @@ SECONDS_PER_DAY = SECONDS_PER_HOUR * 24
 
 ADMINS_GROUP = "Admins"
 USERS_GROUP = "Users"
-MINUTES_PER_SKU = 5.0
+# For now we are hard-coding a wait time for each SKU whose sales records are not yet
+# ready.
+SALES_WAIT_TIME_MINUTES = 5.0

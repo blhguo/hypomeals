@@ -21,13 +21,14 @@ urlpatterns = [
     path("view-pl-skus/<int:pk>", views.view_pl_skus, name="view_pl_skus"),
     path("generate_report", views.generate_sales_report, name="generate_sales_report"),
     # Sales
-    path("drilldown/<int:sku_pk>", views.sales_drilldown, name="drilldown"),
+    path("sales/summary/", views.sales_summary, name="sales_summary"),
+    path("sales/drilldown/<int:sku_pk>", views.sales_drilldown, name="drilldown"),
     path("ac-customers", views.autocomplete_customers, name="autocomplete_customers"),
     # SKU views
     path("sku", views.sku, name="sku"),
-    path("remove-skus", views.remove_skus, name="remove_skus"),
-    path("add-sku", views.add_sku, name="add_sku"),
-    path("edit-sku/<int:sku_number>", views.edit_sku, name="edit_sku"),
+    path("sku/remove", views.remove_skus, name="remove_skus"),
+    path("sku/add", views.add_sku, name="add_sku"),
+    path("sku/edit/<int:sku_number>", views.edit_sku, name="edit_sku"),
     path(
         "ac-ingredients",
         views.autocomplete_ingredients,
@@ -109,6 +110,4 @@ urlpatterns = [
     path("accounts/logout/", views.logout_view, name="logout"),
     path("accounts/sso/authorize", views.sso_start, name="sso"),
     path("accounts/sso", views.sso_landing, name="sso_landing"),
-    # Sales Summary views
-    path("sales-summary/", views.sales_summary, name="sales_summary"),
 ]

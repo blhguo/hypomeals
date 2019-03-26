@@ -10,7 +10,7 @@
 <div class="row">
 <div class="col-sm">
 <div class="alert alert-success my-4">
-    {% if editing %}
+    {% if edit %}
     <h3>Editing User {{ user.username }}</h3>
     <p>
         Modify the User using the form below. Note that you cannot change
@@ -37,18 +37,80 @@
     {{ form.non_field_errors }}
     </div>
     {% endif %}
-    {% for field in form %}
-        <div class="form-group">
-        {{ field.label_tag }}
-        {{ field }}
-        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
-        {% if field.errors %}{{ field.errors }}{% endif %}
-        </div>
-    {% endfor %}
+
+    <div class="form-group">
+    {{ form.username.label_tag }}
+    {{ form.username }}
+    {% if form.username.help_text %}<small>{{ form.username.help_text }}</small>{% endif %}
+    {% if form.username.errors %}{{ form.username.errors }}{% endif %}
+    </div>
+
+    <div class="form-group">
+    {{ form.first_name.label_tag }}
+    {{ form.first_name }}
+    {% if form.first_name.help_text %}<small>{{ form.first_name.help_text }}</small>{% endif %}
+    {% if form.first_name.errors %}{{ form.first_name.errors }}{% endif %}
+    </div>
+
+    <div class="form-group">
+    {{ form.last_name.label_tag }}
+    {{ form.last_name }}
+    {% if form.last_name.help_text %}<small>{{ form.last_name.help_text }}</small>{% endif %}
+    {% if form.last_name.errors %}{{ form.last_name.errors }}{% endif %}
+    </div>
+
+    <div class="form-group">
+    {{ form.email.label_tag }}
+    {{ form.email }}
+    {% if form.email.help_text %}<small>{{ form.email.help_text }}</small>{% endif %}
+    {% if form.email.errors %}{{ form.email.errors }}{% endif %}
+    </div>
+
+    <div class="form-group">
+    {{ form.netid.label_tag }}
+    {{ form.netid }}
+    {% if form.netid.help_text %}<small>{{ form.netid.help_text }}</small>{% endif %}
+    {% if form.netid.errors %}{{ form.netid.errors }}{% endif %}
+    </div>
+
+    <div class="form-group">
+    {{ form.password.label_tag }}
+    {{ form.password }}
+    {% if form.password.help_text %}<small>{{ form.password.help_text }}</small>{% endif %}
+    {% if form.password.errors %}{{ form.password.errors }}{% endif %}
+    </div>
+
+    <div class="form-group">
+    <div class="custom-control custom-checkbox">
+    {{ form.is_admin }}
+    <label class="custom-control-label" for="id_is_admin">Admin?</label>
+    {% if form.is_admin.help_text %}<small>{{ form.is_admin.help_text }}</small>{% endif %}
+    {% if form.is_admin.errors %}{{ form.is_admin.errors }}{% endif %}
+    </div>
+
+    </div>
+    <div class="form-group">
+    <div class="custom-control custom-checkbox">
+    {{ form.set_unusable_password }}
+    <label class="custom-control-label"
+           for="id_set_unusable_password">
+        Set unusable password?
+        <span class="badge badge-pill badge-info"
+              data-toggle="tooltip"
+              data-placement="right"
+              title="{{ form.set_unusable_password.help_text }}">
+            i
+        </span>
+    </label>
+    <br/>
+    {% if form.set_unusable_password.errors %}{{ form.set_unusable_password.errors }}{% endif %}
+    </div>
+    </div>
+
     <input type="submit" id="editUserSubmitButton" style="display: none;">
     </form>
     <div class="btn-group" id="formSubmitBtnGroup">
-        {% if editing %}
+        {% if edit %}
         <a href="#" id="nextButton" class="btn btn-success">Apply Changes</a>
         {% else %}
         <a href="#" id="nextButton" class="btn btn-success">Save</a>
