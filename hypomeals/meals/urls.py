@@ -25,9 +25,9 @@ urlpatterns = [
     path("ac-customers", views.autocomplete_customers, name="autocomplete_customers"),
     # SKU views
     path("sku", views.sku, name="sku"),
-    path("remove-skus", views.remove_skus, name="remove_skus"),
-    path("add-sku", views.add_sku, name="add_sku"),
-    path("edit-sku/<int:sku_number>", views.edit_sku, name="edit_sku"),
+    path("sku/remove", views.remove_skus, name="remove_skus"),
+    path("sku/add", views.add_sku, name="add_sku"),
+    path("sku/edit/<int:sku_number>", views.edit_sku, name="edit_sku"),
     path(
         "ac-ingredients",
         views.autocomplete_ingredients,
