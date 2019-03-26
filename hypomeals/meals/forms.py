@@ -18,7 +18,7 @@ from django.urls import reverse_lazy
 
 from meals import bulk_import
 from meals import utils
-from meals.constants import ADMINS_GROUP, USERS_GROUP
+from meals.constants import ADMINS_GROUP
 from meals.importers import CollisionOccurredException
 from meals.models import (
     FormulaIngredient,
@@ -570,13 +570,6 @@ class SaleFilterForm(forms.Form, utils.BootstrapFormControlMixin):
     start = forms.DateTimeField(widget=forms.DateInput())
 
     end = forms.DateTimeField(widget=forms.DateInput())
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for field in self.fields.values():
-            field.widget.attrs["class"] = "form-control mb-2"
-        self.fields["start"].widget.attrs["type"] = "date"
-        self.fields["end"].widget.attrs["type"] = "date"
 
     def clean(self):
         if (
@@ -1327,29 +1320,62 @@ GoalScheduleFormset = formset_factory(
 
 
 class EditUserForm(forms.ModelForm, utils.BootstrapFormControlMixin):
-    is_admin = forms.BooleanField(required=False)
+    is_admin = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={"class": "custom-control-input"}),
+    )
+    password = forms.CharField(
+        required=False,
+        widget=forms.PasswordInput(),
+        help_text=(
+            "Leave this field blank if you don't wish to change the user's password."
+        ),
+    )
+    set_unusable_password = forms.BooleanField(
+        required=False,
+        help_text=(
+            "Select this option if you wish to disable a "
+            "user from logging in with password. Note that a NetID user may "
+            "still log in even if the password is disabled."
+        ),
+        widget=forms.CheckboxInput(attrs={"class": "custom-control-input"})
+    )
 
     class Meta:
         model = User
         fields = ["username", "first_name", "last_name", "email", "netid", "password"]
-        widgets = {"password": forms.PasswordInput()}
+        help_texts = {
+            "netid": (
+                "Optionally associate the user with a NetID. "
+                "Note: a NetID user may not log in with a password."
+            )
+        }
 
-    def __init__(self, *args, **kwargs):
-        instance = kwargs.pop("instance", None)
-        initial = kwargs.pop("initial", {})
-        super().__init__(*args, instance=instance, initial=initial, **kwargs)
+    def clean_username(self):
+        if "username" in self.cleaned_data:
+            if self.instance is None:
+                if self.cleaned_data["username"].startswith("netid_user_"):
+                    raise ValidationError(
+                        "Usernames starting with 'netid_user_' are "
+                        "reserved and cannot be used."
+                    )
+            return self.cleaned_data["username"]
+        return None
 
     def save(self, commit=False):
         instance = super().save(commit)
-        users_group = Group.objects.get(name=USERS_GROUP)
-        users_group.user_set.remove(instance)
         admin_group = Group.objects.get(name=ADMINS_GROUP)
-        admin_group.user_set.remove(instance)
-        instance.set_password(self.cleaned_data["password"])
+        if self.cleaned_data.get("set_unusable_password", False):
+            instance.set_unusable_password()
+        else:
+            password = self.cleaned_data.get("password", "")
+            if password:
+                instance.set_password(password)
+
+        if self.cleaned_data["is_admin"]:
+            admin_group.user_set.add(instance)
+        else:
+            admin_group.user_set.remove(instance)
 
         instance.save()
-
-        instance.groups.add(users_group)
-        if self.cleaned_data["is_admin"]:
-            instance.groups.add(admin_group)
         return instance

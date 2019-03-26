@@ -13,6 +13,8 @@ services:
         restart: always
         volumes:
             - db-data:/var/lib/postgresql/data
+            - ./credentials/vcm-4081.vm.duke.edu.pem:/var/lib/postgresql/certs/server.crt:ro
+            - ./credentials/vcm-4081.vm.duke.edu.key:/var/lib/postgresql/certs/server.key:ro
         ports:
             - "5432:5432"
     web-init:
@@ -42,6 +44,8 @@ services:
         volumes:
             - ./hypomeals:/code
             - ./static:/srv/static
+            - ./credentials/hypomeals-write-only.json:/code/hypomeals-write-only.json:ro
+            - ./credentials/oauth_config.json:/code/oauth_config.json:ro
         expose:
             - "8000"
         depends_on:
@@ -55,6 +59,9 @@ services:
         command: /code/runcelery.sh
         volumes:
             - ./hypomeals:/code
+            - ./credentials/backup.key:/code/backup.key:ro
+            - ./credentials/hypomeals-write-only.json:/code/hypomeals-write-only.json:ro
+            - ./credentials/email_config.json:/code/email_config.json:ro
         depends_on:
             - redis
     # This is a scheduler service that runs the daily jobs
@@ -68,13 +75,14 @@ services:
             - ./hypomeals:/code
         depends_on:
             - redis
+            - celery
     nginx:
         image: nginx:latest
         ports:
             - "443:443"
         volumes:
             - ./nginx/config:/etc/nginx/conf.d
-            - ./nginx/certs:/etc/nginx/certs
+            - ./credentials:/etc/nginx/certs:ro
             - ./static:/srv/static/
             - ./hypomeals/logs/:/var/log/nginx/
         depends_on:

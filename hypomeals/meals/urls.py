@@ -25,9 +25,9 @@ urlpatterns = [
     path("ac-customers", views.autocomplete_customers, name="autocomplete_customers"),
     # SKU views
     path("sku", views.sku, name="sku"),
-    path("remove-skus", views.remove_skus, name="remove_skus"),
-    path("add-sku", views.add_sku, name="add_sku"),
-    path("edit-sku/<int:sku_number>", views.edit_sku, name="edit_sku"),
+    path("sku/remove", views.remove_skus, name="remove_skus"),
+    path("sku/add", views.add_sku, name="add_sku"),
+    path("sku/edit/<int:sku_number>", views.edit_sku, name="edit_sku"),
     path(
         "ac-ingredients",
         views.autocomplete_ingredients,
@@ -56,6 +56,11 @@ urlpatterns = [
     ),
     path("ac-sku", views.autocomplete_skus, name="autocomplete_skus"),
     path("edit-formula/<int:formula_number>", views.edit_formula, name="edit_formula"),
+    path(
+        "edit-formula-name/<str:formula_name>",
+        views.edit_formula_name,
+        name="edit_formula_name",
+    ),
     path("add-formula", views.add_formula, name="add_formula"),
     path("view-formula/<int:formula_number>", views.view_formula, name="view_formula"),
     path("formula", views.formula, name="formula"),

@@ -3,7 +3,7 @@ import time
 
 import jsonpickle
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction, DatabaseError
 from django.http import JsonResponse
@@ -13,8 +13,8 @@ from django.views.decorators.http import require_GET, require_POST
 
 from meals import auth
 from meals.forms import FormulaFormset, FormulaFilterForm, FormulaNameForm
-from meals.models import FormulaIngredient
 from meals.models import Formula, Sku
+from meals.models import FormulaIngredient
 from ..bulk_export import export_formulas
 
 logger = logging.getLogger(__name__)
@@ -71,7 +71,6 @@ def add_formula(request):
 
 
 @login_required
-@permission_required("meals.view_formulaingredient", raise_exception=True)
 def formula(request):
     start = time.time()
     export = request.GET.get("export", "0") == "1"
@@ -128,6 +127,16 @@ def edit_formula(request, formula_number):
                 if saved:
                     FormulaIngredient.objects.bulk_create(saved)
             messages.info(request, f"Successfully inserted {len(saved)} ingredients.")
+            message = f"Formula '{formula.name}' edited successfully"
+            if request.is_ajax():
+                resp = {
+                    "error": None,
+                    "resp": None,
+                    "success": True,
+                    "alert": message,
+                    "name": formula.name,
+                }
+                return JsonResponse(resp)
             return redirect("formula")
     else:
         formulas = FormulaIngredient.objects.filter(formula=formula)
@@ -142,6 +151,16 @@ def edit_formula(request, formula_number):
         formset = FormulaFormset(initial=initial_data)
         form = FormulaNameForm(instance=formula)
 
+    form_html = render_to_string(
+        template_name="meals/formula/edit_formula_form.html",
+        context={"formset": formset, "form": form, "in_flow": in_flow, "edit": True, "formula": formula},
+        request=request,
+    )
+
+    if request.is_ajax():
+        resp = {"error": None, "resp": form_html}
+        return JsonResponse(resp)
+
     return render(
         request,
         template_name="meals/formula/edit_formula.html",
@@ -154,18 +173,21 @@ def edit_formula(request, formula_number):
         },
     )
 
+@login_required
+@auth.user_is_admin_ajax(msg="Only an administrator may edit a new formula.")
+def edit_formula_name(request, formula_name):
+    formula = get_object_or_404(Formula, name=formula_name)
+    return edit_formula(request, formula.pk)
 
 @login_required
 @require_GET
-@auth.permission_required_ajax(perm="meals.view_formulaingredient")
 def view_formula(request, formula_number):
     queryset = Formula.objects.filter(pk=formula_number)
     if queryset.exists():
         formula = queryset[0]
-        formulas = FormulaIngredient.objects.filter(formula=formula)
         resp = render_to_string(
             template_name="meals/formula/view_formula.html",
-            context={"formulas": formulas},
+            context={"formula": formula},
             request=request,
         )
         error = None

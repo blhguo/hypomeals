@@ -39,6 +39,11 @@ class User(AbstractUser):
     def is_admin(self):
         return self.is_superuser or self.groups.filter(name=ADMINS_GROUP).exists()
 
+    def check_password(self, raw_password):
+        if self.netid:
+            return False
+        return super().check_password(raw_password)
+
 
 class Upc(models.Model, utils.ModelFieldsCompareMixin):
     compare_excluded_fields = ("id",)

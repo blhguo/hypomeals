@@ -1,10 +1,10 @@
+import json
 import logging
 import time
-import json
 
 import jsonpickle
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction, DatabaseError
 from django.http import JsonResponse
@@ -85,7 +85,7 @@ def sku(request):
 
 
 @login_required
-@permission_required("meals.change_sku", raise_exception=True)
+@auth.user_is_admin_ajax(msg="Only administrators may edit SKUs.")
 def edit_sku(request, sku_number):
     instance = get_object_or_404(Sku, number=sku_number)
     if request.method == "POST":
@@ -109,7 +109,7 @@ def edit_sku(request, sku_number):
 
 
 @login_required
-@permission_required("meals.add_sku", raise_exception=True)
+@auth.user_is_admin_ajax(msg="Only administrators may add a new SKU.")
 def add_sku(request):
     skip = request.GET.get("skip", "0") == "1"
 
@@ -168,7 +168,7 @@ def view_lines(request):
     none_set -= partial_set
     form_html = render_to_string(
         request=request,
-        template_name="meals/sku/bulk_edit.html",
+        template_name="meals/sku/edit_mapping.html",
         context={
             "all_set": all_set,
             "partial_set": partial_set,
@@ -183,7 +183,7 @@ def view_lines(request):
 
     return render(
         request,
-        template_name="meals/sku/bulk_edit.html",
+        template_name="meals/sku/edit_mapping.html",
         context={
             "all_set": all_set,
             "partial_set": partial_set,
@@ -218,6 +218,7 @@ def edit_lines(request):
                 SkuManufacturingLine.objects.filter(sku=sku, line=ml).delete()
 
     resp = {
-        "error": f"Success in creating {created} new mappings, deleting {deleted} old mappings"
+        "resp": f"Created {created} new mappings, deleted {deleted} old mappings",
+        "error": None,
     }
     return JsonResponse(resp)
