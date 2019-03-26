@@ -1,10 +1,6 @@
 $(function () {
     let removeButton = $("#removeButton");
     let skuCheckboxes = $(".sku-checkbox");
-    const acIngredientUrl = $("#acIngredientUrl").attr("href");
-    const acProductLineUrl = $("#acProductLineUrl").attr("href");
-    const ingredientsInputId = $("#ingredientsInputId").val();
-    const productLinesInputId = $("#productLinesInputId").val();
     const pageNumInputId = $("#pageNumInputId").val();
     const skuUrl = $("#skuUrl").attr("href");
     const removeSkuUrl = $("#removeSkuUrl").attr("href");
@@ -23,10 +19,9 @@ $(function () {
     }
 
     skuCheckboxes.change(function () {
-        removeButton.attr("disabled",
-            $(".sku-checkbox:checked").length === 0);
-        bulkButton.attr("disabled",
-            $(".sku-checkbox:checked").length === 0);
+        let numChecked = $(".sku-checkbox:checked").length;
+        removeButton.attr("disabled", numChecked === 0);
+        bulkButton.attr("disabled", numChecked === 0);
     });
 
     selectAllCheckbox.change(function () {
@@ -58,7 +53,7 @@ $(function () {
         let toRemove = [];
         skuCheckboxes.each(function (i, cb) {
             if (cb.checked) {
-                toRemove.push(cb.id);
+                toRemove.push($(cb).attr("data-sku-id"));
             }
         });
         if (toRemove.length < 0) return;
@@ -94,18 +89,13 @@ $(function () {
     /************* View Formula ***********/
 
     let viewFormulaButtons = $(".viewFormula");
-    let viewFormulaUrl = $("#viewFormulaUrl").attr("href");
     let loadingSpinner = $("#loadingSpinner");
-    let modalBody = $("#modalBody");
-    let modalDiv = $("#modalDiv");
 
-    function viewFormula() {
-        let skuNumber = $(this).attr("id");
-        let url = viewFormulaUrl.replace("0", String(skuNumber));
-        let removed = modalBody.find("div.container").remove();
-        if (removed.length > 0) {
-            loadingSpinner.toggle("on");
-        }
+    function viewFormula(e) {
+        e.preventDefault();
+        let url = $(this).attr("href");
+        let modal = makeModalAlert("View Formula", loadingSpinner);
+        modal.find(".modal-dialog").addClass("modal-lg");
         $.getJSON(url, {})
             .done(function (data, textStatus) {
                 if (!showNetworkError(data, textStatus)) {
@@ -113,12 +103,13 @@ $(function () {
                 }
                 if ("error" in data && data.error != null) {
                     alert(data.error);
-                    modalDiv.modal("hide");
+                    modal.modal("hide");
                     return;
                 }
-                loadingSpinner.toggle("off");
-                $(data.resp).appendTo(modalBody);
-            })
+                modal.find("#loadingSpinner").toggle(false);
+                $(data.resp).appendTo(modal.find(".modal-body"));
+            });
+        return false;
     }
 
     viewFormulaButtons.click(viewFormula);
@@ -134,30 +125,13 @@ $(function () {
     /************** Add Bulk Edit Modal *************/
     const viewLinesUrl = $("#viewLinesUrl").attr("href");
     const editLinesUrl = $("#editLinesUrl").attr("href");
-    let bulkModalDiv = $("#bulkModalDiv");
-    let bulkModalBody = $("#bulkModalBody");
-    let bulkLoadingSpinner = $("#bulkLoadingSpinner");
-    let bulkModalSaveButton = $("#bulkModalSave");
+    let bulkModal = null;
 
-    function modalChanged(_, newContent) {
-        $("#ml-content").remove();
-        let container = bulkModalBody.find("div.container");
-        if (container.length > 0) {
-            container.remove();
-        }
-        newContent.appendTo(bulkModalBody);
-        $('.indeterminate').prop('indeterminate', true);
-        modalForm = newContent.find("form");
-        bulkModalBody.find("#formSubmitBtnGroup").toggle("false");
-        bulkModalSaveButton.attr("disabled", false);
-    }
-
-    bulkModalBody.off("modal:change");
-    bulkModalBody.on("modal:change", modalChanged);
 
     function ajaxDone(data, textStatus) {
-        bulkLoadingSpinner.toggle(false);
-        bulkModalBody.trigger("modal:change", [$(data.resp)]);
+        bulkModal.find("#loadingSpinner").toggle(false);
+        bulkModal.find(".modal-body").append($(data.resp));
+        bulkModal.find(".indeterminate").prop("indeterminate", true);
     }
 
     bulkButton.click(function () {
@@ -165,31 +139,34 @@ $(function () {
         let skus = [];
         skuCheckboxes.each(function (i, cb) {
             if (cb.checked) {
-                skus.push(cb.id);
+                skus.push($(cb).attr("data-sku-id"));
             }
         });
-        if (skus.length < 0) return;
+        if (skus.length <= 0) return;
+        bulkModal = makeModalAlert("Edit Manufacturing Line Mapping",
+            loadingSpinner,
+            saveMappings);
+        bulkModal.find(".modal-dialog").addClass("modal-lg");
         $.getJSON(viewLinesUrl, {"skus": JSON.stringify(skus)})
             .done(ajaxDone)
             .fail(function (_, __, errorThrown) {
                 alert(`Error loading content: ${errorThrown}`);
-                bulkModalDiv.modal("hide");
+                bulkModal.modal("hide");
             })
     });
-    // registerAutocomplete($(`#${ingredientsInputId}`), acIngredientUrl, true);
-    // registerAutocomplete($(`#${productLinesInputId}`), acProductLineUrl, true);
     function saveDone(data, textStatus) {
-        alert(data.error);
-        bulkModalDiv.modal("hide");
-        const skuUrl = $("#skuUrl").attr("href");
+        if (!showNetworkError(data, textStatus)) {
+            return
+        }
+        alert(data.resp);
         skuFilterForm.submit();
     }
 
-    bulkModalSaveButton.on("click", function () {
+    function saveMappings() {
         let skus = [];
         skuCheckboxes.each(function (i, cb) {
             if (cb.checked) {
-                skus.push(cb.id);
+                skus.push($(cb).attr("data-sku-id"));
             }
         });
         let checked = [];
@@ -211,9 +188,9 @@ $(function () {
             .done(saveDone)
             .fail(function (_, __, errorThrown) {
                 alert(`Error loading content: ${errorThrown}`);
-                bulkModalDiv.modal("hide");
             })
 
-    });
+    }
+
     $("#resetAllButton").click(refreshPage);
 });
