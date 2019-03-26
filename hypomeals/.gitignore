@@ -70,3 +70,6 @@ hypomeal/
 
 # Temporary files
 celerybeat.pid
+
+# Credentials
+credentials.json

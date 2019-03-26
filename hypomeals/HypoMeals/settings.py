@@ -11,19 +11,13 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 import json
 import os
+import sys
 
 import gspread
 from google.oauth2 import service_account
-from oauth2client.service_account import ServiceAccountCredentials
+from oauth2client.service_account import ServiceAccountCredentials as SAC
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "v*hru*y3-fk)j!=*qi50y_da^1v^2&32d0^-91o)67u*57hse-"  # noqa
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -39,57 +33,67 @@ EMAIL_HOST = os.getenv("DJANGO_EMAIL_HOST", "smtp.mailgun.org")
 EMAIL_PORT = int(os.getenv("DJANGO_EMAIL_PORT", "587"))
 EMAIL_USE_TLS = os.getenv("DJANGO_EMAIL_USE_TLS", "1") == "1"
 
-EMAIL_CONFIG_FILE = os.path.join(BASE_DIR, "email_config.json")
-if os.path.exists(EMAIL_CONFIG_FILE):
-    with open(EMAIL_CONFIG_FILE) as f:
-        email_config = json.load(f)
-        EMAIL_HOST_USER = email_config["user"]
-        EMAIL_HOST_PASSWORD = email_config["password"]
-        EMAIL_FROM_ADDR = email_config["from"]
-else:
-    EMAIL_HOST_USER = os.getenv("DJANGO_EMAIL_USER")
-    EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_PASSWORD")
-    EMAIL_FROM_ADDR = os.getenv("DJANGO_EMAIL_FROM")
+CREDENTIALS_FILE = os.path.join(BASE_DIR, "credentials.json")
 
-# Google stuff
+# Google storage and sheets
+
 GOOGLE_SHEETS_SCOPES = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive",
 ]
-
-GOOGLE_APPLICATION_CREDENTIALS = os.path.join(BASE_DIR, "hypomeals-write-only.json")
-DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
 GS_BUCKET_NAME = "hypomeals"
-GOOGLE_SHEET_SPREADSHEET_NAME = "ECE458 Group 8 Task Sheet"
-if os.path.exists(GOOGLE_APPLICATION_CREDENTIALS):
-    GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
-        GOOGLE_APPLICATION_CREDENTIALS
-    )
-    GOOGLE_SHEETS_OAUTH_CLIENT = ServiceAccountCredentials.from_json_keyfile_name(
-        GOOGLE_APPLICATION_CREDENTIALS, scopes=GOOGLE_SHEETS_SCOPES
-    )
-    GOOGLE_SHEETS_CLIENT = gspread.authorize(GOOGLE_SHEETS_OAUTH_CLIENT)
-else:
-    # If this file is not configured, we are likely in test mode and will / should
-    # never access Google cloud anyway. So just go ahead and ignore it.
-    GS_CREDENTIALS = None
 GS_DEFAULT_ACL = "publicRead"
+GOOGLE_SHEET_SPREADSHEET_NAME = "ECE458 Group 8 Task Sheet"
+
+# Credentials
+
+if os.path.exists(CREDENTIALS_FILE):
+    with open(CREDENTIALS_FILE) as f:
+        credentials = json.load(f)
+
+        if "django" in credentials:
+            SECRET_KEY = credentials["django"]["secret_key"]
+
+        # Email configs
+        if "email" in credentials:
+            email_config = credentials["email"]
+            EMAIL_HOST_USER = email_config["user"]
+            EMAIL_HOST_PASSWORD = email_config["password"]
+            EMAIL_FROM_ADDR = email_config["from"]
+        else:
+            EMAIL_HOST_USER = os.getenv("DJANGO_EMAIL_USER")
+            EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_PASSWORD")
+            EMAIL_FROM_ADDR = os.getenv("DJANGO_EMAIL_FROM")
+
+        # Google cloud
+        if "gcloud" in credentials:
+            GS_CREDENTIALS = service_account.Credentials.from_service_account_info(
+                credentials["gcloud"]
+            )
+            GOOGLE_SHEETS_OAUTH_CLIENT = SAC.from_json_keyfile_dict(
+                credentials["gcloud"], scopes=GOOGLE_SHEETS_SCOPES
+            )
+            GOOGLE_SHEETS_CLIENT = gspread.authorize(GOOGLE_SHEETS_OAUTH_CLIENT)
+        else:
+            GS_CREDENTIALS = None
+
+        # NetID
+        if "netid" in credentials:
+            netid_config = credentials["netid"]
+            OAUTH_SECRET_KEY = netid_config["secret_key"]
+            OAUTH_CLIENT_ID = netid_config["client_id"]
+            OAUTH_AUTHORIZE_URL = netid_config["authorize_url"]
+            OAUTH_REDIRECT_URL = "http://127.0.0.1:8000/accounts/sso"
+else:
+    print(
+        "WARNING: Credentials file cannot be found. Django may fail to start",
+        file=sys.stderr,
+    )
 
 # Database
 USE_LOCAL_DB = os.getenv("DJANGO_USE_LOCAL_DB", "0") == "1"
 DB_HOST = os.getenv("DJANGO_DB_HOST", "vcm-4081.vm.duke.edu")
 DB_PORT = os.getenv("DJANGO_DB_PORT", "5432")
-
-OAUTH_CONFIG_FILE = os.path.join(BASE_DIR, "oauth_config.json")
-if os.path.exists(OAUTH_CONFIG_FILE):
-    with open(OAUTH_CONFIG_FILE) as oauth_config:
-        OAUTH_CONFIG = json.load(oauth_config)
-        OAUTH_SECRET_KEY = OAUTH_CONFIG["secret_key"]
-        OAUTH_CLIENT_ID = OAUTH_CONFIG["client_id"]
-        OAUTH_AUTHORIZE_URL = OAUTH_CONFIG["authorize_url"]
-        OAUTH_REDIRECT_URL = "http://127.0.0.1:8000/accounts/sso"
-else:
-    OAUTH_CONFIG = None
 
 IDENTITY_API_URL = "https://api.colab.duke.edu/identity/v1/"
 
