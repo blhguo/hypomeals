@@ -21,7 +21,6 @@ from meals import utils
 from meals.constants import ADMINS_GROUP, USERS_GROUP
 from meals.importers import CollisionOccurredException
 from meals.models import (
-    Customer,
     FormulaIngredient,
     SkuManufacturingLine,
     ManufacturingLine,
@@ -36,6 +35,7 @@ from meals.models import (
     Upc,
     Vendor,
     Unit,
+    Customer,
 )
 from meals.utils import BootstrapFormControlMixin, FilenameRegexValidator
 
@@ -685,6 +685,58 @@ class SkuFilterForm(forms.Form, utils.BootstrapFormControlMixin):
         if num_per_page == -1:
             num_per_page = query.count()
         return Paginator(query.distinct(), num_per_page)
+
+
+class ProductLineFilterForm(forms.Form, utils.BootstrapFormControlMixin):
+    NUM_PER_PAGE_CHOICES = [(i, str(i)) for i in range(50, 501, 50)] + [(-1, "All")]
+
+    page_num = forms.IntegerField(
+        widget=forms.HiddenInput(), initial=1, min_value=1, required=False
+    )
+    num_per_page = forms.ChoiceField(choices=NUM_PER_PAGE_CHOICES, required=True)
+    sort_by = forms.ChoiceField(choices=ProductLine.get_sortable_fields, required=True)
+    keyword = forms.CharField(required=False, max_length=100)
+    product_lines = CsvAutocompletedField(
+        model=ProductLine,
+        required=False,
+        attr="name",
+        data_source=reverse_lazy("autocomplete_product_lines"),
+        help_text="Enter Product Lines separated by commas",
+    )
+    customers = CsvAutocompletedField(
+        model=Customer,
+        required=False,
+        attr="name",
+        data_source=reverse_lazy("autocomplete_customers"),
+        help_text="Enter Customers separated by commas",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["product_lines"].widget.attrs["placeholder"] = "Start typing..."
+        self.fields["customers"].widget.attrs["placeholder"] = "Start typing..."
+
+    def query(self):
+        params = self.cleaned_data
+        num_per_page = int(params.get("num_per_page", 50))
+        sort_by = params.get("sort_by", "")
+        query_filter = Q()
+        if params["keyword"]:
+            query_filter &= Q(name__icontains=params["keyword"]) | Q(
+                id__icontains=params["keyword"]
+            )
+        if params["product_lines"]:
+            query_filter &= Q(name__in=params["product_lines"])
+        customers_filtered = Customer.objects.all()
+        if params["customers"]:
+            customers_filtered = customers_filtered.filter(name__in=params["customers"])
+
+        query = ProductLine.objects.filter(query_filter)
+        if sort_by:
+            query = query.order_by(sort_by)
+        if num_per_page == -1:
+            num_per_page = query.count()
+        return Paginator(query.distinct(), num_per_page), customers_filtered
 
 
 class UpcField(forms.CharField):

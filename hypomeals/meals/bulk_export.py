@@ -59,7 +59,7 @@ FILE_TYPE_TO_FIELDS = {
         "customer.name": "Customer Name",
         "sales": "Number of Sales",
         "price": "Price per Case",
-    }
+    },
 }
 FILE_TYPE_TO_FIELDS_REV = {}
 for key, value in FILE_TYPE_TO_FIELDS.items():
@@ -83,13 +83,35 @@ HEADERS = {
     "ingredients": ["Ingr#", "Name", "Vendor Info", "Size", "Cost", "Comment"],
     "product_lines": ["Name"],
     "formulas": ["Formula#", "Name", "Ingr#", "Quantity", "Comment"],
-    "sales": ["Year",
-              "Week Number",
-              "Customer Number",
-              "Customer Name",
-              "Number of Sales",
-              "Price per Case",
-              "Revenue"],
+    "sales-summary": [
+        "Sku#",
+        "Sku Name",
+        "Yearly Revenue",
+        "Avg Manufacture Run Size",
+        "Ingredient Cost",
+        "Setup Cost",
+        "Manufacture Run Cost",
+        "COGS",
+        "Avg Revenue",
+        "Avg Profit",
+        "Profit Margin",
+    ],
+    "sales-yearly": [
+        "Year",
+        "Sku#",
+        "Sku Name",
+        "Total Revenue",
+        "Average Revenue Per Case",
+    ],
+    "sales": [
+        "Year",
+        "Week Number",
+        "Customer Number",
+        "Customer Name",
+        "Number of Sales",
+        "Price per Case",
+        "Revenue",
+    ],
 }
 
 FILE_TYPES = {
@@ -97,7 +119,7 @@ FILE_TYPES = {
     "ingredients": Ingredient,
     "product_lines": ProductLine,
     "formulas": FormulaIngredient,
-    "sales": Sale
+    "sales": Sale,
 }
 
 FILE_TYPE_TO_FILENAME = {file_type: f"{file_type}.csv" for file_type in FILE_TYPES}
@@ -150,7 +172,9 @@ def _export_objs(stream, file_type, objects):
                     + str(getattr(obj, "unit.symbol"))
                 )
             elif header == "Revenue":
-                result = str(float(getattr(obj, "sales"))*float(getattr(obj, "price")))
+                result = str(
+                    float(getattr(obj, "sales")) * float(getattr(obj, "price"))
+                )
             else:
                 result = str(operator.attrgetter(field_dict[header])(obj))
             row[header] = result
@@ -162,6 +186,29 @@ def _export_objs(stream, file_type, objects):
     # )
     stream.seek(0)
     return stream
+
+
+def export_sales(summary_stream, yearly_stream, objects):
+    summary_headers = HEADERS["sales-summary"]
+    yearly_headers = HEADERS["sales-yearly"]
+    summary_writer = csv.DictWriter(summary_stream, fieldnames=summary_headers)
+    yearly_writer = csv.DictWriter(yearly_stream, fieldnames=yearly_headers)
+    summary_writer.writeheader()
+    yearly_writer.writeheader()
+    for _, pl_summary in objects:
+        for sku_summary in pl_summary:
+            row = {}
+            for i, header in enumerate(summary_headers):
+                row[header] = sku_summary[i]
+            summary_writer.writerow(row)
+            for sku_one_year in sku_summary[-1]:
+                row = {}
+                for i, header in enumerate(yearly_headers):
+                    row[header] = sku_one_year[i]
+                yearly_writer.writerow(row)
+    summary_stream.seek(0)
+    yearly_stream.seek(0)
+    return summary_stream, yearly_stream
 
 
 def export_skus(skus, include_formulas=False, include_product_lines=False):
@@ -303,4 +350,31 @@ def export_formulas(formulas):
     data = _export_objs(formula_data, "formulas", formulas)
     response = HttpResponse(data.read(), content_type="text/csv")
     response["Content-Disposition"] = "attachment; filename=formulas.csv"
+    return response
+
+
+def export_sales_summary(sales_summary_report):
+    directory = TEMPDIR / utils.make_token_with_timestamp("sales_summary")
+    directory.mkdir(parents=True, exist_ok=True)
+    logger.info("Will use directory %s", directory)
+    sales_summary_file = directory / "sales-summary.csv"
+    sales_summary_file.touch(exist_ok=True)
+    sales_summary_data = sales_summary_file.open("r+")
+
+    directory = TEMPDIR / utils.make_token_with_timestamp("sales_yearly")
+    directory.mkdir(parents=True, exist_ok=True)
+    logger.info("Will use directory %s", directory)
+    sales_yearly_file = directory / "sales-yearly.csv"
+    sales_yearly_file.touch(exist_ok=True)
+    sales_yearly_data = sales_yearly_file.open("r+")
+
+    export_sales(sales_summary_data, sales_yearly_data, sales_summary_report)
+    exported_files = [sales_summary_file, sales_yearly_file]
+    byte_data = BytesIO()
+    with zipfile.ZipFile(byte_data, "w") as zip_file:
+        for file in exported_files:
+            zip_file.write(file, arcname=file.name)
+
+    response = HttpResponse(byte_data.getvalue(), content_type="application/zip")
+    response["Content-Disposition"] = "attachment; filename=archive.zip"
     return response

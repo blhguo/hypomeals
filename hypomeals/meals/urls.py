@@ -43,6 +43,7 @@ urlpatterns = [
         views.autocomplete_product_lines,
         name="autocomplete_product_lines",
     ),
+    path("ac-customers", views.autocomplete_customers, name="autocomplete_customers"),
     path("ac-formulas", views.autocomplete_formulas, name="autocomplete_formulas"),
     path("ac-users", views.autocomplete_users, name="autocomplete_users"),
     path("ingredient", views.ingredient, name="ingredient"),
@@ -108,4 +109,6 @@ urlpatterns = [
     path("accounts/logout/", views.logout_view, name="logout"),
     path("accounts/sso/authorize", views.sso_start, name="sso"),
     path("accounts/sso", views.sso_landing, name="sso_landing"),
+    # Sales Summary views
+    path("sales-summary/", views.sales_summary, name="sales_summary"),
 ]

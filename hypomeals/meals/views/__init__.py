@@ -9,4 +9,5 @@ from .sku import *
 from .goal import *
 from .product_line import *
 from .line import *
+from .sales_summary import *
 from .sales import *

@@ -1,6 +1,7 @@
 # pylint: disable-msg=arguments-differ
 import logging
 import re
+from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
@@ -57,6 +58,20 @@ class ProductLine(models.Model, utils.ModelFieldsCompareMixin):
     compare_excluded_fields = ("id",)
 
     name = models.CharField(max_length=100, unique=True, verbose_name="Name")
+
+    @classmethod
+    def get_sortable_fields(cls):
+        """
+        Returns a list of fields that this model is sortable by. For now this is hard-
+        coded because there is no easy way to tell whether it makes sense to sort by
+        a particular field.
+        :return: a list of 2-tuples (field identifier, human-readable name) suitable
+            for use in, for example, a ChoiceField in a form.
+        """
+        return [
+            ("id", "ID"),
+            ("name", "Name"),
+        ]
 
     def __str__(self):
         return self.name
@@ -464,6 +479,16 @@ class Formula(
 
     def __str__(self):
         return self.name
+
+    @property
+    def ingredient_cost(self):
+        formula_ingredients = FormulaIngredient.objects.filter(formula=self)
+        ingredient_cost = Decimal(0)
+        for formula_ingredient in formula_ingredients:
+            quantity = formula_ingredient.quantity
+            cost = formula_ingredient.ingredient.cost
+            ingredient_cost += quantity * cost
+        return ingredient_cost
 
     @classmethod
     def get_sortable_fields(cls):
