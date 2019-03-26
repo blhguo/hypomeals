@@ -25,9 +25,8 @@ def sku_summary(sku, rev_sum, num_sales, sku_info):
         avg_run_size = manufacture_run_size / Decimal(len(activities_sku))
     else:
         avg_run_size = sku.manufacturing_rate * Decimal(10.0)
-    # Fake Data For Now
-    setup_cost_per_case = Decimal(1000) / avg_run_size
-    run_cost_per_case = Decimal(20)
+    setup_cost_per_case = sku.setup_cost / avg_run_size
+    run_cost_per_case = sku.run_cost
     ingredient_cost_per_case = sku.formula.ingredient_cost * sku.formula_scale
     cogs = setup_cost_per_case + run_cost_per_case + ingredient_cost_per_case
     if num_sales == 0:
