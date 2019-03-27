@@ -1046,6 +1046,7 @@ class FormulaFormsetBase(forms.BaseFormSet):
                 continue
             logger.info(form.cleaned_data)
             ingr_number = form.cleaned_data["ingredient"].number
+            ingr_unit = form.cleaned_data["ingredient"].unit
             if ingr_number in ingredients:
                 errors.append(
                     ValidationError(
@@ -1060,6 +1061,23 @@ class FormulaFormsetBase(forms.BaseFormSet):
                 )
             else:
                 ingredients[ingr_number] = index
+            user_input_unit = Unit.objects.filter(symbol=form.cleaned_data["unit"])[0]
+            user_input_type = user_input_unit.unit_type
+            if ingr_unit.unit_type != user_input_type:
+                errors.append(
+                    ValidationError(
+                        "Unit '%(unit_symbol_1)s' in Row %(error_row)d"
+                        " is incompatible with the unit '%(unit_symbol_2)s' "
+                        "for ingredient '%(ingredient_name)s'",
+                        params={
+                            "unit_symbol_1": user_input_unit.verbose_name,
+                            "unit_symbol_2": ingr_unit.verbose_name,
+                            "error_row": index,
+                            "ingredient_name": form.cleaned_data["ingredient"].name,
+                        },
+                    )
+                )
+
         if errors:
             raise ValidationError(errors)
 
@@ -1340,7 +1358,7 @@ class EditUserForm(forms.ModelForm, utils.BootstrapFormControlMixin):
             "user from logging in with password. Note that a NetID user may "
             "still log in even if the password is disabled."
         ),
-        widget=forms.CheckboxInput(attrs={"class": "custom-control-input"})
+        widget=forms.CheckboxInput(attrs={"class": "custom-control-input"}),
     )
 
     class Meta:
