@@ -497,9 +497,17 @@ class Formula(
 
     @property
     def ingredient_cost(self):
-        return self.formulaingredient_set.aggregate(
-            cost=Sum(F("quantity") * F("ingredient__cost"))
-        )["cost"] or Decimal("0")
+        formula_ingredients = FormulaIngredient.objects.filter(formula=self)
+        cost = 0
+        for formula_ingredient in formula_ingredients:
+            factor = (
+                formula_ingredient.quantity * formula_ingredient.unit.scale_factor
+            ) / (
+                formula_ingredient.ingredient.size
+                * formula_ingredient.ingredient.unit.scale_factor
+            )
+            cost += factor * formula_ingredient.ingredient.cost
+        return cost
 
     @classmethod
     def get_sortable_fields(cls):

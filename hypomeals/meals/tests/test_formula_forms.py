@@ -7,7 +7,7 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 
 from meals.forms import FormulaFormset
-from meals.models import Ingredient, FormulaIngredient, User
+from meals.models import Ingredient, User
 from .test_base import BaseTestCase
 
 logger = logging.getLogger(__name__)
@@ -69,11 +69,11 @@ class FormulaFormsTest(BaseTestCase):
         resp = self.client.post(
             reverse("edit_formula", args=(sku.formula.number,)), data=form_data
         )
-        # self.assertEqual(
-        #     resp.status_code,
-        #     HttpResponseRedirect.status_code,
-        #     "Redirect should happen after processing form",
-        # )
+        self.assertEqual(
+            resp.status_code,
+            HttpResponseRedirect.status_code,
+            "Redirect should happen after processing form",
+        )
 
         formula = sku.formula.formulaingredient_set.values(
             "ingredient__name", "quantity"
