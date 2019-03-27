@@ -1061,7 +1061,9 @@ class FormulaFormsetBase(forms.BaseFormSet):
                 )
             else:
                 ingredients[ingr_number] = index
-            user_input_type = Unit.objects.filter(symbol=form.cleaned_data["unit"])[0].unit_type
+            user_input_type = Unit.objects.filter(symbol=form.cleaned_data["unit"])[
+                0
+            ].unit_type
             if ingr_unit.unit_type != user_input_type:
                 errors.append(
                     ValidationError(
@@ -1356,7 +1358,7 @@ class EditUserForm(forms.ModelForm, utils.BootstrapFormControlMixin):
             "user from logging in with password. Note that a NetID user may "
             "still log in even if the password is disabled."
         ),
-        widget=forms.CheckboxInput(attrs={"class": "custom-control-input"})
+        widget=forms.CheckboxInput(attrs={"class": "custom-control-input"}),
     )
 
     class Meta:
