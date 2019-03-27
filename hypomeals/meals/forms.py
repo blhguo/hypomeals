@@ -1061,19 +1061,19 @@ class FormulaFormsetBase(forms.BaseFormSet):
                 )
             else:
                 ingredients[ingr_number] = index
-            user_input_type = Unit.objects.filter(symbol=form.cleaned_data["unit"])[
-                0
-            ].unit_type
+            user_input_unit = Unit.objects.filter(symbol=form.cleaned_data["unit"])[0]
+            user_input_type = user_input_unit.unit_type
             if ingr_unit.unit_type != user_input_type:
                 errors.append(
                     ValidationError(
-                        "Row %(error_row)d: Ingredient Unit Type '%(type1)s' is not the"
-                        " same type as specified in database, which is Unit Type"
-                        " '%(type2)s'",
+                        "Unit '%(unit_symbol_1)s' in Row %(error_row)d"
+                        " is incompatible with the unit '%(unit_symbol_2)s' "
+                        "for ingredient '%(ingredient_name)s'",
                         params={
-                            "type1": user_input_type,
-                            "type2": ingr_unit.unit_type,
+                            "unit_symbol_1": user_input_unit.verbose_name,
+                            "unit_symbol_2": ingr_unit.verbose_name,
                             "error_row": index,
+                            "ingredient_name": form.cleaned_data["ingredient"].name,
                         },
                     )
                 )
