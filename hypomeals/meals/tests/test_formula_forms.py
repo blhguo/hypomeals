@@ -1,18 +1,19 @@
 # pylint: disable-msg=expression-not-assigned
 import logging
+from decimal import Decimal
 from unittest import skip
 
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 
 from meals.forms import FormulaFormset
-from meals.models import Ingredient, FormulaIngredient, User
+from meals.models import Ingredient, User
 from .test_base import BaseTestCase
 
 logger = logging.getLogger(__name__)
 
 
-@skip("Pending model update migration")
+@skip("Skip it for now")
 class FormulaFormsTest(BaseTestCase):
     def setUp(self):
         super().setUp()
@@ -52,18 +53,21 @@ class FormulaFormsTest(BaseTestCase):
 
     def test_create_formula(self):
         """Tests that formula overrides original"""
-        sku = self.create_sku(
+        formula = self.create_formula(
             name="chocolate cake", ingredients=["chocolate", "cheese", "cream"]
         )
+        sku = self.create_sku(name="chocolate cake", formula=formula)
         self.create_ingredient("cocoa")
-        form_data = self._get_form_data(["chocolate", "cheese", "cocoa"], [1, 2, 3])
+        form_data = self._get_form_data(
+            ["chocolate", "cheese", "cocoa"], [Decimal(1.0), Decimal(2.0), Decimal(3.0)]
+        )
         self.client.force_login(
             User.objects.create_superuser(
                 username="test_user", email="abc@example.com", password="123456"
             )
         )
         resp = self.client.post(
-            reverse("edit_formula", args=(sku.number,)), data=form_data
+            reverse("edit_formula", args=(sku.formula.number,)), data=form_data
         )
         self.assertEqual(
             resp.status_code,
@@ -71,14 +75,12 @@ class FormulaFormsTest(BaseTestCase):
             "Redirect should happen after processing form",
         )
 
-        formula = FormulaIngredient.objects.filter(sku_number=sku).values(
-            "ingredient_number__name", "quantity"
+        formula = sku.formula.formulaingredient_set.values(
+            "ingredient__name", "quantity"
         )
-        ingr_dict = {
-            ingr["ingredient_number__name"]: ingr["quantity"] for ingr in formula
-        }
+        ingr_dict = {ingr["ingredient__name"]: ingr["quantity"] for ingr in formula}
         self.assertDictEqual(
-            {"chocolate": 1.0, "cheese": 2.0, "cocoa": 3.0},
+            {"chocolate": Decimal(1.0), "cheese": Decimal(2.0), "cocoa": Decimal(3.0)},
             ingr_dict,
             "Formula should be exactly what was supplied.",
         )

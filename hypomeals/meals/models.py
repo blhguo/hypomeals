@@ -8,7 +8,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import BLANK_CHOICE_DASH, Sum, F
+from django.db.models import BLANK_CHOICE_DASH
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.text import Truncator
@@ -127,7 +127,7 @@ class Unit(models.Model):
         decimal_places=6,
         validators=[
             MinValueValidator(
-                limit_value=0.000001, message="Unit scale factor must be positive."
+                limit_value=0.000_001, message="Unit scale factor must be positive."
             )
         ],
     )
@@ -206,7 +206,7 @@ class Ingredient(
         decimal_places=6,
         validators=[
             MinValueValidator(
-                limit_value=0.000001, message="Size of ingredient must be positive."
+                limit_value=0.000_001, message="Size of ingredient must be positive."
             )
         ],
     )
@@ -312,7 +312,7 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
         decimal_places=6,
         validators=[
             MinValueValidator(
-                limit_value=0.000001,
+                limit_value=0.000_001,
                 message="The formula scale factor must be positive.",
             )
         ],
@@ -331,7 +331,36 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
         help_text="Manufacturing rate for this SKU in cases per hour",
         validators=[
             MinValueValidator(
-                limit_value=0.000001, message="The manufacturing rate must be positive."
+                limit_value=0.000_001,
+                message="The manufacturing rate must be positive.",
+            )
+        ],
+    )
+    setup_cost = models.DecimalField(
+        verbose_name="Manufacturing Setup Cost",
+        max_digits=20,
+        decimal_places=6,
+        blank=False,
+        default=1.0,
+        help_text="The fixed retooling cost to prepare a manufacturing line",
+        validators=[
+            MinValueValidator(
+                limit_value=0.000_001,
+                message="The manufacturing rate must be positive.",
+            )
+        ],
+    )
+    run_cost = models.DecimalField(
+        verbose_name="Manufacturing Run Cost",
+        max_digits=20,
+        decimal_places=6,
+        blank=False,
+        default=1.0,
+        help_text="The cost per case to manufacture SKU separate from ingredient cost",
+        validators=[
+            MinValueValidator(
+                limit_value=0.000_001,
+                message="The manufacturing rate must be positive.",
             )
         ],
     )
@@ -468,9 +497,17 @@ class Formula(
 
     @property
     def ingredient_cost(self):
-        return self.formulaingredient_set.aggregate(
-            cost=Sum(F("quantity") * F("ingredient__cost"))
-        )["cost"] or Decimal("0")
+        formula_ingredients = FormulaIngredient.objects.filter(formula=self)
+        cost = Decimal(0)
+        for formula_ingredient in formula_ingredients:
+            factor = (
+                formula_ingredient.quantity * formula_ingredient.unit.scale_factor
+            ) / (
+                formula_ingredient.ingredient.size
+                * formula_ingredient.ingredient.unit.scale_factor
+            )
+            cost += factor * formula_ingredient.ingredient.cost
+        return cost
 
     @classmethod
     def get_sortable_fields(cls):
@@ -623,7 +660,9 @@ class GoalItem(
         max_digits=20,
         decimal_places=6,
         validators=[
-            MinValueValidator(limit_value=0.000001, message="Quantity must be positive")
+            MinValueValidator(
+                limit_value=0.000_001, message="Quantity must be positive"
+            )
         ],
     )
 
@@ -760,7 +799,7 @@ class Sale(models.Model):
         decimal_places=6,
         validators=[
             MinValueValidator(
-                limit_value=0.000001, message="Sales records must be positive."
+                limit_value=0.000_001, message="Sales records must be positive."
             )
         ],
     )

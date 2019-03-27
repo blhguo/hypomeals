@@ -223,6 +223,8 @@
     <th nowrap>Formula Scale Factor</th>
     <th nowrap>Manufacturing Lines</th>
     <th>Rate</th>
+    <th>Setup Cost</th>
+    <th>Run Cost</th>
     <th>Sales</th>
     <th style="width: 25rem;">Comment</th>
 </tr>
@@ -278,6 +280,12 @@
     </td>
     <td>
         {{ sku.manufacturing_rate|quantize:2 }}
+    </td>
+    <td>
+        {{ sku.setup_cost|quantize:2 }}
+    </td>
+    <td>
+        {{ sku.run_cost|quantize:2 }}
     </td>
     <td>
         <a href="{% url 'drilldown' sku.number %}">Report</a>

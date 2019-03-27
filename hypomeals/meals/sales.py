@@ -32,7 +32,7 @@ class HtmlTableIterator:
         else:
             first_row = self.rows[0]
             self.rows = self.rows[1:]  # first row will be taken as header
-            self.current_row = 1
+            self.current_row = 0
             self.num_rows -= 1
 
         for td in first_row:
