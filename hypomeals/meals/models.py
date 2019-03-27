@@ -356,7 +356,7 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
         decimal_places=6,
         blank=False,
         default=1.0,
-        help_text="The cost per case to manufacture a SKU separate from ingredient cost",
+        help_text="The cost per case to manufacture SKU separate from ingredient cost",
         validators=[
             MinValueValidator(
                 limit_value=0.000_001,

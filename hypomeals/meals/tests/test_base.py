@@ -74,9 +74,11 @@ class BaseTestCase(TestCase):
         if ingredients:
             if not isinstance(ingredients[0], Ingredient):
                 ingredients = [self.create_ingredient(name) for name in ingredients]
+        unit = Unit.objects.get_or_create(symbol="kg", verbose_name="Kilogram", scale_factor=1,
+                                   is_base=True, unit_type="mass")[0]
         [
             FormulaIngredient.objects.create(
-                formula=formula, ingredient=ingredient, quantity=1
+                formula=formula, ingredient=ingredient, quantity=1, unit=unit
             )
             for ingredient in ingredients
         ]
