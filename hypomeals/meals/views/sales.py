@@ -183,7 +183,7 @@ def sales_summary(request):
             product_lines, customers = form.query()
         else:
             product_lines, customers = (
-                Paginator(Sku.objects.all(), 50),
+                Paginator(ProductLine.objects.all(), 50),
                 Customer.objects.all(),
             )
     else:
