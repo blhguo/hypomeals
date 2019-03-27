@@ -10,8 +10,8 @@ services:
             - "2222:22"
         volumes:
             - db-data:/var/lib/postgresql/data
-            - ./credentials/vcm-4081.vm.duke.edu.pem:/var/lib/postgresql/certs/server.crt:ro
-            - ./credentials/vcm-4081.vm.duke.edu.key:/var/lib/postgresql/certs/server.key:ro
+            - ./credentials/vcm-4081.vm.duke.edu.pem:/var/lib/postgresql/certs/server.crt
+            - ./credentials/vcm-4081.vm.duke.edu.key:/var/lib/postgresql/certs/server.key
     web-init:
         build: ./hypomeals
         command: /code/initserver.sh
@@ -20,6 +20,7 @@ services:
             - web-vars-prod.env
         volumes:
             - ./hypomeals/logs:/code/logs
+            - ./credentials/credentials.json:/code/credentials.json:ro
             - ./static:/srv/static
     redis:
         image: "redis:5.0.3"
@@ -36,8 +37,7 @@ services:
         command: /code/runserver.sh
         volumes:
             - ./hypomeals/logs:/code/logs
-            - ./credentials/hypomeals-write-only.json:/code/hypomeals-write-only.json:ro
-            - ./credentials/oauth_config.json:/code/oauth_config.json:ro
+            - ./credentials/credentials.json:/code/credentials.json:ro
         expose:
             - "8000"
         depends_on:
@@ -51,9 +51,7 @@ services:
         command: /code/runcelery.sh
         volumes:
             - ./hypomeals/logs:/code/logs
-            - ./credentials/backup.key:/code/backup.key:ro
-            - ./credentials/hypomeals-write-only.json:/code/hypomeals-write-only.json:ro
-            - ./credentials/email_config.json:/code/email_config.json:ro
+            - ./credentials/credentials.json:/code/credentials.json:ro
         depends_on:
             - redis
     celery-beat:
@@ -64,6 +62,7 @@ services:
         command: /code/runcelerybeat.sh
         volumes:
             - ./hypomeals/logs:/code/logs
+            - ./credentials/credentials.json:/code/credentials.json:ro
         depends_on:
             - redis
             - celery
