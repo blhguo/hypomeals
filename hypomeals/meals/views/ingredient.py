@@ -5,7 +5,6 @@ import jsonpickle
 from django.contrib import messages
 from django.contrib.auth.decorators import (
     login_required,
-    permission_required,
 )
 from django.core.paginator import Paginator
 from django.db import transaction, DatabaseError
@@ -59,7 +58,7 @@ def ingredient(request):
 
 
 @login_required
-@permission_required("meals.add_ingredient", raise_exception=True)
+@auth.user_is_admin_ajax(msg="Only administrators may add new ingredients.")
 def add_ingredient(request):
     if request.method == "POST":
         form = EditIngredientForm(request.POST)
@@ -91,9 +90,8 @@ def add_ingredient(request):
 
 
 @login_required
-@auth.permission_required_ajax(perm="meals.edit_ingredient")
+@auth.user_is_admin_ajax(msg="Only administrator may edit ingredients.")
 def edit_ingredient(request, ingredient_number):
-
     instance = get_object_or_404(Ingredient, number=ingredient_number)
     if request.method == "POST":
         form = EditIngredientForm(request.POST, instance=instance)
@@ -118,7 +116,7 @@ def edit_ingredient(request, ingredient_number):
 
 @login_required
 @require_POST
-@auth.permission_required_ajax(perm="meals.remove_ingredient")
+@auth.user_is_admin_ajax(msg="Only administrators may remove ingredients.")
 def remove_ingredients(request):
     to_remove = jsonpickle.loads(request.POST.get("to_remove", "[]"))
     try:

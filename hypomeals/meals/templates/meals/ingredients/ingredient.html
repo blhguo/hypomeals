@@ -1,5 +1,6 @@
 {% extends "meals/base.html" %}
 {% load staticfiles %}
+{% load humanize %}
 
 {% block ingredient_active %}active{% endblock %}
 {% block title %}Ingredients{% endblock %}
@@ -182,8 +183,8 @@
             </a>
         </td>
         <td>{{ ingredient.vendor.info }}</td>
-        <td>{{ ingredient.size.normalize }} {{ ingredient.unit.symbol }}</td>
-        <td>{{ ingredient.cost }}</td>
+        <td>{{ ingredient.size.normalize|intcomma }} {{ ingredient.unit.symbol }}</td>
+        <td>$ {{ ingredient.cost|intcomma }}</td>
         <td>{{ ingredient.comment|truncatewords:20 }}</td>
     </tr>
     {%  empty %}
