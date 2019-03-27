@@ -5,7 +5,6 @@ import jsonpickle
 from django.contrib import messages
 from django.contrib.auth.decorators import (
     login_required,
-    permission_required,
 )
 from django.core.paginator import Paginator
 from django.db import transaction, DatabaseError

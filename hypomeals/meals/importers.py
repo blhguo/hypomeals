@@ -25,7 +25,7 @@ from typing import (
     Sequence,
     Union,
     Generic,
-)
+    Iterable)
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured, ValidationError
@@ -437,6 +437,27 @@ class Importer(ABC, Generic[T]):
 
             self.unique_dict[unique_keys][values] = line_num
 
+    @staticmethod
+    def _to_decimal(row: Dict[str, Any], fields: Iterable[str]) -> None:
+        for field in fields:
+            try:
+                row[field] = Decimal(str(row[field]))
+            except InvalidOperation:
+                raise UserFacingException(
+                    f"'{row[field]}' is not a valid floating point number."
+                )
+
+    @staticmethod
+    def _parse_usd(row: Dict[str, Any], fields: Iterable[str]):
+        for field in fields:
+            try:
+                row[field] = Decimal(utils.parse_usd(row[field]))
+            except (InvalidOperation, ValueError):
+                raise UserFacingException(
+                    "Cost must be a USD expression; "
+                    f"'{row[field]}' is not a valid USD expression."
+                )
+
     def _construct_record(self, row: Dict[str, Any], line_num: int = None) -> Record[T]:
         """
         This method constructs a new instance from a row, and optionally creates m2m
@@ -609,68 +630,9 @@ class SkuImporter(Importer):
         "comment": "Comment",
     }
 
-    def _process_row(
-        self, row: Dict[str, Any], filename: str = None, line_num: int = None
-    ) -> Dict[str, Any]:
-        try:
-            row["SKU#"] = int(row["SKU#"])
-        except ValueError:
-            raise UserFacingException(
-                f"SKU number must be numeric; '{row['SKU#']}' is not a valid integer."
-            )
-        raw_formula = row["Formula#"]
-
-        row["Count per case"] = int(row["Count per case"])
-
-        formula_qs = Formula.objects.filter(number=raw_formula)
-        if formula_qs.exists():
-            row["Formula#"] = formula_qs[0]
-        else:
-            raise IntegrityException(
-                message=f"Cannot import SKU #{row['SKU#']}",
-                line_num=line_num,
-                referring_name="SKU",
-                referred_name="Formula",
-                fk_name="Formula",
-                fk_value=row["Formula#"],
-            )
-        raw_case_upc = row["Case UPC"]
-        if utils.is_valid_upc(raw_case_upc):
-            if str(raw_case_upc)[0] not in ["2", "3", "4", "5"]:
-                row["Case UPC"] = Upc.objects.get_or_create(upc_number=raw_case_upc)[0]
-            else:
-                raise ValidationError(
-                    "Cannot import SKU#: %(sku_num)s due to non-consumer Case UPC",
-                    params={"sku_num": row["SKU#"]},
-                )
-        else:
-            raise UserFacingException(f"{raw_case_upc} is not a valid UPC.")
-        raw_unit_upc = row["Unit UPC"]
-        if utils.is_valid_upc(raw_unit_upc):
-            if str(raw_unit_upc)[0] not in ["2", "3", "4", "5"]:
-                row["Unit UPC"] = Upc.objects.get_or_create(upc_number=raw_unit_upc)[0]
-            else:
-                raise ValidationError(
-                    "Cannot import SKU#: %(sku_num)s due to non-consumer Unit UPC",
-                    params={"sku_num": row["SKU#"]},
-                )
-        else:
-            raise UserFacingException(f"{raw_unit_upc} is not a valid UPC.")
-        if row["Comment"] is None:
-            row["Comment"] = ""
-        product_line = ProductLine.objects.filter(name=row["PL Name"])
-        if product_line.exists():
-            row["PL Name"] = product_line[0]
-        else:
-            raise IntegrityException(
-                message=f"Cannot import SKU #{row['SKU#']}",
-                line_num=line_num,
-                referring_name="SKU",
-                referred_name="Product Line",
-                fk_name="PL Name",
-                fk_value=row["PL Name"],
-            )
-
+    def _check_manufacturing_line(
+        self, row: Dict[str, Any], line_num: int = None
+    ) -> List[ManufacturingLine]:
         # Duplicated shortnames are ignored
         raw_ml = {
             shortname.strip()
@@ -691,25 +653,63 @@ class SkuImporter(Importer):
                 fk_name="ML Shortnames",
                 fk_value=", ".join(missing),
             )
+        return ml_objs.all()
 
-        row["ML Shortnames"] = ml_objs.all()
+    def _process_row(
+        self, row: Dict[str, Any], filename: str = None, line_num: int = None
+    ) -> Dict[str, Any]:
+        try:
+            row["SKU#"] = int(row["SKU#"])
+        except ValueError:
+            raise UserFacingException(
+                f"SKU number must be numeric; '{row['SKU#']}' is not a valid integer."
+            )
+        row["Count per case"] = int(row["Count per case"])
+        raw_formula = row["Formula#"]
 
-        for field in ["Rate", "Formula factor"]:
-            try:
-                row[field] = Decimal(str(row[field]))
-            except InvalidOperation:
-                raise UserFacingException(
-                    f"'{row[field]}' is not a valid floating point number."
-                )
+        formula_qs = Formula.objects.filter(number=raw_formula)
+        if formula_qs.exists():
+            row["Formula#"] = formula_qs[0]
+        else:
+            raise IntegrityException(
+                message=f"Cannot import SKU #{row['SKU#']}",
+                line_num=line_num,
+                referring_name="SKU",
+                referred_name="Formula",
+                fk_name="Formula",
+                fk_value=row["Formula#"],
+            )
+        for field in ["Case UPC", "Unit UPC"]:
+            if utils.is_valid_upc(row[field]):
+                if str(row[field])[0] not in ["2", "3", "4", "5"]:
+                    row[field] = Upc.objects.get_or_create(upc_number=row[field])[0]
+                else:
+                    raise ValidationError(
+                        "%(field)s must be a valid consumer UPC; '%(upc)s' is not a "
+                        "valid consumer UPC number.",
+                        params={"field": field, "upc": row[field]},
+                    )
+            else:
+                raise UserFacingException(f"{row[field]} is not a valid UPC.")
+        if row["Comment"] is None:
+            row["Comment"] = ""
+        product_line = ProductLine.objects.filter(name=row["PL Name"])
+        if product_line.exists():
+            row["PL Name"] = product_line[0]
+        else:
+            raise IntegrityException(
+                message=f"Cannot import SKU #{row['SKU#']}",
+                line_num=line_num,
+                referring_name="SKU",
+                referred_name="Product Line",
+                fk_name="PL Name",
+                fk_value=row["PL Name"],
+            )
 
-        for field in ["Mfg setup cost", "Mfg run cost"]:
-            try:
-                row[field] = Decimal(utils.parse_usd(row[field]))
-            except (InvalidOperation, ValueError):
-                raise UserFacingException(
-                    "Cost must be a USD expression; "
-                    f"'{row[field]}' is not a valid USD expression."
-                )
+        row["ML Shortnames"] = self._check_manufacturing_line(row, line_num)
+
+        self._to_decimal(row, ["Rate", "Formula factor"])
+        self._parse_usd(row, ["Mfg setup cost", "Mfg run cost"])
 
         return row
 

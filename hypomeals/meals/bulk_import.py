@@ -7,7 +7,6 @@ from typing import Dict, Tuple
 
 from cachetools import TTLCache
 from django.db import transaction
-from django.db.models.fields.related import RelatedField
 
 from meals import utils
 from meals.importers import IMPORTERS, Importer, CollisionOccurredException
