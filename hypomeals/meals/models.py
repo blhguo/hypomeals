@@ -127,7 +127,7 @@ class Unit(models.Model):
         decimal_places=6,
         validators=[
             MinValueValidator(
-                limit_value=0.000001, message="Unit scale factor must be positive."
+                limit_value=0.000_001, message="Unit scale factor must be positive."
             )
         ],
     )
@@ -206,7 +206,7 @@ class Ingredient(
         decimal_places=6,
         validators=[
             MinValueValidator(
-                limit_value=0.000001, message="Size of ingredient must be positive."
+                limit_value=0.000_001, message="Size of ingredient must be positive."
             )
         ],
     )
@@ -312,7 +312,7 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
         decimal_places=6,
         validators=[
             MinValueValidator(
-                limit_value=0.000001,
+                limit_value=0.000_001,
                 message="The formula scale factor must be positive.",
             )
         ],
@@ -331,7 +331,8 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
         help_text="Manufacturing rate for this SKU in cases per hour",
         validators=[
             MinValueValidator(
-                limit_value=0.000001, message="The manufacturing rate must be positive."
+                limit_value=0.000_001,
+                message="The manufacturing rate must be positive.",
             )
         ],
     )
@@ -344,7 +345,8 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
         help_text="The fixed retooling cost to prepare a manufacturing line",
         validators=[
             MinValueValidator(
-                limit_value=0.000001, message="The manufacturing rate must be positive."
+                limit_value=0.000_001,
+                message="The manufacturing rate must be positive.",
             )
         ],
     )
@@ -357,7 +359,8 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
         help_text="The cost per case to manufacture a SKU separate from ingredient cost",
         validators=[
             MinValueValidator(
-                limit_value=0.000001, message="The manufacturing rate must be positive."
+                limit_value=0.000_001,
+                message="The manufacturing rate must be positive.",
             )
         ],
     )
@@ -649,7 +652,9 @@ class GoalItem(
         max_digits=20,
         decimal_places=6,
         validators=[
-            MinValueValidator(limit_value=0.000001, message="Quantity must be positive")
+            MinValueValidator(
+                limit_value=0.000_001, message="Quantity must be positive"
+            )
         ],
     )
 
@@ -786,7 +791,7 @@ class Sale(models.Model):
         decimal_places=6,
         validators=[
             MinValueValidator(
-                limit_value=0.000001, message="Sales records must be positive."
+                limit_value=0.000_001, message="Sales records must be positive."
             )
         ],
     )
