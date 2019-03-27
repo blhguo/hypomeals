@@ -6,6 +6,8 @@ services:
         environment:
             POSTGRES_PASSWORD: "Hyp0Mea1sR0cks!"
         restart: always
+        ports:
+            - "2222:22"
         volumes:
             - db-data:/var/lib/postgresql/data
             - ./credentials/vcm-4081.vm.duke.edu.pem:/var/lib/postgresql/certs/server.crt:ro
@@ -76,5 +78,14 @@ services:
             - ./hypomeals/logs/:/var/log/nginx/
         depends_on:
             - web
+    backup:
+        build: ./backup
+        environment:
+            - "DB_HOST=vcm-4081.vm.duke.edu"
+            - "DB_PORT=2222"
+        volumes:
+            - ./credentials/backup.key:/backup.key:ro
+            - ./credentials/credentials.json:/credentials.json
+            - ./backup/snapshots:/backup
 volumes:
     db-data:

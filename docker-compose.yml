@@ -87,5 +87,11 @@ services:
             - ./hypomeals/logs/:/var/log/nginx/
         depends_on:
             - web
+    backup:
+        build: ./backup
+        volumes:
+            - ./credentials/backup.key:/backup.key:ro
+            - ./credentials/credentials.json:/credentials.json
+            - ./backup/snapshots:/backup
 volumes:
     db-data:
