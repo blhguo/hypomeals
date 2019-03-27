@@ -71,6 +71,16 @@ def sales_drilldown(request, sku_pk):
     if len(x_axis) > GRAPH_DATA_POINTS:
         x_axis = x_axis[:: int(len(x_axis) / GRAPH_DATA_POINTS)]
         y_axis = y_axis[:: int(len(y_axis) / GRAPH_DATA_POINTS)]
+    now = datetime.now()
+    end_year = now.year
+    begin_year = end_year - 9
+    customer_names = form.cleaned_data["customer"]
+    if customer_names:
+        customers = Customer.objects.filter(name__in=customer_names)
+    else:
+        customers = Customer.objects.all()
+    rev_sum, num_sales, sku_ten_year = sku_revenue(sku, customers, begin_year)
+    sku_summary_report = [sku_summary(sku, rev_sum, num_sales, sku_ten_year), ]
     return render(
         request,
         template_name="meals/sales/drilldown.html",
@@ -83,6 +93,7 @@ def sales_drilldown(request, sku_pk):
             "pages": range(page_start, page_end),
             "current_page": page,
             "duration": "{:0.3f}".format(end - start),
+            "sku_summary": sku_summary_report,
         },
     )
 
@@ -96,7 +107,6 @@ def sku_summary(sku, rev_sum, num_sales, sku_info):
         avg_run_size = manufacture_run_size / Decimal(len(activities_sku))
     else:
         avg_run_size = sku.manufacturing_rate * Decimal(10.0)
-    # Fake Data For Now
     setup_cost_per_case = sku.setup_cost / avg_run_size
     run_cost_per_case = sku.run_cost
     cogs = setup_cost_per_case + run_cost_per_case + sku.ingredient_cost
@@ -133,6 +143,29 @@ def time_estimate():
             cnt += 1
     return cnt * SALES_WAIT_TIME_MINUTES
 
+
+def sku_revenue(sku, customers, begin_year):
+    sku_ten_year = []
+    rev_sum = Decimal(0)
+    num_sales = Decimal(0)
+    sales_all = (
+        Sale.objects.filter(
+            sku=sku, customer__in=customers, year__gte=begin_year
+        )
+            .order_by("year")
+            .values("year")
+            .annotate(revenue=Sum(F("sales") * F("price")), count=Sum(F("sales")))
+    )
+    for sales_per_year in sales_all:
+        year = sales_per_year["year"]
+        sales_tot = sales_per_year["revenue"]
+        num_tot = sales_per_year["count"]
+        sku_ten_year.append(
+            (year, sku, sales_tot, sales_tot / num_tot)
+        )
+        rev_sum += sales_tot
+        num_sales += num_tot
+    return rev_sum, num_sales, sku_ten_year
 
 @login_required
 def sales_summary(request):
@@ -199,26 +232,7 @@ def sales_summary(request):
         begin_year = end_year - 9
         pl_summary_report = []
         for sku in skus:
-            sku_ten_year = []
-            rev_sum = Decimal(0)
-            num_sales = Decimal(0)
-            sales_all = (
-                Sale.objects.filter(
-                    sku=sku, customer__in=customers, year__gte=begin_year
-                )
-                .order_by("year")
-                .values("year")
-                .annotate(revenue=Sum(F("sales") * F("price")), count=Sum(F("sales")))
-            )
-            for sales_per_year in sales_all:
-                year = sales_per_year["year"]
-                sales_tot = sales_per_year["revenue"]
-                num_tot = sales_per_year["count"]
-                sku_ten_year.append(
-                    (year, sku, sales_tot, sales_tot / num_tot)
-                )
-                rev_sum += sales_tot
-                num_sales += num_tot
+            rev_sum, num_sales, sku_ten_year = sku_revenue(sku, customers, begin_year)
             sku_summary_report = sku_summary(sku, rev_sum, num_sales, sku_ten_year)
             pl_summary_report.append(sku_summary_report)
         sales_summary_result.append((pl.name, pl_summary_report))
