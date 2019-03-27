@@ -498,7 +498,7 @@ class Formula(
     @property
     def ingredient_cost(self):
         formula_ingredients = FormulaIngredient.objects.filter(formula=self)
-        cost = 0
+        cost = Decimal(0)
         for formula_ingredient in formula_ingredients:
             factor = (
                 formula_ingredient.quantity * formula_ingredient.unit.scale_factor
