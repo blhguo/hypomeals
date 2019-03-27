@@ -797,6 +797,8 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
             "formula_scale",
             "manufacturing_lines",
             "manufacturing_rate",
+            "setup_cost",
+            "run_cost",
         ]
         exclude = [
             "case_upc",

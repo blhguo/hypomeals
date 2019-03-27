@@ -341,7 +341,7 @@ class Sku(models.Model, utils.ModelFieldsCompareMixin, utils.AttributeResolution
         decimal_places=6,
         blank=False,
         default=1.0,
-        help_text="The foxed retooling cost to prepare a manufacturing line",
+        help_text="The fixed retooling cost to prepare a manufacturing line",
         validators=[
             MinValueValidator(
                 limit_value=0.000001, message="The manufacturing rate must be positive."
