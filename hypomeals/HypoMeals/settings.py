@@ -19,7 +19,7 @@ from oauth2client.service_account import ServiceAccountCredentials as SAC
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-SECRET_KEY = "dummy"  # will be replaced by credentials.json
+SECRET_KEY = "dummy"  # noqa will be replaced by credentials.json
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
