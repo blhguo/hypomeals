@@ -490,6 +490,8 @@ def compute_end_time(start_time: datetime, num_hours: float) -> datetime:
     """
     if start_time.tzinfo is None:
         start_time = start_time.replace(tzinfo=timezone.get_current_timezone())
+    else:
+        start_time = start_time.astimezone(tz=timezone.get_current_timezone())
     num_days = int(num_hours / WORK_HOURS_PER_DAY)
     remaining_hours = num_hours % WORK_HOURS_PER_DAY
     if remaining_hours == 0:
@@ -502,9 +504,13 @@ def compute_end_time(start_time: datetime, num_hours: float) -> datetime:
         ).total_seconds() / SECONDS_PER_HOUR
     end_time = start_time + timedelta(days=num_days)
     if remaining_hours > 0:
-        end_time = datetime.combine(
-            (end_time + timedelta(days=1)).date(), WORK_HOURS_START
-        )
+        if start_time.timetz() < WORK_HOURS_START:
+            # Can use same day to finish
+            end_time = datetime.combine(end_time, WORK_HOURS_START)
+        else:
+            end_time = datetime.combine(
+                (end_time + timedelta(days=1)).date(), WORK_HOURS_START
+            )
         end_time += timedelta(hours=remaining_hours)
     else:
         end_time = datetime.combine(end_time.date(), WORK_HOURS_END) + timedelta(

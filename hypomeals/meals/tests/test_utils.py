@@ -115,6 +115,11 @@ class UtilsTest(BaseTestCase):
                     datetime(2019, 2, 22, 8, 30, 0),
                     "8AM, 10.5 hours, 8:30AM next day",
                 ),
+                (
+                    (datetime(2019, 2, 21, 1, 0, 0), 4),
+                    datetime(2019, 2, 21, 12, 0, 0),
+                    "1AM, 4 hours, 12PM same day",
+                )
             )
         ]
         for (start_time, hours), expected, msg in test_cases:

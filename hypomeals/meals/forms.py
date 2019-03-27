@@ -3,6 +3,7 @@ import logging
 import re
 import zipfile
 from collections import OrderedDict, defaultdict
+from datetime import timedelta
 from pathlib import Path
 
 from django import forms
@@ -1210,10 +1211,10 @@ class GoalScheduleForm(forms.ModelForm):
 
     goal_item = forms.IntegerField(disabled=True)
     start_time = forms.DateTimeField(
-        input_formats=["%Y-%m-%dT%H:%M:%S.%fZ"], required=False
+        input_formats=["%Y-%m-%dT%H:%M:%S.%f%z"], required=False
     )
     end_time = forms.DateTimeField(
-        input_formats=["%Y-%m-%dT%H:%M:%S.%fZ"], required=False
+        input_formats=["%Y-%m-%dT%H:%M:%S.%f%z"], required=False
     )
 
     def clean_line(self):
@@ -1240,7 +1241,7 @@ class GoalScheduleForm(forms.ModelForm):
         return qs[0]
 
     def should_delete(self):
-        return (
+        delete = (
             "start_time" not in self.cleaned_data
             or not self.cleaned_data["start_time"]
             or "line" not in self.cleaned_data
@@ -1248,6 +1249,8 @@ class GoalScheduleForm(forms.ModelForm):
             or "end_time" not in self.cleaned_data
             or not self.cleaned_data["end_time"]
         )
+        logger.info("should delete=%s", delete)
+        return delete
 
     def clean(self):
         if "line" in self.cleaned_data and self.cleaned_data["line"]:
@@ -1262,9 +1265,17 @@ class GoalScheduleForm(forms.ModelForm):
                 )
             # Regardless of what the user gives, we always compute the end time on
             # server side to prevent cheating.
-            self.cleaned_data["end_time"] = utils.compute_end_time(
-                self.cleaned_data["start_time"], self.item.hours
-            )
+            if (
+                "override_hours" in self.cleaned_data
+                and self.cleaned_data["override_hours"]
+            ):
+                self.cleaned_data["end_time"] = self.cleaned_data[
+                    "start_time"
+                ] + timedelta(hours=10)
+            else:
+                self.cleaned_data["end_time"] = utils.compute_end_time(
+                    self.cleaned_data["start_time"], self.item.hours
+                )
         return super().clean()
 
     def __init__(self, *args, item, **kwargs):
@@ -1275,8 +1286,11 @@ class GoalScheduleForm(forms.ModelForm):
         self.fields["line"] = forms.ChoiceField(choices=lines, required=False)
 
     class Meta:
-        fields = ["goal_item", "line", "start_time", "end_time"]
-        error_messages = {"start_time": {"invalid": "Start time is not a valid time."}}
+        fields = ["goal_item", "line", "start_time", "end_time", "override_hours"]
+        error_messages = {
+            "start_time": {"invalid": "Start time is not a valid time."},
+            "end_time": {"invalid": "End time is not a valid time."},
+        }
         model = GoalSchedule
 
 

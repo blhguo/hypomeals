@@ -45,6 +45,10 @@ $(function() {
         if (senderId === IGNORE_SENDER_ID) return;
         let item = properties.data[0];
         let oldItem = properties.oldData[0];
+        item.start = moment(item.start);
+        item.end = moment(item.end);
+        oldItem.start = moment(oldItem.start);
+        oldItem.end = moment(oldItem.end);
         let itemInfo = goalItemsMap.get(item.id);
         if (!itemInfo.lines.includes(item.group)) {
             makeModalAlert("Cannot Schedule",
@@ -55,7 +59,13 @@ $(function() {
         }
         if ("start" in item) {
             try {
-                adjustEnd(item, item.start, true);
+                let newHours = item.end.diff(item.start, "hours");
+                if (newHours !== (oldItem.end.diff(oldItem.start, "hours"))) {
+                    // User has overridden the duration
+                    adjustEnd(item, item.start, newHours, true);
+                } else {
+                    adjustEnd(item, item.start, null, true);
+                }
             } catch (e) {
                 if (e.message !== "overlap") throw e;
                 makeModalAlert("Error",
@@ -83,7 +93,7 @@ $(function() {
         toggleGoalItem(item.id, true);
         if ("start" in item) {
             try {
-                adjustEnd(item, item.start, !item.suppressWarning);
+                adjustEnd(item, item.start, itemInfo.overrideHours, !item.suppressWarning);
             } catch (e) {
                 makeModalAlert("Error",
                     `Production overlaps on Manufacturing Line '${item.group}'.
@@ -96,6 +106,8 @@ $(function() {
     });
     items.on("remove", function(event, properties, senderId) {
         let itemInfo = goalItemsMap.get(properties.items[0]);
+        itemInfo.start = null;
+        itemInfo.overrideHours = null;
         toggleGoalItem(properties.items[0], itemInfo.isOrphaned);
         // generateWarnings();
     });
@@ -106,6 +118,7 @@ $(function() {
         div = $(div);
         let id = Number(div.attr("data-goal-item-id"));
         let lines = div.attr("data-lines").split(",");
+        let overrideHours = div.attr("data-override-hours");
         let itemInfo = {
             id: id,
             type: "range",
@@ -115,6 +128,7 @@ $(function() {
             goalId: Number(div.attr("data-goal-id")),
             goalItemId: Number(div.attr("data-goal-item-id")),
             deadline: moment(div.attr("data-goal-deadline")).hours(WORK_HOURS_END),
+            overrideHours: overrideHours ? Number(overrideHours) : null,
             lines: lines,
             isOrphaned: JSON.parse(div.attr("data-is-orphaned")),
             rate: Number(div.attr("data-sku-rate")),
@@ -151,9 +165,13 @@ $(function() {
             "YYYY-MM-DD HH:mm:ss");
         if (startTime.isValid()) {
             itemInfo.start = startTime;
-            if (!endTime.isValid()) {
-                endTime = getCompletionTime(startTime, itemInfo.hours);
-                itemInfo.end = endTime;
+            if (itemInfo.overrideHours) {
+                itemInfo.end = itemInfo.start.clone().add(itemInfo.overrideHours, "hours");
+            } else {
+                if (!endTime.isValid()) {
+                    endTime = getCompletionTime(startTime, itemInfo.hours);
+                    itemInfo.end = endTime;
+                }
             }
             goalItemsMap.set(id, itemInfo);
             items.add(itemInfo);
@@ -169,16 +187,24 @@ $(function() {
             let select = formDiv.find("select");
             let startTime = formDiv.find("input[name*=start_time]");
             let endTime = formDiv.find("input[name*=end_time]");
+            let overrideHours = formDiv.find("input[name*=override_hours]");
             let scheduledItem = items.get(itemId);
+            let itemInfo = goalItemsMap.get(itemId);
             if (scheduledItem !== null) {
                 select.find(`option[value=${scheduledItem.group}]`).prop("selected", true);
-                startTime.val(moment(scheduledItem.start).toISOString());
-                endTime.val(moment(scheduledItem.end).toISOString());
+                startTime.val(moment(scheduledItem.start).toISOString(true));
+                endTime.val(moment(scheduledItem.end).toISOString(true));
+                if (itemInfo.overrideHours) {
+                    overrideHours.val(itemInfo.overrideHours);
+                } else {
+                    overrideHours.val("");
+                }
                 scheduled.push(scheduledItem);
             } else {
                 select.find("option:eq(0)").prop("selected", true);
                 startTime.val("");
                 endTime.val("");
+                overrideHours.val("");
             }
         }
 
@@ -239,23 +265,28 @@ $(function() {
         });
         for (let i = 0; i < itemsInGroup.length - 1; i++) {
             if (moment(itemsInGroup[i + 1].start) <= moment(itemsInGroup[i].end)) {
-                return true;
+                throw Error("overlap");
             }
         }
         return false;
     }
 
-    function adjustEnd(item, start, showWarning) {
+    function adjustEnd(item, start, overrideHours, showWarning) {
         let itemId = item.id;
         let globalSuppress = suppressWarningCheckbox.prop("checked");
         start = moment(start);
         let itemInfo = goalItemsMap.get(itemId);
         let updates = {id: itemId};
-        updates["end"] = getCompletionTime(start, itemInfo.hours);
+        if (overrideHours) {
+            itemInfo.overrideHours = overrideHours;
+            updates["end"] = moment(start).add(overrideHours, "hours");
+        } else {
+            updates["end"] = getCompletionTime(start, itemInfo.hours);
+        }
         updates["type"] = "range";
         if (updates.end > itemInfo.deadline) {
             updates["className"] = "bg-danger text-white";
-            updates["title"] = `Start: ${start.format("lll")}.
+            updates["title"] = `${start.format("lll")} - ${updates.end.format("lll")}.
         Warning: item exceeds deadline ${itemInfo.deadline.format("lll")}`;
             if (showWarning && !globalSuppress) {
                 makeModalAlert("Warning",
@@ -264,14 +295,19 @@ $(function() {
             deadline of ${itemInfo.deadline.format("lll")} in the goal.
             Consider moving this item earlier.`);
             }
+        } else if (itemInfo.isOrphaned) {
+            updates["className"] = "bg-warning text-dark";
+            updates["title"] = `${start.format("lll")} - ${updates.end.format("lll")}`;
+        } else if (itemInfo.overrideHours) {
+            updates["className"] = "bg-warning text-dark";
+            updates["title"] = `${start.format("lll")} - ${updates.end.format("lll")} \
+            Warning: item duration is overridden to ${overrideHours} hours`;
         } else {
-            updates["className"] = itemInfo.isOrphaned ? "bg-warning text-dark" : "";
-            updates["title"] = `Start: ${start.format("lll")}`;
+            updates["className"] = "";
+            updates["title"] = `${start.format("lll")} - ${updates.end.format("lll")}`
         }
         items.update(updates, IGNORE_SENDER_ID);
-        if (checkOverlap(item)) {
-            throw Error("overlap");
-        }
+        checkOverlap(item);
     }
 
     function toggleGoalItem(goalItemId, scheduled) {
@@ -293,7 +329,14 @@ $(function() {
         }
         let endTime = startTime.clone().add(numDays, "days");
         if (remaining > 0) {
-            endTime.add(1, "days").startOf("day").hours(WORK_HOURS_START).add(remaining, "hours");
+            if (startTime.hours() <= WORK_HOURS_START) {
+                endTime.startOf("day").hours(WORK_HOURS_START).add(remaining, "hours");
+            } else {
+                endTime.add(1, "days")
+                    .startOf("day")
+                    .hours(WORK_HOURS_START)
+                    .add(remaining, "hours");
+            }
         } else {
             endTime.startOf("day").hours(WORK_HOURS_END).add(remaining, "hours");
         }
@@ -311,13 +354,17 @@ $(function() {
             let item = items.get(itemId);
             let itemInfo = goalItemsMap.get(itemId);
             if (itemInfo.isOrphaned) {
-                warnings.push(`Item '${itemInfo.content}' is orphaned. \
+                warnings.push(`'${itemInfo.content}': item is orphaned. \
                     consider removing the item.`);
                 continue;  // other warnings are suppressed for orphaned items.
             }
             if (moment(item.end) > itemInfo.deadline) {
-                warnings.push(`Item '${itemInfo.content}' exceeds \
+                warnings.push(`'${itemInfo.content}': item exceeds \
                     deadline of ${itemInfo.deadline.format("lll")}`);
+            }
+            if (itemInfo.overrideHours) {
+                warnings.push(`'${itemInfo.content}': manufacturing duration \
+                    has been overridden to ${itemInfo.overrideHours} hours.`);
             }
         }
         warningDiv.toggle(warnings.length > 0 && !suppressWarning);

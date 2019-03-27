@@ -318,6 +318,7 @@ def schedule(request):
         pk__in=set(goal_items.values_list("goal", flat=True).distinct())
     )
     if request.method == "POST":
+        logger.info("raw POST=%s", request.POST)
         formset = GoalScheduleFormset(request.POST, goal_items=goal_items)
         if formset.is_valid():
             with transaction.atomic():

@@ -206,6 +206,7 @@ ul.errorlist {
          data-goal-item-id="{{ item.pk }}"
          {% if form.item.scheduled %}
          data-is-scheduled="true"
+         data-override-hours="{{ item.schedule.override_hours }}"
          {% else %}
          data-is-scheduled="false"
          {% endif %}

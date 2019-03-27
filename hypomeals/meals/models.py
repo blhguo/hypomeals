@@ -678,7 +678,7 @@ class GoalItem(
 
     @property
     def hours(self):
-        return float(self.quantity / self.sku.manufacturing_rate)
+        return int(self.quantity / self.sku.manufacturing_rate + 1)
 
     @property
     def scheduled(self):
@@ -743,7 +743,7 @@ class GoalSchedule(
     @property
     def hours(self):
         """Returns the number of hours to complete a scheduled goal item."""
-        return float(self.goal_item.quantity / self.goal_item.sku.manufacturing_rate)
+        return int(self.goal_item.quantity / self.goal_item.sku.manufacturing_rate + 1)
 
     @property
     def completion_time(self):
@@ -751,6 +751,8 @@ class GoalSchedule(
 
     @property
     def completion_hours(self):
+        if self.override_hours:
+            return self.override_hours
         return (
             self.completion_time - self.start_time
         ).total_seconds() / SECONDS_PER_HOUR
