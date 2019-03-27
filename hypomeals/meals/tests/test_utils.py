@@ -70,8 +70,8 @@ class UtilsTest(BaseTestCase):
     def test_compute_end_time(self):
         test_cases = [
             (
-                (timezone.make_aware(start_time), hours),
-                timezone.make_aware(end_time),
+                ((start_time.replace(tzinfo=timezone.get_current_timezone())), hours),
+                end_time.replace(tzinfo=timezone.get_current_timezone()),
                 msg,
             )
             for (start_time, hours), end_time, msg in (
