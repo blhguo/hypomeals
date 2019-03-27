@@ -138,6 +138,62 @@
 <h3 class="mb-3">Sales Report for SKU #{{ sku.pk }}: {{ sku.name }}</h3>
 
 <div style="overflow: scroll;">
+        <table class="table">
+            <thead class="thead-light">
+                <tr>
+                    <th>SKU#</th>
+                    <th>Name</th>
+                    <th>Yearly Revenue</th>
+                    <th>Avg Run Size</th>
+                    <th>Ingredient Cost</th>
+                    <th>Setup Cost</th>
+                    <th>Run Cost</th>
+                    <th>COGS</th>
+                    <th>Avg Revenue</th>
+                    <th>Avg Profit</th>
+                    <th>Profit Margin</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for number, name, rev_sum, avg_run_size, ingredient_cost_per_case, setup_cost_per_case, run_cost_per_case, cogs, avg_rev_per_case, avg_profit_per_case, profit_margin, sku_info in sku_summary %}
+                    <tr>
+                        <td class="align-middle">
+                            {{ number }}
+                        </td>
+                        <td class="align-middle">
+                            <a href="{% url 'drilldown' number %}{{ drilldown_params }}">{{ name }}</a>
+                        </td>
+                        <td nowrap class="align-middle">
+                            $ {{ rev_sum|quantize|intcomma }}
+                        </td>
+                        <td class="align-middle">
+                            {{ avg_run_size|quantize }}
+                        </td>
+                        <td nowrap class="align-middle">
+                            $ {{ ingredient_cost_per_case|quantize|intcomma }}
+                        </td>
+                        <td nowrap="" class="align-middle">
+                            $ {{ setup_cost_per_case|quantize }}
+                        </td>
+                        <td nowrap="" class="align-middle">
+                            $ {{ run_cost_per_case|quantize }}
+                        </td>
+                        <td nowrap class="align-middle">
+                            $ {{ cogs|quantize|intcomma }}
+                        </td>
+                        <td nowrap class="align-middle">
+                            $ {{ avg_rev_per_case|quantize }}
+                        </td>
+                        <td nowrap class="align-middle">
+                            $ {{ avg_profit_per_case|quantize }}
+                        </td>
+                        <td class="align-middle">
+                            {{ profit_margin|percentage }}%
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
 <table class="table">
 <thead class="thead-light">
 <tr>
