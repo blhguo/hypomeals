@@ -160,16 +160,16 @@
                                         </tr>
                                         </thead>
                                         <tbody>
-                                        {% for year, sku, tot_rev, avg_rev in sku_info %}
+                                        {% for year, sku_number, sku_name, tot_rev, avg_rev in sku_info %}
                                         <tr>
                                             <td class="align-middle">
                                                 {{ year }}
                                             </td>
                                             <td class="align-middle">
-                                                {{ sku.number }}
+                                                {{ sku_number }}
                                             </td>
                                             <td class="align-middle">
-                                                <a href="{% url 'edit_sku' sku.number %}">{{ sku.name }}</a>
+                                                <a href="{% url 'edit_sku' sku_number %}">{{ sku_name }}</a>
                                             </td>
                                             <td class="align-middle">
                                                 $ {{ tot_rev|quantize|intcomma }}

@@ -161,7 +161,7 @@ def sku_revenue(sku, customers, begin_year):
         sales_tot = sales_per_year["revenue"]
         num_tot = sales_per_year["count"]
         sku_ten_year.append(
-            (year, sku, sales_tot, sales_tot / num_tot)
+            (year, sku.number, sku.name, sales_tot, sales_tot / num_tot)
         )
         rev_sum += sales_tot
         num_sales += num_tot
