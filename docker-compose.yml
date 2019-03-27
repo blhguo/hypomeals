@@ -25,6 +25,7 @@ services:
             - web-vars.env
         volumes:
             - ./hypomeals:/code
+            - ./credentials/credentials.json:/code/credentials.json:ro
             - ./static:/srv/static
     redis:
         image: "redis:5.0.3"
@@ -43,9 +44,7 @@ services:
         command: /code/runserver.sh
         volumes:
             - ./hypomeals:/code
-            - ./static:/srv/static
-            - ./credentials/hypomeals-write-only.json:/code/hypomeals-write-only.json:ro
-            - ./credentials/oauth_config.json:/code/oauth_config.json:ro
+            - ./credentials/credentials.json:/code/credentials.json:ro
         expose:
             - "8000"
         depends_on:
@@ -59,9 +58,7 @@ services:
         command: /code/runcelery.sh
         volumes:
             - ./hypomeals:/code
-            - ./credentials/backup.key:/code/backup.key:ro
-            - ./credentials/hypomeals-write-only.json:/code/hypomeals-write-only.json:ro
-            - ./credentials/email_config.json:/code/email_config.json:ro
+            - ./credentials/credentials.json:/code/credentials.json:ro
         depends_on:
             - redis
     # This is a scheduler service that runs the daily jobs
@@ -73,6 +70,7 @@ services:
         command: /code/runcelerybeat.sh
         volumes:
             - ./hypomeals:/code
+            - ./credentials/credentials.json:/code/credentials.json:ro
         depends_on:
             - redis
             - celery
@@ -87,5 +85,11 @@ services:
             - ./hypomeals/logs/:/var/log/nginx/
         depends_on:
             - web
+    backup:
+        build: ./backup
+        volumes:
+            - ./credentials/backup.key:/backup.key:ro
+            - ./credentials/credentials.json:/credentials.json
+            - ./backup/snapshots:/backup
 volumes:
     db-data:
