@@ -41,7 +41,8 @@ td.text-center {
 
 <!-- Collisions Table -->
 <div class="row">
-<div class="col-sm-12">
+<div class="col-sm-12" style="overflow: scroll;">
+
 <table class="table table-bordered">
 <thead class="thead-light">
 <tr>
@@ -81,12 +82,12 @@ td.text-center {
     <label class="form-check-label"
            for="confirmOverwrite">
         By checking this box, I understand that I am about to overwrite
-        {{ collisions|length }} conflict{{ total_conflicts|pluralize }}
+        {{ total_conflicts }} conflict{{ total_conflicts|pluralize }}
         above and that this action cannot be undone.
     </label>
 </div>
 
-<div class="btn-group mt-2">
+<div class="btn-group my-2">
     <a href="{% url 'collision' %}?force=1"
        class="btn btn-danger"
        id="confirmOverwriteButton">

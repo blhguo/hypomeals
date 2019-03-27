@@ -53,21 +53,6 @@ def process_csv_files(files, session_key: str) -> Tuple[Dict[str, int], Dict[str
     return inserted, ignored
 
 
-def _save_instance(instance):
-    """
-    Saves an instance with ForeignKey objects that are potentially not committed to
-    DB.
-    :param instance: an instance to save
-    """
-    for field in instance._meta.fields:
-        if isinstance(field, RelatedField):
-            fk = getattr(instance, field.name)
-            fk.save()
-            setattr(instance, field.name, fk)
-            logger.info("Saved fk %s (#%d) %s", field.name, fk.pk, str(fk))
-    instance.save()
-
-
 @transaction.atomic
 def _force_save(tx: Dict[str, Importer]):
     start = time.time()

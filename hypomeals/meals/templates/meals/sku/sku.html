@@ -1,6 +1,7 @@
 {% extends "meals/base.html" %}
 {% load staticfiles %}
 {% load meals_extras %}
+{% load humanize %}
 
 {% block sku_active %}active{% endblock %}
 {% block title %}Review SKUs{% endblock %}
@@ -223,8 +224,8 @@
     <th nowrap>Formula Scale Factor</th>
     <th nowrap>Manufacturing Lines</th>
     <th>Rate</th>
-    <th>Setup Cost</th>
-    <th>Run Cost</th>
+    <th nowrap>Setup Cost</th>
+    <th nowrap>Run Cost</th>
     <th>Sales</th>
     <th style="width: 25rem;">Comment</th>
 </tr>
@@ -281,11 +282,11 @@
     <td>
         {{ sku.manufacturing_rate|quantize:2 }}
     </td>
-    <td>
-        {{ sku.setup_cost|quantize:2 }}
+    <td nowrap>
+        $ {{ sku.setup_cost|quantize:2|intcomma }}
     </td>
-    <td>
-        {{ sku.run_cost|quantize:2 }}
+    <td nowrap>
+        $ {{ sku.run_cost|quantize:2|intcomma }}
     </td>
     <td>
         <a href="{% url 'drilldown' sku.number %}">Report</a>

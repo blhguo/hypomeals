@@ -9,6 +9,7 @@ import string
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta
+from decimal import Decimal
 from functools import wraps
 from typing import Type, Tuple, Callable
 
@@ -33,8 +34,10 @@ from meals.constants import (
     WORK_HOURS_END,
     WORK_HOURS_START,
     SECONDS_PER_HOUR,
+    USD_EXP_REGEX,
 )
 
+logger = logging.getLogger(__name__)
 
 def exception_to_error(func):
     @wraps(func)
@@ -301,9 +304,12 @@ class ModelFieldsCompareMixin:
             value2 = getattr(i2, field.name)
             if isinstance(field, ForeignKey):
                 if hasattr(field.related_model, "compare_instances"):
-                    return field.related_model.compare_instances(value1, value2)
+                    if not field.related_model.compare_instances(value1, value2):
+                        return False
             else:
                 if value1 != value2:
+                    logger.info("%s %s %s %s", type(value1), value1, type(value2),
+                                value2)
                     return False
         return True
 
@@ -540,3 +546,10 @@ def chunked_read(file, chunk_size=1024):
         if not data:
             break
         yield data
+
+
+def parse_usd(expression: str) -> float:
+    match = USD_EXP_REGEX.fullmatch(expression)
+    if not match:
+        raise ValueError(f"'{expression}' is not a valid USD expression")
+    return Decimal(match.group(1))

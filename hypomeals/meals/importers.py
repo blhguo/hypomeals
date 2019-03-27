@@ -214,7 +214,7 @@ class AmbiguousRecord(UserFacingException, Generic[T]):
     def __str__(self) -> str:
         result = self.message
         result += (
-            f"\nRecord '{self.record}' "
+            f"\nRecord '{self.record.instance}' "
             f"matched {len(self.matches)} existing record(s):"
         )
         for i, (attr, match) in enumerate(self.matches.items(), start=1):
@@ -536,10 +536,14 @@ class Importer(ABC, Generic[T]):
             if field.attname not in record.m2m:
                 raise ImportException(f"m2m relationship not found: {field.attname}")
             related = record.m2m[field.attname]
-            manager = getattr(record.instance, field.attname)
+            if isinstance(record.instance, CollisionException):
+                instance = record.instance.new_instance
+            else:
+                instance = record.instance
+            manager = getattr(instance, field.attname)
             if hasattr(manager, "through"):
                 manager = manager.through.objects
-            manager.filter(**{self.model_opts.model_name: record.instance}).delete()
+            manager.filter(**{self.model_opts.model_name: instance}).delete()
             manager.bulk_create(related)
 
     def _save_m2m(self, record: Record[T]) -> None:
@@ -580,6 +584,8 @@ class SkuImporter(Importer):
         "Formula factor",
         "ML Shortnames",
         "Rate",
+        "Mfg setup cost",
+        "Mfg run cost",
         "Comment",
     ]
     primary_key = Sku._meta.get_field("number")
@@ -598,13 +604,23 @@ class SkuImporter(Importer):
         "formula_scale": "Formula factor",
         "manufacturing_lines": "ML Shortnames",
         "manufacturing_rate": "Rate",
+        "setup_cost": "Mfg setup cost",
+        "run_cost": "Mfg run cost",
         "comment": "Comment",
     }
 
     def _process_row(
         self, row: Dict[str, Any], filename: str = None, line_num: int = None
     ) -> Dict[str, Any]:
+        try:
+            row["SKU#"] = int(row["SKU#"])
+        except ValueError:
+            raise UserFacingException(
+                f"SKU number must be numeric; '{row['SKU#']}' is not a valid integer."
+            )
         raw_formula = row["Formula#"]
+
+        row["Count per case"] = int(row["Count per case"])
 
         formula_qs = Formula.objects.filter(number=raw_formula)
         if formula_qs.exists():
@@ -625,7 +641,8 @@ class SkuImporter(Importer):
             else:
                 raise ValidationError(
                     "Cannot import SKU#: %(sku_num)s due to non-consumer Case UPC",
-                    params={'sku_num': row["SKU#"]})
+                    params={"sku_num": row["SKU#"]},
+                )
         else:
             raise UserFacingException(f"{raw_case_upc} is not a valid UPC.")
         raw_unit_upc = row["Unit UPC"]
@@ -635,7 +652,8 @@ class SkuImporter(Importer):
             else:
                 raise ValidationError(
                     "Cannot import SKU#: %(sku_num)s due to non-consumer Unit UPC",
-                    params={'sku_num': row["SKU#"]})
+                    params={"sku_num": row["SKU#"]},
+                )
         else:
             raise UserFacingException(f"{raw_unit_upc} is not a valid UPC.")
         if row["Comment"] is None:
@@ -675,6 +693,24 @@ class SkuImporter(Importer):
             )
 
         row["ML Shortnames"] = ml_objs.all()
+
+        for field in ["Rate", "Formula factor"]:
+            try:
+                row[field] = Decimal(str(row[field]))
+            except InvalidOperation:
+                raise UserFacingException(
+                    f"'{row[field]}' is not a valid floating point number."
+                )
+
+        for field in ["Mfg setup cost", "Mfg run cost"]:
+            try:
+                row[field] = Decimal(utils.parse_usd(row[field]))
+            except (InvalidOperation, ValueError):
+                raise UserFacingException(
+                    "Cost must be a USD expression; "
+                    f"'{row[field]}' is not a valid USD expression."
+                )
+
         return row
 
     def _construct_record(self, row: Dict[str, Any], line_num: int = None) -> Record:
@@ -694,7 +730,7 @@ class IngredientImporter(Importer):
     file_type = "ingredients"
     header = ["Ingr#", "Name", "Vendor Info", "Size", "Cost", "Comment"]
     model = Ingredient
-    model_name = ("Ingredient",)
+    model_name = "Ingredient"
     field_dict = {
         "number": "Ingr#",
         "name": "Name",
@@ -714,11 +750,14 @@ class IngredientImporter(Importer):
         except RuntimeError as e:
             raise UserFacingException(str(e))
         try:
-            row["Size"] = Decimal(row["Size"])
+            # The CSV parser is being too "helpful" by converting size to a float...
+            row["Size"] = Decimal(str(row["Size"]))
         except InvalidOperation:
-            raise UserFacingException(
-                f"{row['Size']}is not a valid floating point number"
-            )
+            raise UserFacingException(f"{row['Size']}is not a valid decimal number")
+        try:
+            row["Cost"] = Decimal(utils.parse_usd(row["Cost"]))
+        except ValueError as e:
+            raise UserFacingException(str(e))
 
         vendor = Vendor.objects.filter(info=row["Vendor Info"])
         if vendor.exists():
@@ -803,10 +842,11 @@ class FormulaImporter(Importer):
         lines_copy = copy.copy(lines)
         super_result = super().do_import(lines)
         self.fi_importer = FormulaIngredientImporter(
+            filename=self.filename,
             formulas={
                 instance.name: instance
                 for instance in itertools.chain(self.instances, self.ignored)
-            }
+            },
         )
         fi_result = self.fi_importer.do_import(lines_copy)
         return (
@@ -862,7 +902,8 @@ class ProductLineImporter(Importer):
         instance = record.instance
         existing = self.model.objects.filter(name=instance.name)
         if existing.exists():
-            return existing[0]
+            record.instance = existing[0]
+            raise IdenticalRecord(record)
         instance.save()
         return record
 

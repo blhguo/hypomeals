@@ -116,3 +116,5 @@ USERS_GROUP = "Users"
 # For now we are hard-coding a wait time for each SKU whose sales records are not yet
 # ready.
 SALES_WAIT_TIME_MINUTES = 5.0
+
+USD_EXP_REGEX = re.compile(r"^\s*\$?\s*([+-]?\d*\.?\d+)\D*$")
