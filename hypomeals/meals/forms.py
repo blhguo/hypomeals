@@ -1046,6 +1046,7 @@ class FormulaFormsetBase(forms.BaseFormSet):
                 continue
             logger.info(form.cleaned_data)
             ingr_number = form.cleaned_data["ingredient"].number
+            ingr_unit = form.cleaned_data["ingredient"].unit
             if ingr_number in ingredients:
                 errors.append(
                     ValidationError(
@@ -1060,6 +1061,21 @@ class FormulaFormsetBase(forms.BaseFormSet):
                 )
             else:
                 ingredients[ingr_number] = index
+            user_input_type = Unit.objects.filter(symbol=form.cleaned_data["unit"])[0].unit_type
+            if ingr_unit.unit_type != user_input_type:
+                errors.append(
+                    ValidationError(
+                        "Row %(error_row)d: Ingredient Unit Type '%(type1)s' is not the"
+                        " same type as specified in database, which is Unit Type"
+                        " '%(type2)s'",
+                        params={
+                            "type1": user_input_type,
+                            "type2": ingr_unit.unit_type,
+                            "error_row": index,
+                        },
+                    )
+                )
+
         if errors:
             raise ValidationError(errors)
 
