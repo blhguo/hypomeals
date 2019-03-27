@@ -80,7 +80,7 @@ services:
     backup:
         build: ./backup
         environment:
-            - "DB_HOST=vcm-4081.vm.duke.edu"
+            - "DB_HOSTNAME=vcm-4081.vm.duke.edu"
             - "DB_PORT=2222"
         volumes:
             - ./credentials/backup.key:/backup.key:ro

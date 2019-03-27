@@ -32,13 +32,14 @@ function send_email {
 echo "Backup up database $HOSTNAME:$PORT"
 start=$SECONDS
 ssh -i /backup.key "root@$HOSTNAME" -p "$PORT" -o StrictHostKeyChecking=no -C pg_dumpall -U postgres > ./backup.sql
-chmod 400 ./backup.sql
 
 if [[ $? -ne 0 ]]; then
     echo "Backup failed... Sending email"
     send_email "HypoMeals Backup Failed" "Backup failed at $(date). Please check ASAP."
+    exit 1
 fi
 
+chmod 400 ./backup.sql
 end=$SECONDS
 echo "Backup completed in $((end - start)) seconds"
 send_email "HypoMeals Backup Succeeded" "Backup succeeded at $(date)."
