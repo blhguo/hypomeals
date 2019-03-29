@@ -1,1 +1,1 @@
-0 1 * * * root /usr/bin/rsnapshot -c /etc/rsnapshot.conf alpha
+0 1 * * * root /usr/bin/rsnapshot -c /etc/rsnapshot.conf -v alpha

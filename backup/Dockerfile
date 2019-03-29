@@ -8,6 +8,7 @@ ADD crontab /etc/cron.d/rsnapshot
 
 RUN chmod +x /scripts/backup_pgsql.sh
 RUN crontab /etc/cron.d/rsnapshot
+RUN chmod 644 /etc/cron.d/rsnapshot
 RUN touch /var/log/cron.log
 
 ENTRYPOINT ["cron", "-f"]
