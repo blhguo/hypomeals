@@ -1,1 +1,2 @@
 0 1 * * * root /usr/bin/rsnapshot -c /etc/rsnapshot.conf -v alpha
+* * * * * root /usr/bin/env > /cron-env

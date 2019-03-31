@@ -1,0 +1,5 @@
+HOME=/root
+LOGNAME=root
+PATH=/usr/bin:/bin
+SHELL=/bin/sh
+PWD=/root
