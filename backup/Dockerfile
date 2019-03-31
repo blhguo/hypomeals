@@ -5,6 +5,7 @@ ADD rsnapshot.conf /etc/rsnapshot.conf
 
 ADD backup_pgsql.sh /scripts/backup_pgsql.sh
 ADD crontab /etc/cron.d/rsnapshot
+ADD conninfo.json /conninfo.json
 ADD run_as_cron /scripts/run_as_cron
 ADD cron_env /cron_env
 

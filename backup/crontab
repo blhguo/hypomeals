@@ -1,2 +1,2 @@
-0 1 * * * root /usr/bin/rsnapshot -c /etc/rsnapshot.conf -v alpha
-* * * * * root /usr/bin/env > /cron-env
+# 6 AM UTC = 1 AM EST
+0 6 * * * root /usr/bin/rsnapshot -c /etc/rsnapshot.conf -v alpha

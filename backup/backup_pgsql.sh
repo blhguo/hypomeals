@@ -1,15 +1,22 @@
 #!/bin/bash
 
-if [[ -z "$DB_HOSTNAME" ]]; then
-    HOSTNAME="db"
+if [[ -e "/conninfo.json" ]]; then
+    # Read from conninfo.json if the file exists
+    HOSTNAME=$(/bin/cat /conninfo.json | /usr/bin/jq -r .hostname)
+    PORT=$(/bin/cat /conninfo.json | /usr/bin/jq -r .port)
 else
-    HOSTNAME="$DB_HOSTNAME"
-fi
+    # Otherwise get hostname/port from environment variable
+    if [[ -z "$DB_HOSTNAME" ]]; then
+        HOSTNAME="db"
+    else
+        HOSTNAME="$DB_HOSTNAME"
+    fi
 
-if [[ -z "$DB_PORT" ]]; then
-    PORT="22"
-else
-    PORT="$DB_PORT"
+    if [[ -z "$DB_PORT" ]]; then
+        PORT="22"
+    else
+        PORT="$DB_PORT"
+    fi
 fi
 
 function send_email {
