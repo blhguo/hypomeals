@@ -156,7 +156,7 @@ def send_task_reminder(person: str, email: str) -> None:
                 assigned_to[row["Assigned to"]].append(row)
 
     if not assigned_to["U4G"] and not assigned_to[person]:
-        logger.info("%s has completed all tasks and no U4G tasks. Skipping...")
+        logger.info("%s has completed all tasks and no U4G tasks. Skipping...", person)
         return
     logger.info("Sending email to %s <%s>", person, email)
 
