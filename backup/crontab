@@ -1,2 +1,6 @@
 # 6 AM UTC = 1 AM EST
 0 6 * * * root /usr/bin/rsnapshot -c /etc/rsnapshot.conf -v alpha
+# Weekly backups run on first of each week
+0 6 * * 1 root /usr/bin/rsnapshot -c /etc/rsnapshot.conf -v beta
+# Monthly backups run on first of each month
+0 6 1 * * root /usr/bin/rsnapshot -c /etc/rsnapshot.conf -v gamma
