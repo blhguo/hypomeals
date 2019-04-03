@@ -597,7 +597,7 @@ class SaleFilterForm(forms.Form, utils.BootstrapFormControlMixin):
             end_year, end_week, _ = params["end"].isocalendar()
             # year < end_year || (year == end_year && week <= end_week)
             query_filter &= Q(year__lt=end_year) | (
-                Q(year=end_year) | Q(week__lte=end_week)
+                Q(year=end_year) & Q(week__lte=end_week)
             )
             # year > start_year || (year == start_year && week >= start_week)
             query_filter &= Q(year__gt=start_year) | (
