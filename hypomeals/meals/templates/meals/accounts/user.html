@@ -1,5 +1,6 @@
 {% extends 'meals/base.html' %}
 {% load static %}
+{% load meals_extras %}
 {% block title %}Users{% endblock %}
 
 {% block users_active %}active{% endblock %}
@@ -51,8 +52,8 @@
     <th>First Name</th>
     <th>Last Name</th>
     <th>Email</th>
-    <th>Admin?</th>
     <th>NetID</th>
+    <th>Roles</th>
 </tr>
 </thead>
 
@@ -71,14 +72,12 @@
     <td>{{ user.first_name }}</td>
     <td>{{ user.last_name }}</td>
     <td>{{ user.email }}</td>
-    <td class="d-flex justify-content-start">
-        {% if user.is_admin %}
-            <span class="fas fa-check"></span>
-        {% else %}
-            <span class="fas fa-times"></span>
-        {% endif %}
-    </td>
     <td>{% if user.netid %}{{ user.netid }}{% else %}N&#47;A{% endif %}</td>
+    <td>
+        {% for role in user.groups|values_list:'name' %}
+        <span class="badge badge-pill badge-primary">{{ role }}</span>
+        {% endfor %}
+    </td>
 </tr>
 {% endfor %}
 </tbody>

@@ -1,4 +1,4 @@
-#pylint: disable-msg=unexpected-keyword-arg
+# pylint: disable-msg=unexpected-keyword-arg
 
 import csv
 import json
@@ -20,7 +20,7 @@ from django.utils.datetime_safe import datetime
 
 from meals import auth
 from meals import utils
-from meals.constants import WORK_HOURS_END, ADMINS_GROUP
+from meals.constants import WORK_HOURS_END
 from meals.forms import (
     SkuQuantityFormset,
     GoalForm,
@@ -50,10 +50,7 @@ def _get_goal(request, goal_id):
         it. Raises PermissionDenied otherwise.
     """
     goal = get_object_or_404(Goal, pk=goal_id)
-    if (
-        request.user.is_superuser
-        or request.user.groups.filter(name=ADMINS_GROUP).exists()
-    ):
+    if request.user.is_admin:
         # User is admin, grant access
         logger.info("Granting admin access for goal %d", goal_id)
         return goal
@@ -64,13 +61,21 @@ def _get_goal(request, goal_id):
     messages.error(
         request, "You do not have permission to view this goal. Did you create it?"
     )
+    messages.error(
+        request, "You may only view goals created by yourself."
+    )
     raise PermissionDenied
 
 
 @login_required
+@auth.permission_required_ajax(
+    perm=("meals.change_goal",),
+    msg="You do not have permission to edit manufacturing goals,",
+    reason="Only business managers may edit manufacturing goals",
+)
 def edit_goal(request, goal_id=-1):
     if goal_id != -1:
-        goal_obj = get_object_or_404(Goal, pk=goal_id)
+        goal_obj = _get_goal(request, goal_id)
     else:
         goal_obj = None
     logger.info("Goal: %s", repr(goal_obj))
@@ -144,6 +149,11 @@ def edit_goal(request, goal_id=-1):
 
 
 @login_required
+@auth.permission_required_ajax(
+    perm=("meals.view_goal",),
+    msg="You do not have permission to the manufacturing calculator,",
+    reason="Only analysts may use the manufacturing calculator",
+)
 def export_csv(request, goal_id):
     goal = _get_goal(request, goal_id)
     items = goal.details.all()
@@ -176,6 +186,11 @@ def _calculate_report(goal, result=None):
 
 
 @login_required
+@auth.permission_required_ajax(
+    perm=("meals.view_goal",),
+    msg="You do not have permission to the manufacturing calculator,",
+    reason="Only analysts may use the manufacturing calculator",
+)
 def view_calculations(request, goal_id):
     to_print = request.GET.get("print", "0") == "1"
     goal = _get_goal(request, goal_id)
@@ -213,10 +228,21 @@ def _generate_calculation(request, goal_id, output_format="csv"):
     return response
 
 
-generate_calculation_csv = login_required(_generate_calculation)
+generate_calculation_csv = login_required(
+    auth.permission_required_ajax(
+        perm=("meals.view_goal",),
+        msg="You do not have permission to view manufacturing goals,",
+        reason="Only analysts may view manufacturing goals",
+    )(_generate_calculation)
+)
 
 
 @login_required
+@auth.permission_required_ajax(
+    perm=("meals.view_goal",),
+    msg="You do not have permission to view manufacturing goals,",
+    reason="Only analysts may view manufacturing goals",
+)
 def goals(request):
     start = time.time()
 
@@ -297,13 +323,21 @@ def _enable_goals(request, is_enabled=False):
 
 
 @login_required
-@auth.user_is_admin_ajax(msg="Only administrators may enable goals.")
+@auth.permission_required_ajax(
+    perm=("meals.change_goal",),
+    msg="You don't have permission to enable goals,",
+    reason="Only business managers may enable goals.",
+)
 def enable_goals(request):
     return _enable_goals(request, True)
 
 
 @login_required
-@auth.user_is_admin_ajax(msg="Only administrators may disable goals.")
+@auth.permission_required_ajax(
+    perm=("meals.change_goal",),
+    msg="You don't have permission to disable goals,",
+    reason="Only business managers may disable goals.",
+)
 def disable_goals(request):
     return _enable_goals(request, False)
 
@@ -311,6 +345,7 @@ def disable_goals(request):
 @login_required
 @auth.user_is_admin_ajax(msg="Only administrators may create a manufacturing schedule.")
 def schedule(request):
+    # TODO: Permission checking is more complicated here
     goal_items = GoalItem.objects.filter(
         Q(schedule__isnull=False) | Q(goal__is_enabled=True)
     )
@@ -351,6 +386,11 @@ def schedule(request):
 
 
 @login_required
+@auth.permission_required_ajax(
+    perm=("meals.view_goal",),
+    msg="You do not have permission to the manufacturing report,",
+    reason="Only analysts view the manufacturing report",
+)
 def schedule_report(request):
     line_shortname = request.GET.get("l", "")
     start = request.GET.get("s", "")

@@ -14,7 +14,16 @@ from meals.models import User
 
 
 @utils.parameterized
-def permission_required_ajax(func, perm):
+def permission_required_ajax(
+    func, perm, msg="You do not have permission to perform this action,", reason=""
+):
+    """
+    Checks the permission of a user in a (possibly AJAX) request, and raise an
+    exception / return error response as appropriate.
+    :param perm: permission, or a list of permissions
+    :param msg: a message when permission is denied. *Should end in a comma*.
+    :param reason: if provided, will be listed in the 403 page as reasons
+    """
 
     if not perm:
         return func
@@ -28,11 +37,12 @@ def permission_required_ajax(func, perm):
     def wrapper(request, *args, **kwargs):
         if request.user.has_perms(perms):
             return func(request, *args, **kwargs)
-        message = "You do not have permission to execute this action."
         if not request.is_ajax():
-            raise PermissionDenied(message)
+            if reason:
+                messages.error(request, reason)
+            raise PermissionDenied(msg)
         return JsonResponse(
-            {"error": "Permission Denied", "resp": message, "alert": message}
+            {"error": "Permission Denied", "resp": msg, "alert": msg}
         )
 
     return wrapper
