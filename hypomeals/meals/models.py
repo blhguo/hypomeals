@@ -4,7 +4,8 @@ import re
 from decimal import Decimal
 
 from django.conf import settings
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, Permission, Group
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -566,11 +567,39 @@ class ManufacturingLine(
     )
     comment = models.CharField(max_length=4000, verbose_name="Comment")
 
+    @cached_property
+    def get_content_type(self):
+        return ContentType.objects.get_for_model(ManufacturingLine)
+
     def __repr__(self):
         return f"<MfgLine #{self.pk}: {self.shortname}>"
 
     def __str__(self):
         return self.shortname
+
+    def create_permission(self):
+        """
+        Create the permission for this manufacturing line, and the corresponding group
+        a user must be in to be considered Plant Manager.
+        """
+        content_type = self.get_content_type
+        perm = Permission.objects.get_or_create(
+            codename=f"owns_ml_{self.shortname}",
+            defaults={
+                "name": f"Owns manufacturing line {self.shortname}",
+                "content_type": content_type,
+            },
+        )[0]
+        group, _ = Group.objects.get_or_create(
+            name=f"Plant Manager ({self.shortname})"
+        )
+        group.permissions.add(perm)
+
+    def save(
+        self, force_insert=False, force_update=False, using=None, update_fields=None
+    ):
+        super().save(force_insert, force_update, using, update_fields)
+        self.create_permission()
 
     class Meta:
         ordering = ["shortname"]

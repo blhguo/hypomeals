@@ -17,29 +17,46 @@ else:
     superuser = User.objects.get(username="admin")
     superuser.set_password(user_password)
     superuser.save()
-view_only_user = User.objects.get_or_create(
-    username="viewonly",
-    defaults={
-        "first_name": "ViewOnly",
-        "last_name": "Perm",
-        "email": "abc@example.com",
-    },
-)[0]
-view_only_user.set_password(user_password)
+
+print("Setting up permission system and groups...")
 
 users_group = Group.objects.get_or_create(name="Users")[0]
 admins_group = Group.objects.get_or_create(name="Admins")[0]
-view_perms = Permission.objects.filter(codename__startswith="view")
+analysts_group = Group.objects.get_or_create(name="Analysts")[0]
+product_managers_group = Group.objects.get_or_create(name="Product Managers")[0]
+business_managers_group = Group.objects.get_or_create(name="Business Managers")[0]
 
-for perm in view_perms:
-    users_group.permissions.add(perm)
+core_data_perms = Permission.objects.filter(
+    content_type__model__in={
+        "sku",
+        "ingredient",
+        "formula",
+        "formulaingredient",
+        "manufacturingline",
+        "skumanufacturingline",
+        "productline",
+    }
+)
+core_data_viewonly = core_data_perms.filter(codename__istartswith="view").all()
+core_data_full = core_data_perms.all()
 
-all_perms = Permission.objects.all()
-for perm in all_perms:
-    admins_group.permissions.add(perm)
+analyst_perms = Permission.objects.filter(
+    content_type__model__in={"goal", "goalitem", "goalschedule", "sale", "customer"}
+)
+analyst_viewonly = analyst_perms.filter(codename__istartswith="view").all()
+analyst_full = analyst_perms.all()
 
+users_group.permissions.add(*core_data_viewonly)
 
-view_only_user.groups.add(users_group)
-view_only_user.save()
+analysts_group.permissions.add(*core_data_viewonly)
+analysts_group.permissions.add(*analyst_viewonly)
+
+product_managers_group.permissions.add(*core_data_full)
+product_managers_group.permissions.add(*analyst_viewonly)
+
+business_managers_group.permissions.add(*core_data_viewonly)
+business_managers_group.permissions.add(
+    *Permission.objects.filter(content_type__model__in={"goal", "goalitem"}).all()
+)
 
 print("SUCCESS: Database is ready for use.")
