@@ -175,6 +175,7 @@
         <span class="fas {% if goal.scheduled %}fa-check{% else %}fa-times{% endif %}"></span>
     <td>{{ goal.user.get_full_name }}</td>
     {% endif %}
+
     <td>{{ goal.save_time|naturaltime }}</td>
     <td>
         <div class="btn-group">
