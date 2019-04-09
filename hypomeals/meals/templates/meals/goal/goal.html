@@ -19,14 +19,14 @@
     formatted manufacturing report, click the "Report" button. You may also
     download manufacturing reports and the goal itself from the "Download"
     menu.</p>
-    {% if request.user.is_admin %}
+    {% if perms.meals.view_goal %}
     <p class="mb-0">
-    As administrator you may select goals from different users to compile
+    You may select goals from different users to compile
     <a href="#" class="mfgScheduleTooltips">manufacturing schedules</a>.
     </p>
     {% else %}
     <p class="mb-0">
-        An administrator may choose to enable or disable your goals to produce
+        An Plant Manager, Product Manager, or Business Manager may choose to enable or disable your goals to produce
         a <a href="#" class="mfgScheduleTooltips">manufacturing schedule</a>.
     </p>
     {% endif %}
@@ -129,7 +129,8 @@
 <table class="table">
 <thead class="thead-light">
 <tr>
-    {% if request.user.is_admin %}
+{#this is wrong, im looking into it right now#}
+    {% if perms.meals.change_goal and perms.meals.view_goal %}
     <th>
         <div class="custom-control custom-checkbox">
         <input type="checkbox"
@@ -141,7 +142,7 @@
     {% endif %}
     <th>Goal Name</th>
     <th>Deadline</th>
-    {% if request.user.is_admin %}
+    {% if perms.meals.change_goal and perms.meals.view_goal %}
     <th>
         <a href="#"
            title="Whether this goal is Enabled / Scheduled"
@@ -156,7 +157,7 @@
 <tbody>
 {% for goal in all_goals %}
 <tr>
-    {% if request.user.is_admin %}
+    {% if perms.meals.view_goal %}
     <td>
         <div class="custom-control custom-checkbox">
         <input type="checkbox" data-goal-id="{{ goal.pk }}"
@@ -168,7 +169,7 @@
     {% endif %}
     <td><a href = "{% url 'edit_goal' goal.pk %}">{{ goal.name }}</a></td>
     <td>{{ goal.deadline|date:"N d, Y" }} ({{ goal.deadline|naturaltime }})</td>
-    {% if request.user.is_admin %}
+    {% if perms.meals.view_goal %}
     <td class="d-flex justify-content-between align-items-center">
         <span class="fas {% if goal.is_enabled %}fa-check{% else %}fa-times{% endif %}"></span>
         <span class="fas {% if goal.scheduled %}fa-check{% else %}fa-times{% endif %}"></span>

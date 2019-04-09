@@ -58,14 +58,14 @@
 </div>
 <div class="col-sm-4">
 <div class="btn-group my-4" style="float: right;">
-    {% if request.user.is_admin %}
+    {% if perms.meals.add_sku %}
     <a id="addSkuButton"
         href="{% url 'add_sku' %}"
         class="btn btn-primary">
         <span class="fa fa-plus"></span> Add a new SKU
     </a>
     {% endif %}
-    {% if request.user.is_admin %}
+    {% if perms.meals.delete_sku %}
     <button type="button"
             class="btn btn-danger"
             disabled
@@ -76,7 +76,7 @@
         <span class="fa fa-minus"></span> Remove selected
     </button>
     {% endif %}
-    {% if request.user.is_admin %}
+    {% if perms.meals.change_skumanufacturingline %}
     <button type="button" class="btn btn-info"
        disabled
        id="bulkButton">
@@ -153,6 +153,8 @@
 
 <!-- Export buttons -->
 <hr>
+{% if perms.meals.change_sku and perms.meals.change_ingredient and perms.meals.change_formula %}
+{% if perms.meals.change_formulaingredient and perms.meals.change_productline and perms.meals.change_manufacturingline and perms.meals.change_skumanufacturingline and perms.meals.change_productline %}
 <h3>Export</h3>
 <div class="form-check mb-2 w-100">
     <input class="form-check-input"
@@ -187,7 +189,10 @@
 </button>
 
 <div></div>
+{% endif %}
+{% endif %}
 </div>
+
 
 
 <!-- Table column -->
@@ -203,7 +208,7 @@
 <table class="table">
 <thead class="thead-light">
 <tr>
-    {% if request.user.is_admin %}
+    {% if perms.meals.delete_sku and perms.meals.change_skumanufacturingline %}
     <th>
         <div class="custom-control custom-checkbox">
         <input type="checkbox"
@@ -233,7 +238,7 @@
 <tbody class="">
 {% for sku in skus %}
 <tr>
-    {% if request.user.is_admin %}
+    {% if perms.meals.delete_sku and perms.meals.change_skumanufacturingline %}
     <td>
         <div class="custom-control custom-checkbox">
         <input type="checkbox" data-sku-id="{{ sku.number }}"
@@ -246,7 +251,7 @@
     <td>{{ sku.number }}</td>
     <td nowrap>
         <a href="{% url 'edit_sku' sku.number %}"
-           {% if request.user.is_admin %}
+           {% if perms.meals.change_sku %}
            title="Click on the name to edit this SKU."
            {% else %}
            title="You don't have permission to edit this SKU."

@@ -239,7 +239,7 @@ generate_calculation_csv = login_required(
 
 @login_required
 @auth.permission_required_ajax(
-    perm=("meals.view_goal",),
+    perm=("meals.view_goal", ),
     msg="You do not have permission to view manufacturing goals,",
     reason="Only analysts may view manufacturing goals",
 )

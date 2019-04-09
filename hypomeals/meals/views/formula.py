@@ -21,7 +21,12 @@ logger = logging.getLogger(__name__)
 
 
 @login_required
-@auth.user_is_admin_ajax(msg="Only an administrator may add a new formula.")
+@auth.permission_required_ajax(
+    perm=("meals.add_formula",
+          "meals.add_formulaingredient", ),
+    msg="You do not have permission to create new formulas",
+    reason="Only Product Managers may create new formulas",
+)
 def add_formula(request):
     in_flow = False
     if request.method == "POST":
@@ -71,6 +76,12 @@ def add_formula(request):
 
 
 @login_required
+@auth.permission_required_ajax(
+    perm=("meals.view_formula",
+          "meals.view_formulaingredient", ),
+    msg="You do not have permission to view formulas",
+    reason="Only logged in users may view formulas",
+)
 def formula(request):
     start = time.time()
     export = request.GET.get("export", "0") == "1"
@@ -104,7 +115,15 @@ def formula(request):
 
 
 @login_required
-@auth.user_is_admin_ajax(msg="Only an administrator may edit a new formula.")
+@auth.permission_required_ajax(
+    perm=("meals.change_formula",
+          "meals.change_formulaingredient",
+          "meals.add_formulaingredient",
+          "meals.delete_formulaingredient",
+          "meals.add_ingredient", ),
+    msg="You do not have permission to edit formulas",
+    reason="Only Product Managers may edit formulas",
+)
 def edit_formula(request, formula_number):
     formula = get_object_or_404(Formula, pk=formula_number)
     in_flow = request.GET.get("in_flow", "0") == "1"
@@ -174,13 +193,23 @@ def edit_formula(request, formula_number):
     )
 
 @login_required
-@auth.user_is_admin_ajax(msg="Only an administrator may edit a new formula.")
+@auth.permission_required_ajax(
+    perm=("meals.change_formula", ),
+    msg="You do not have permission to edit formula names",
+    reason="Only Product Managers may edit formula names",
+)
 def edit_formula_name(request, formula_name):
     formula = get_object_or_404(Formula, name=formula_name)
     return edit_formula(request, formula.pk)
 
 @login_required
 @require_GET
+@auth.permission_required_ajax(
+    perm=("meals.view_formula",
+          "meals.view_formulaingredient", ),
+    msg="You do not have permission to view formulas",
+    reason="Only logged in users may view formulas",
+)
 def view_formula(request, formula_number):
     queryset = Formula.objects.filter(pk=formula_number)
     if queryset.exists():
@@ -199,7 +228,13 @@ def view_formula(request, formula_number):
 
 @login_required
 @require_POST
-@auth.user_is_admin_ajax(msg="Only an administrator may add a new formula.")
+#TODO: If a user is tring to remove a formula, does that user also need perm to change SKUs? Not sure how permissinos propagate to fks
+@auth.permission_required_ajax(
+    perm=("meals.delete_formula",
+          "meals.delete_formulaingredient", ),
+    msg="You do not have permission to remove formulas",
+    reason="Only Product Managers may remove formulas",
+)
 def remove_formulas(request):
     to_remove = jsonpickle.loads(request.POST.get("to_remove", "[]"))
     try:

@@ -56,14 +56,14 @@
 </div>
 <div class="col-sm-4">
     <div class="btn-group my-4" style="float:right;">
-        {% if request.user.is_admin %}
+        {% if perms.meals.add_formula and perms.meals.add_formulaingredient %}
         <a id="addFormulaButton"
            href="{%  url 'add_formula' %}"
            class="btn btn-primary">
             <span class="fa fa-plus"></span> Add a new Formula
         </a>
         {% endif %}
-        {% if request.user.is_admin %}
+        {% if perms.meals.delete_formula and perms.meals.delete_formulaingredient %}
         <button type="button"
                 class="btn btn-danger"
                 disabled
@@ -125,6 +125,8 @@
 </div>
 
 <!-- Export controls -->
+{% if perms.meals.change_sku and perms.meals.change_ingredient and perms.meals.change_formula %}
+{% if perms.meals.change_formulaingredient and perms.meals.change_productline and perms.meals.change_manufacturingline and perms.meals.change_skumanufacturingline and perms.meals.change_productline %}
 <div class="w-100">
 <hr>
 <h3>Export</h3>
@@ -132,7 +134,10 @@
     <span class="fas fa-download"></span> Export Current Search
 </button>
 </div>
+  {% endif %}
+{% endif %}
 </div>
+
 
 
 <!-- Table column -->
@@ -147,7 +152,7 @@
 <table class="table">
     <thead class="thead-light">
     <tr>
-        {% if request.user.is_admin %}
+        {% if perms.meals.delete_formula and perms.meals.delete_formulaingredient %}
         <th>
             <div class="custom-control custom-checkbox">
             <input type="checkbox"
@@ -167,7 +172,7 @@
     <tbody class="table-striped">
     {% for formula in formulas %}
     <tr>
-        {% if request.user.is_admin %}
+        {% if perms.meals.delete_formula and perms.meals.delete_formulaingredient %}
         <td>
             <div class="custom-control custom-checkbox">
             <input type="checkbox" data-formula-id="{{ formula.number }}"
@@ -180,7 +185,7 @@
         <td>{{ formula.number }}</td>
         <td>
             <a href="{% url "edit_formula" formula.number %}"
-               {% if request.user.is_admin %}
+               {% if perms.meals.change_formula and perms.meals.change_formulaingredient %}
                title="Click on the name to edit this formula."
                {% else %}
                title="You don't have permission to edit this formula."

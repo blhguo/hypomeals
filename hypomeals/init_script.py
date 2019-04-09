@@ -37,6 +37,8 @@ core_data_perms = Permission.objects.filter(
         "productline",
     }
 )
+
+
 core_data_viewonly = core_data_perms.filter(codename__istartswith="view").all()
 core_data_full = core_data_perms.all()
 
