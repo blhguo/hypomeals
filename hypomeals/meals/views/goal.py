@@ -135,7 +135,7 @@ def edit_goal(request, goal_id=-1):
     msg="You do not have permission to the manufacturing calculator,",
     reason="Only analysts may use the manufacturing calculator",
 )
-def export_csv(request, goal_id):
+def export_csv(_, goal_id):  # placeholder for the "request" instance we are not using
     goal = get_object_or_404(Goal, pk=goal_id)
     items = goal.details.all()
     tf = tempfile.mktemp()

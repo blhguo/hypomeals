@@ -54,7 +54,7 @@ def add_formula(request):
 
     form_html = render_to_string(
         template_name="meals/formula/edit_formula_form.html",
-        context={"formset": formset, "form": form, "edit": False, "view": False},
+        context={"formset": formset, "form": form, "edit": False},
         request=request,
     )
 
@@ -65,7 +65,7 @@ def add_formula(request):
     return render(
         request,
         template_name="meals/formula/edit_formula.html",
-        context={"formset": formset, "form": form, "edit": False, "view": False},
+        context={"formset": formset, "form": form, "edit": False},
     )
 
 
@@ -166,7 +166,6 @@ def edit_formula(request, formula_number):
             "form": form,
             "formula": formula,
             "formset": formset,
-            "in_flow": in_flow,
             "edit": True,
         },
     )
