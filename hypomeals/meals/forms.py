@@ -793,13 +793,13 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
             "count",
             "product_line",
             "custom_product_line",
-            "comment",
             "formula",
             "formula_scale",
             "manufacturing_lines",
             "manufacturing_rate",
             "setup_cost",
             "run_cost",
+            "comment",
         ]
         exclude = [
             "case_upc",

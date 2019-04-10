@@ -61,9 +61,7 @@ def _get_goal(request, goal_id):
     messages.error(
         request, "You do not have permission to view this goal. Did you create it?"
     )
-    messages.error(
-        request, "You may only view goals created by yourself."
-    )
+    messages.error(request, "You may only view goals created by yourself.")
     raise PermissionDenied
 
 
@@ -179,7 +177,10 @@ def _calculate_report(goal, result=None):
                 / formula_item.ingredient.unit.scale_factor
             )
             result[formula_item.ingredient] += (
-                formula_item.quantity * item.sku.formula_scale * unit_scale
+                formula_item.quantity
+                * item.sku.formula_scale
+                * unit_scale
+                * item.quantity
             )
     logger.info("Report: %s", result)
     return result
