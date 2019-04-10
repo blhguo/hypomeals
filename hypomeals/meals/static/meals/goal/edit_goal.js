@@ -6,21 +6,28 @@ $(function () {
     let emptyAlert = $("#emptyAlert");
     let deadlineInputId = $("#deadlineInputId").val();
     let deadlineInput = $(`#${deadlineInputId}`);
+
+    $("#id_name").trigger("focus");
+
     filterSkusUrl = $("#filterSkusUrl").attr("href");
 
     $("#datepicker1").datetimepicker({format: "YYYY-MM-DD"});
 
-    $(".filterButtons").click(renderModal);
+    $(".filterButtons").click(renderProductLineModal);
     registerFilterTooltip();
+
+    $(".salesButtons").click(renderSalesProjectionModal);
+    registerSalesProjectionTooltip();
 
     registerFormset(
         formset,
         $("#addRowButton"),
         function(row) {
             registerAutocomplete(row.find("input.meals-autocomplete"));
-            row.find(".filterButtons").click(renderModal);
+            row.find(".filterButtons").click(renderProductLineModal);
             toggleEmptyAlert();
             registerFilterTooltip();
+            registerSalesProjectionTooltip();
         },
         toggleEmptyAlert,
     );
@@ -41,10 +48,11 @@ $(function () {
         setTimeout(function() {
             calendarPopover.popover("hide");
         }, 2000);
-    })
+    });
 });
 
-function renderModal() {
+function renderProductLineModal() {
+    // "this" is the button being clicked.
     filteringInput = $(this).parents("td").find("input");
     let modal = makeModalAlert("Filter by Product Line", $("#productLineFilter"));
 
@@ -76,9 +84,20 @@ function renderModal() {
     }
 }
 
+function renderSalesProjectionModal() {
+    // TODO: Implement this.
+}
+
 function registerFilterTooltip() {
     $(".filterButtons").tooltip({
         placement: "right",
         title: "Click here to filter by product lines"
     });
+}
+
+function registerSalesProjectionTooltip() {
+    $(".salesButtons").tooltip({
+        placement: "right",
+        title: "Click here to view sales projections"
+    })
 }
