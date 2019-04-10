@@ -24,11 +24,14 @@
 <div class="row mt-3 d-flex justify-content-right align-items-center">
 <div class="col-sm">
     <div class="btn-group" style="float:right;">
+            {% if perms.meals.add_productline %}
+
         <a href="{%  url 'add_product_line' %}"
            class="btn btn-primary">
             <span class="fa fa-plus"></span> Add Product Line
         </a>
-        {% if perms.delete_productline %}
+    {% endif %}
+        {% if perms.meals.delete_productline %}
         <button data-href="{% url 'remove_product_lines' %}"
                 disabled
                 id="removeButton"
@@ -54,7 +57,7 @@
 <table class="table" style="width:100%">
     <thead class="thead-light">
     <tr>
-        {% if perms.meals.view_productline %}
+        {% if perms.meals.view_sale or perms.meals.delete_productline %}
         <th>
         <div class="custom-control custom-checkbox">
         <input type="checkbox"
@@ -71,7 +74,7 @@
     <tbody class="table-striped">
     {% for product_line in product_lines %}
     <tr>
-        {% if perms.meals.view_productline %}
+        {% if perms.meals.view_sale or perms.meals.delete_productline %}
         <td>
         <div class="custom-control custom-checkbox">
         <input type="checkbox" data-pl-id="{{ product_line.pk }}"

@@ -57,6 +57,7 @@ product_managers_group.permissions.add(*core_data_full)
 product_managers_group.permissions.add(*analyst_viewonly)
 
 business_managers_group.permissions.add(*core_data_viewonly)
+business_managers_group.permissions.add(*analyst_viewonly)
 business_managers_group.permissions.add(
     *Permission.objects.filter(content_type__model__in={"goal", "goalitem"}).all()
 )

@@ -29,6 +29,7 @@ urlpatterns = [
     path("sku/remove", views.remove_skus, name="remove_skus"),
     path("sku/add", views.add_sku, name="add_sku"),
     path("sku/edit/<int:sku_number>", views.edit_sku, name="edit_sku"),
+    path("edit-lines", views.edit_lines, name="edit_lines"),
     path(
         "ac-ingredients",
         views.autocomplete_ingredients,
@@ -47,6 +48,7 @@ urlpatterns = [
     path("ac-customers", views.autocomplete_customers, name="autocomplete_customers"),
     path("ac-formulas", views.autocomplete_formulas, name="autocomplete_formulas"),
     path("ac-users", views.autocomplete_users, name="autocomplete_users"),
+    # Ingredient Views
     path("ingredient", views.ingredient, name="ingredient"),
     path("remove-ingredient", views.remove_ingredients, name="remove_ingredients"),
     path("add-ingredient", views.add_ingredient, name="add_ingredient"),
@@ -56,6 +58,7 @@ urlpatterns = [
         name="edit_ingredient",
     ),
     path("ac-sku", views.autocomplete_skus, name="autocomplete_skus"),
+    # Formula Views
     path("edit-formula/<int:formula_number>", views.edit_formula, name="edit_formula"),
     path(
         "edit-formula-name/<str:formula_name>",
@@ -67,7 +70,7 @@ urlpatterns = [
     path("formula", views.formula, name="formula"),
     path("remove-formulas", views.remove_formulas, name="remove_formulas"),
     path("view-lines", views.view_lines, name="view_lines"),
-    path("edit-lines", views.edit_lines, name="edit_lines"),
+
     # Import/export views
     path("import/", views.import_page, name="import"),
     path("import/success/", views.import_success, name="import_success"),

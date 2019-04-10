@@ -130,7 +130,7 @@ def edit_ingredient(request, ingredient_number):
 @login_required
 @require_POST
 @auth.permission_required_ajax(
-    perm=("meals.delete_goal", ),
+    perm=("meals.delete_ingredient", ),
     msg="You do not have permission to remove ingredients",
     reason="Only product managers have permission to remove ingredients",
 )
