@@ -26,8 +26,8 @@ GRAPH_DATA_POINTS = 10
 @login_required
 @auth.permission_required_ajax(
     perm=("meals.view_sku", "meals.view_sale", "meals.view_productline", "meals.view_customer", ),
-    msg="You do not have permission to view the SKUs related to this product line",
-    reason="Only logged in users may view the SKUs related to this product line",
+    msg="You do not have permission to view the SKUs and sales related to this product line",
+    reason="Only Authorized users (Analysts, Product Managers, Plant Managers, and Business Managers) may view the SKUs related to this product line",
 )
 def sales_drilldown(request, sku_pk):
     start = time.time()
@@ -176,8 +176,8 @@ def sku_revenue(sku, customers, begin_year):
 @login_required
 @auth.permission_required_ajax(
     perm=("meals.view_sku", "meals.view_sale", "meals.view_customer", "meals.view_productline", ),
-    msg="You do not have permission to view the SKUs related to this product line",
-    reason="Only logged in users may view the SKUs related to this product line",
+    msg="You do not have permission to view the sales and SKUs related to this product line",
+    reason="Only Authorized users (Analysts, Product Managers, Plant Managers, and Business Managers) may view the SKUs related to this product line",
 )
 def sales_summary(request):
     export = request.GET.get("export", "0") == "1"
