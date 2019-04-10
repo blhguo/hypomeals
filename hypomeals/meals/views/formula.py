@@ -228,10 +228,10 @@ def view_formula(request, formula_number):
 
 @login_required
 @require_POST
-#TODO: If a user is tring to remove a formula, does that user also need perm to change SKUs? Not sure how permissinos propagate to fks
 @auth.permission_required_ajax(
     perm=("meals.delete_formula",
-          "meals.delete_formulaingredient", ),
+          "meals.delete_formulaingredient",
+          "meals.change_sku", ),
     msg="You do not have permission to remove formulas",
     reason="Only Product Managers may remove formulas",
 )

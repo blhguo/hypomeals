@@ -20,6 +20,11 @@ logger = logging.getLogger(__name__)
 
 
 @login_required
+@auth.permission_required_ajax(
+    perm=("meals.view_productline",),
+    msg="You do not have permission to view product lines",
+    reason="Only logged in users may view product lines",
+)
 def product_line(request):
     start = time.time()
     product_lines = ProductLine.objects.all()
@@ -35,7 +40,11 @@ def product_line(request):
 
 
 @login_required
-@auth.user_is_admin_ajax(msg="Only an administrator may edit product lines.")
+@auth.permission_required_ajax(
+    perm=("meals.change_productline",),
+    msg="You do not have permission to edit product lines",
+    reason="Only product managers can edit product lines",
+)
 def edit_product_line(request, pk):
     instance = get_object_or_404(ProductLine, pk=pk)
     if request.method == "POST":
@@ -64,7 +73,11 @@ def edit_product_line(request, pk):
 
 
 @login_required
-@auth.user_is_admin_ajax(msg="Only an administrator may add a new product line.")
+@auth.permission_required_ajax(
+    perm=("meals.add_productline",),
+    msg="You do not have permission to create product lines",
+    reason="Only product managers may create product lines",
+)
 def add_product_line(request):
     if request.method == "POST":
         form = EditProductLineForm(request.POST)
@@ -96,7 +109,11 @@ def add_product_line(request):
 
 
 @login_required
-@auth.user_is_admin_ajax(msg="Only administrators may delete product lines.")
+@auth.permission_required_ajax(
+    perm=("meals.delete_productline",),
+    msg="You do not have permission to delete product lines",
+    reason="Only product managers may delete product lines",
+)
 def remove_product_lines(request):
     to_remove = set(map(int, json.loads(request.GET.get("toRemove", "[]"))))
     num_deleted, result = ProductLine.objects.filter(pk__in=to_remove).delete()
@@ -111,6 +128,11 @@ def remove_product_lines(request):
 
 @login_required
 @require_GET
+@auth.permission_required_ajax(
+    perm=("meals.view_sku", "meals.view_productline", ),
+    msg="You do not have permission to view the SKUs related to this product line",
+    reason="Only logged in users may view the SKUs related to this product line",
+)
 def view_pl_skus(request, pk):
     queryset = ProductLine.objects.filter(pk=pk)
     if queryset.exists():
@@ -129,6 +151,12 @@ def view_pl_skus(request, pk):
 
 
 @login_required
+@auth.permission_required_ajax(
+    #TODO: CUrrently non-funcitonal, for some reason all users have view_sale perm
+    perm=("meals.view_ingredient", "meals.view_sale", "meals.view_sku", ),
+    msg="You do not have permission to generate sales reports",
+    reason="Only Analysts, Product Managers, Business Managers, and Plant Managers may generate reports",
+)
 def generate_sales_report(request):
     target_pls = set(map(int, json.loads(request.GET.get("toTarget", "[]"))))
     qs = ProductLine.objects.filter(pk__in=target_pls)

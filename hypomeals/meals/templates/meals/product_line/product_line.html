@@ -28,7 +28,7 @@
            class="btn btn-primary">
             <span class="fa fa-plus"></span> Add Product Line
         </a>
-        {% if request.user.is_admin %}
+        {% if perms.delete_productline %}
         <button data-href="{% url 'remove_product_lines' %}"
                 disabled
                 id="removeButton"
@@ -36,7 +36,7 @@
             <span class="fas fa-minus"></span> Remove selected
         </button>
         {% endif %}
-        {% if request.user.is_admin %}
+        {% if perms.meals.view_ingredient and perms.meals.view_sale and perms.meals.view_sku %}
         <button data-href="{% url 'generate_sales_report' %}"
                 disabled
                 id="generateButton"
@@ -54,7 +54,7 @@
 <table class="table" style="width:100%">
     <thead class="thead-light">
     <tr>
-        {% if request.user.is_admin %}
+        {% if perms.meals.view_productline %}
         <th>
         <div class="custom-control custom-checkbox">
         <input type="checkbox"
@@ -71,7 +71,7 @@
     <tbody class="table-striped">
     {% for product_line in product_lines %}
     <tr>
-        {% if request.user.is_admin %}
+        {% if perms.meals.view_productline %}
         <td>
         <div class="custom-control custom-checkbox">
         <input type="checkbox" data-pl-id="{{ product_line.pk }}"
@@ -83,7 +83,7 @@
         {% endif %}
         <td>
             <a href="{% url "edit_product_line" product_line.pk %}"
-               {% if request.user.is_admin %}
+               {% if perms.meals.change_productline %}
                title="Click on the name to edit this product line."
                {% else %}
                title="You don't have permission to edit this Product Line."

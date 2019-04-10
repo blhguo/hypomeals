@@ -254,10 +254,7 @@ def goals(request):
     if form.is_valid():
         all_goals = form.query(request.user)
     else:
-        if request.user.is_admin:
-            all_goals = Goal.objects.all()
-        else:
-            all_goals = Goal.objects.filter(user=request.user).all()
+        all_goals = Goal.objects.all()
 
     for g in all_goals:
         g.deadline = datetime.combine(g.deadline, WORK_HOURS_END)
@@ -274,6 +271,11 @@ def goals(request):
 
 
 @login_required
+@auth.permission_required_ajax(
+    perm=("meals.view_goal", "meals.view_sku", ),
+    msg="You do not have permission to view manufacturing goals,",
+    reason="Only analysts may view manufacturing goals",
+)
 def filter_skus(request):
     pd = request.GET.get("product_line", None)
     skus = Sku.objects.filter(product_line__name=pd)

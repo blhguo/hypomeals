@@ -71,16 +71,14 @@
         <button class="btn btn-success" id="showHelpButton">
             <span class="fas fa-question-circle"></span> Help
         </button>
+        <a href="{% url 'schedule' %}" id="scheduleButton" class="btn btn-primary"><span class="fas fa-calendar-check"></span> Schedule</a>
+        {% if  perms.meals.change_goal %}
         <a href="{% url "add_goal" %}" id="addGoalButton" class="btn btn-primary">
             <span class="fas fa-plus"></span> Add a new Goal
         </a>
-        {% if request.user.is_admin %}
         <button class="btn btn-primary dropdown-toggle dropdown-toggle-split"
                 data-toggle="dropdown"></button>
         <div class="dropdown-menu">
-        <a href="{% url 'schedule' %}"
-           id="scheduleButton"
-           class="dropdown-item"><span class="fas fa-calendar-check"></span> Schedule</a>
         <a href="#"
            id="enableGoalsButton"
            class="dropdown-item"><span class="fas fa-check"></span> Enable Goals</a>
@@ -142,7 +140,7 @@
     {% endif %}
     <th>Goal Name</th>
     <th>Deadline</th>
-    {% if perms.meals.change_goal and perms.meals.view_goal %}
+    {#  {% if perms.meals.change_goal and perms.meals.view_goal %}#}
     <th>
         <a href="#"
            title="Whether this goal is Enabled / Scheduled"
@@ -150,14 +148,14 @@
            data-placement="top">E&#47;S?</a>
     </th>
     <th>Creator</th>
-    {% endif %}
+    {# {% endif %} #}
     <th>Last Modified Time</th>
     <th>Actions</th>
 </thead>
 <tbody>
 {% for goal in all_goals %}
 <tr>
-    {% if perms.meals.view_goal %}
+    {% if perms.meals.change_goal and perms.meals.view_goal %}
     <td>
         <div class="custom-control custom-checkbox">
         <input type="checkbox" data-goal-id="{{ goal.pk }}"

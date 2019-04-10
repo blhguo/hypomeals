@@ -22,6 +22,11 @@ logger = logging.getLogger(__name__)
 
 
 @login_required
+@auth.permission_required_ajax(
+    perm=("meals.view_ingredient", ),
+    msg="You do not have permission to view the ingredients,",
+    reason="Only logged in users may view the ingredients",
+)
 def ingredient(request):
     start = time.time()
     export = request.GET.get("export", "0") == "1"
@@ -58,7 +63,11 @@ def ingredient(request):
 
 
 @login_required
-@auth.user_is_admin_ajax(msg="Only administrators may add new ingredients.")
+@auth.permission_required_ajax(
+    perm=("meals.add_ingredient",),
+    msg="You do not have permission to create new ingredients",
+    reason="Only product managers can create new ingredients",
+)
 def add_ingredient(request):
     if request.method == "POST":
         form = EditIngredientForm(request.POST)
@@ -90,7 +99,11 @@ def add_ingredient(request):
 
 
 @login_required
-@auth.user_is_admin_ajax(msg="Only administrator may edit ingredients.")
+@auth.permission_required_ajax(
+    perm=("meals.change_ingredient",),
+    msg="You do not have permission to edit ingredients",
+    reason="Only product managers may edit ingredients",
+)
 def edit_ingredient(request, ingredient_number):
     instance = get_object_or_404(Ingredient, number=ingredient_number)
     if request.method == "POST":
@@ -116,7 +129,11 @@ def edit_ingredient(request, ingredient_number):
 
 @login_required
 @require_POST
-@auth.user_is_admin_ajax(msg="Only administrators may remove ingredients.")
+@auth.permission_required_ajax(
+    perm=("meals.delete_goal", ),
+    msg="You do not have permission to remove ingredients",
+    reason="Only product managers have permission to remove ingredients",
+)
 def remove_ingredients(request):
     to_remove = jsonpickle.loads(request.POST.get("to_remove", "[]"))
     try:

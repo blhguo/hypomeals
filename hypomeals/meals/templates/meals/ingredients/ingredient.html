@@ -57,14 +57,14 @@
 </div>
 <div class="col-sm-4">
     <div class="btn-group my-4" style="float:right;">
-        {% if request.user.is_admin %}
+        {% if perms.meals.add_ingredient %}
         <a id="addIngredientButton"
            href="{%  url 'add_ingredient' %}"
            class="btn btn-primary">
             <span class="fa fa-plus"></span> Add a new Ingredient
         </a>
         {% endif %}
-        {% if request.user.is_admin %}
+        {% if perms.meals.delete_ingredient %}
         <button type="button"
                 class="btn btn-danger"
                 disabled
@@ -152,7 +152,7 @@
 <table class="table">
     <thead class="thead-light">
     <tr>
-        {% if request.user.is_admin %}
+        {% if perms.meals.view_ingredient %}
         <th><input type="checkbox" id="selectAllCheckbox"> </th>
         {% endif %}
         <th>Ingr#</th>
@@ -166,13 +166,13 @@
     <tbody class="table-striped">
     {% for ingredient in ingredients %}
     <tr>
-        {% if request.user.is_admin %}
+        {% if perms.meals.view_ingredient %}
         <td><input type="checkbox" class="ingredient-checkbox" id="{{ ingredient.number }}"> </td>
         {% endif %}
         <td>{{ ingredient.number }}</td>
         <td>
             <a href="{% url "edit_ingredient" ingredient.number %}"
-               {% if request.user.is_admin %}
+               {% if perms.meals.change_ingredient %}
                title="Click on the name to edit this ingredient."
                {% else %}
                title="You don't have permission to edit this ingredient."

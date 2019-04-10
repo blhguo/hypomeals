@@ -16,12 +16,19 @@ from meals.forms import SaleFilterForm, ProductLineFilterForm
 from meals.models import Sku, Sale, ProductLine, Customer, GoalItem
 from ..bulk_export import export_drilldown, export_sales_summary
 
+from meals import auth
+
 logger = logging.getLogger(__name__)
 
 GRAPH_DATA_POINTS = 10
 
 
 @login_required
+@auth.permission_required_ajax(
+    perm=("meals.view_sku", "meals.view_sale", "meals.view_productline", "meals.view_customer", ),
+    msg="You do not have permission to view the SKUs related to this product line",
+    reason="Only logged in users may view the SKUs related to this product line",
+)
 def sales_drilldown(request, sku_pk):
     start = time.time()
     export = request.GET.get("export", "0") == "1"
@@ -97,7 +104,6 @@ def sales_drilldown(request, sku_pk):
         },
     )
 
-
 def sku_summary(sku, rev_sum, num_sales, sku_info):
     activities_sku = GoalItem.objects.filter(sku=sku)
     manufacture_run_size = Decimal(0)
@@ -168,6 +174,11 @@ def sku_revenue(sku, customers, begin_year):
     return rev_sum, num_sales, sku_ten_year
 
 @login_required
+@auth.permission_required_ajax(
+    perm=("meals.view_sku", "meals.view_sale", "meals.view_customer", "meals.view_productline", ),
+    msg="You do not have permission to view the SKUs related to this product line",
+    reason="Only logged in users may view the SKUs related to this product line",
+)
 def sales_summary(request):
     export = request.GET.get("export", "0") == "1"
     if not sku_ready():

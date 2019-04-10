@@ -153,9 +153,10 @@
 
 <!-- Export buttons -->
 <hr>
-{% if perms.meals.change_sku and perms.meals.change_ingredient and perms.meals.change_formula %}
-{% if perms.meals.change_formulaingredient and perms.meals.change_productline and perms.meals.change_manufacturingline and perms.meals.change_skumanufacturingline and perms.meals.change_productline %}
-<h3>Export</h3>
+{#{% if perms.meals.change_sku and perms.meals.change_ingredient and perms.meals.change_formula %}#}
+{#{% if perms.meals.change_formulaingredient and perms.meals.change_productline and perms.meals.change_manufacturingline and perms.meals.change_skumanufacturingline and perms.meals.change_productline %}#}
+{% if perms.meals.view_sku %}
+    <h3>Export</h3>
 <div class="form-check mb-2 w-100">
     <input class="form-check-input"
            type="checkbox"
@@ -190,7 +191,7 @@
 
 <div></div>
 {% endif %}
-{% endif %}
+{#{% endif %}#}
 </div>
 
 
