@@ -69,14 +69,16 @@
                 <a class="nav-link" href="{% url 'sales_summary' %}">Sales Summary</a>
             </li>
             <li class="nav-item dropdown {% block manufacturing_active %}{% endblock %}">
-              <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">
-                Manufacturing
-              </a>
-              <div class="dropdown-menu">
-                <a class="dropdown-item" href="{% url 'lines' %}">Lines</a>
-                <a class="dropdown-item" href="{% url 'goals' %}">Goals</a>
-                <a class="dropdown-item" href="{% url 'schedule' %}">Schedule</a>
-              </div>
+                <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">
+                    Manufacturing
+                </a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="{% url 'lines' %}">Lines</a>
+                    <a class="dropdown-item" href="{% url 'goals' %}">Goals</a>
+                    {% if request.user.is_plant_manager %}
+                    <a class="dropdown-item" href="{% url 'schedule' %}">Schedule</a>
+                    {% endif %}
+                </div>
             </li>
             <li class="nav-item {% block import_active %}{% endblock %}">
                 <a class="nav-link" href="{% url 'import' %}">Import</a>

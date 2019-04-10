@@ -41,6 +41,17 @@ class User(AbstractUser):
     def is_admin(self):
         return self.is_superuser or self.groups.filter(name=ADMINS_GROUP).exists()
 
+    @property
+    def is_plant_manager(self):
+        """
+        This is ugly but it works. It works by listing all permissions that a user has,
+        and taking the first 13 characters ("meals.owns_ml" is 13 characters) of each
+        permission, and checking if "meals.owns_ml" is contained in the resulting set.
+        :return: True iff the user is a Plant Manager for at least one manufacturing
+            line
+        """
+        return "meals.owns_ml" in set(map(lambda s: s[:13], self.get_all_permissions()))
+
     def check_password(self, raw_password):
         if self.netid:
             return False

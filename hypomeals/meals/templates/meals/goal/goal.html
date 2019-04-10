@@ -11,23 +11,26 @@
 <div class="col-sm">
 <div class="alert alert-success">
     <h3>Manufacturing Goals</h3>
-    <p>
-        Review your saved goals here. Your goals are private to you. If you want
-        to create a new goal, click the "Add a new Goal" button.
-    </p>
-    <p>Click on the goal's name to edit the goal. If you wish to view a
-    formatted manufacturing report, click the "Report" button. You may also
-    download manufacturing reports and the goal itself from the "Download"
-    menu.</p>
-    {% if perms.meals.view_goal %}
     <p class="mb-0">
-    You may select goals from different users to compile
+        This page shows a list of all manufacturing goals in the system. You
+        may filter goals using the form on the left.
+    </p>
+    {% if perms.meals.add_goal %}
+    <p class="mb-0">
+        Review your saved goals here. Your goals are visible to all Analysts.
+        If you would like to create a new goal, click the "Add a new Goal" button.
+    </p>
+    {% endif %}
+    {% if perms.meals.change_goal %}
+    <p class="mt-2">
+        Click on the goal's name to edit the goal. If you wish to view a
+        formatted manufacturing report, click the "Report" button. You may also
+        download manufacturing reports and the goal itself from the "Download"
+        menu.
+    </p>
+    <p class="mb-0">
+    You may also enable / disable goals for a Plant Manager to compile
     <a href="#" class="mfgScheduleTooltips">manufacturing schedules</a>.
-    </p>
-    {% else %}
-    <p class="mb-0">
-        An Plant Manager, Product Manager, or Business Manager may choose to enable or disable your goals to produce
-        a <a href="#" class="mfgScheduleTooltips">manufacturing schedule</a>.
     </p>
     {% endif %}
 </div>
@@ -52,39 +55,31 @@
 <div class="row mt-2">
 <div class="col-sm">
     <div class="d-flex justify-content-between align-items-center">
-    {% if False %}
-    <div class="custom-control custom-checkbox">
-        <input type="checkbox" class="custom-control-input" id="showAllCheckbox">
-        <label class="custom-control-label"
-               for="showAllCheckbox">
-            Show goals owned by others
-            <span class="badge badge-pill badge-info"
-                  data-placement="right"
-                  title="This option is enabled because you are an administrator"
-                  data-toggle="tooltip">i</span>
-        </label>
-    </div>
-    {% else %}
     <div></div>  <!-- Empty div to position the btn-group -->
-    {% endif %}
     <div class="btn btn-group">
         <button class="btn btn-success" id="showHelpButton">
             <span class="fas fa-question-circle"></span> Help
         </button>
-        <a href="{% url 'schedule' %}" id="scheduleButton" class="btn btn-primary"><span class="fas fa-calendar-check"></span> Schedule</a>
-        {% if  perms.meals.change_goal %}
+        {% if perms.meals.add_goal %}
         <a href="{% url "add_goal" %}" id="addGoalButton" class="btn btn-primary">
             <span class="fas fa-plus"></span> Add a new Goal
         </a>
+        {% endif %}
+        {% if perms.meals.change_goal %}
         <button class="btn btn-primary dropdown-toggle dropdown-toggle-split"
                 data-toggle="dropdown"></button>
         <div class="dropdown-menu">
+        {% if request.user.is_plant_manager %}
+        <a href="{% url 'schedule' %}"
+           id="scheduleButton"
+           class="dropdown-item"><span class="fas fa-calendar-check"></span> Schedule</a>
+        {% endif %}
         <a href="#"
            id="enableGoalsButton"
-           class="dropdown-item"><span class="fas fa-check"></span> Enable Goals</a>
+           class="dropdown-item"><span class="fas fa-check"></span> Enable Goals (⌘-e)</a>
         <a href="#"
            id="disableGoalsButton"
-           class="dropdown-item"><span class="fas fa-times"></span> Disable Goals</a>
+           class="dropdown-item"><span class="fas fa-times"></span> Disable Goals (⌘-d)</a>
         </div>
         {% endif %}
     </div>
@@ -127,8 +122,7 @@
 <table class="table">
 <thead class="thead-light">
 <tr>
-{#this is wrong, im looking into it right now#}
-    {% if perms.meals.change_goal and perms.meals.view_goal %}
+    {% if perms.meals.change_goal %}
     <th>
         <div class="custom-control custom-checkbox">
         <input type="checkbox"
@@ -140,7 +134,6 @@
     {% endif %}
     <th>Goal Name</th>
     <th>Deadline</th>
-    {#  {% if perms.meals.change_goal and perms.meals.view_goal %}#}
     <th>
         <a href="#"
            title="Whether this goal is Enabled / Scheduled"
@@ -148,14 +141,13 @@
            data-placement="top">E&#47;S?</a>
     </th>
     <th>Creator</th>
-    {# {% endif %} #}
     <th>Last Modified Time</th>
     <th>Actions</th>
 </thead>
 <tbody>
 {% for goal in all_goals %}
 <tr>
-    {% if perms.meals.change_goal and perms.meals.view_goal %}
+    {% if perms.meals.change_goal %}
     <td>
         <div class="custom-control custom-checkbox">
         <input type="checkbox" data-goal-id="{{ goal.pk }}"
@@ -167,13 +159,10 @@
     {% endif %}
     <td><a href = "{% url 'edit_goal' goal.pk %}">{{ goal.name }}</a></td>
     <td>{{ goal.deadline|date:"N d, Y" }} ({{ goal.deadline|naturaltime }})</td>
-    {% if perms.meals.view_goal %}
     <td class="d-flex justify-content-between align-items-center">
         <span class="fas {% if goal.is_enabled %}fa-check{% else %}fa-times{% endif %}"></span>
         <span class="fas {% if goal.scheduled %}fa-check{% else %}fa-times{% endif %}"></span>
     <td>{{ goal.user.get_full_name }}</td>
-    {% endif %}
-
     <td>{{ goal.save_time|naturaltime }}</td>
     <td>
         <div class="btn-group">

@@ -28,7 +28,6 @@ logger = logging.getLogger(__name__)
     reason="Only Product Managers may create new formulas",
 )
 def add_formula(request):
-    in_flow = False
     if request.method == "POST":
         formset = FormulaFormset(request.POST)
         form = FormulaNameForm(request.POST)
@@ -60,7 +59,7 @@ def add_formula(request):
 
     form_html = render_to_string(
         template_name="meals/formula/edit_formula_form.html",
-        context={"formset": formset, "form": form, "in_flow": in_flow, "edit": False},
+        context={"formset": formset, "form": form, "edit": False},
         request=request,
     )
 
@@ -71,7 +70,7 @@ def add_formula(request):
     return render(
         request,
         template_name="meals/formula/edit_formula.html",
-        context={"formset": formset, "form": form, "in_flow": in_flow, "edit": False},
+        context={"formset": formset, "form": form, "edit": False},
     )
 
 
@@ -126,7 +125,6 @@ def formula(request):
 )
 def edit_formula(request, formula_number):
     formula = get_object_or_404(Formula, pk=formula_number)
-    in_flow = request.GET.get("in_flow", "0") == "1"
     if request.method == "POST":
         logger.debug("Raw POST data: %s", request.POST)
         formset = FormulaFormset(request.POST)
@@ -172,7 +170,7 @@ def edit_formula(request, formula_number):
 
     form_html = render_to_string(
         template_name="meals/formula/edit_formula_form.html",
-        context={"formset": formset, "form": form, "in_flow": in_flow, "edit": True, "formula": formula},
+        context={"formset": formset, "form": form, "edit": True, "formula": formula},
         request=request,
     )
 
@@ -187,7 +185,6 @@ def edit_formula(request, formula_number):
             "form": form,
             "formula": formula,
             "formset": formset,
-            "in_flow": in_flow,
             "edit": True,
         },
     )

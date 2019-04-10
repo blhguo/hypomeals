@@ -41,32 +41,6 @@ from meals.utils import SortedDefaultDict
 logger = logging.getLogger(__name__)
 
 
-def _get_goal(request, goal_id):
-    """
-    Retrieves a goal from a goal_id
-    :param request: the HttpRequest instance
-    :param goal_id: the ID of a goal
-    :return: a Goal object, if one exists, and the current user has permission to view
-        it. Raises PermissionDenied otherwise.
-    """
-    goal = get_object_or_404(Goal, pk=goal_id)
-    if request.user.is_admin:
-        # User is admin, grant access
-        logger.info("Granting admin access for goal %d", goal_id)
-        return goal
-    if request.user == goal.user:
-        # User created this goal, grant access
-        logger.info("Granting owner access for goal %d", goal_id)
-        return goal
-    messages.error(
-        request, "You do not have permission to view this goal. Did you create it?"
-    )
-    messages.error(
-        request, "You may only view goals created by yourself."
-    )
-    raise PermissionDenied
-
-
 @login_required
 @auth.permission_required_ajax(
     perm=("meals.change_goal",),
@@ -75,7 +49,14 @@ def _get_goal(request, goal_id):
 )
 def edit_goal(request, goal_id=-1):
     if goal_id != -1:
-        goal_obj = _get_goal(request, goal_id)
+        goal_obj = get_object_or_404(Goal, pk=goal_id)
+        if goal_obj.user != request.user:
+            messages.error(
+                request,
+                "You do not have permission to view this goal. Did you create it?"
+            )
+            messages.error(request, "You may only view goals created by yourself.")
+            raise PermissionDenied
     else:
         goal_obj = None
     logger.info("Goal: %s", repr(goal_obj))
@@ -154,8 +135,8 @@ def edit_goal(request, goal_id=-1):
     msg="You do not have permission to the manufacturing calculator,",
     reason="Only analysts may use the manufacturing calculator",
 )
-def export_csv(request, goal_id):
-    goal = _get_goal(request, goal_id)
+def export_csv(_, goal_id):  # placeholder for the "request" instance we are not using
+    goal = get_object_or_404(Goal, pk=goal_id)
     items = goal.details.all()
     tf = tempfile.mktemp()
     with open(tf, "w", newline="") as f:
@@ -179,7 +160,10 @@ def _calculate_report(goal, result=None):
                 / formula_item.ingredient.unit.scale_factor
             )
             result[formula_item.ingredient] += (
-                formula_item.quantity * item.sku.formula_scale * unit_scale
+                formula_item.quantity
+                * item.sku.formula_scale
+                * unit_scale
+                * item.quantity
             )
     logger.info("Report: %s", result)
     return result
@@ -193,7 +177,7 @@ def _calculate_report(goal, result=None):
 )
 def view_calculations(request, goal_id):
     to_print = request.GET.get("print", "0") == "1"
-    goal = _get_goal(request, goal_id)
+    goal = get_object_or_404(Goal, pk=goal_id)
     report = _calculate_report(goal)
     return render(
         request,
@@ -203,7 +187,7 @@ def view_calculations(request, goal_id):
 
 
 def _generate_calculation(request, goal_id, output_format="csv"):
-    goal = _get_goal(request, goal_id)
+    goal = get_object_or_404(Goal, pk=goal_id)
     report = _calculate_report(goal)
     if output_format.casefold() == "csv":
         tf = tempfile.mktemp()
@@ -252,7 +236,7 @@ def goals(request):
         form = GoalFilterForm()
 
     if form.is_valid():
-        all_goals = form.query(request.user)
+        all_goals = form.query()
     else:
         all_goals = Goal.objects.all()
 
