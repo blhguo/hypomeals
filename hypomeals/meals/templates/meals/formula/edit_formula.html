@@ -5,14 +5,13 @@
 
 {% block body %}
 <div class="container m-auto">
-{% if edit %}
 <div class="row">
 <div class="col-sm">
     <div class="alert alert-success my-4">
-    {% if request.user.is_admin %}
+    {% if edit %}
     <h3>Edit Formula #{{ formula.number }}: {{ formula.name }}</h3>
     {% else %}
-    <h3>View Formula #{{ formula.number }}: {{ formula.name }}</h3>
+    <h3>Add a new Formula</h3>
     {% endif %}
     {% if messages %}
     {% for message in messages %}
@@ -30,32 +29,8 @@
     </div>
 </div>
 </div>
-{% endif %}
 
-<div class="row">
-<div class="col-sm mb-4">
-    <div class="btn-group float-right" role="group">
-    {% if request.user.is_admin %}
-    <button type="button"
-            id="addRowButton"
-            class="btn btn-primary">
-        <span class="fa fa-plus"></span> Add row
-    </button>
-    {% endif %}
-    {% if request.user.is_admin %}
-    <button type="button"
-            id="createIngrButton"
-            data-toggle="modal"
-            data-target="#modalDiv"
-            class="btn btn-success">
-        <span class="fa fa-plus"></span> Create new Ingredient
-    </button>
-    {% endif %}
-    </div>
-</div>
-</div>
-
-<div class="row">
+<div class="row mb-2">
 <div class="col-sm">
 {% if edit %}
   <form id="formulaForm" action="{% url 'edit_formula' formula.number %}" method="post">
@@ -77,6 +52,29 @@ Please correct the following error(s):
     {% if field.errors %}<small class="errorlist">{{ field.errors }}</small>{% endif %}
     </div>
 {% endfor %}
+
+<div class="row mb-2">
+<div class="col-sm">
+    <div class="btn-group float-right" role="group">
+    {% if request.user.is_admin %}
+    <button type="button"
+            id="addRowButton"
+            class="btn btn-primary">
+        <span class="fa fa-plus"></span> Add row
+    </button>
+    {% endif %}
+    {% if request.user.is_admin %}
+    <button type="button"
+            id="createIngrButton"
+            data-toggle="modal"
+            data-target="#modalDiv"
+            class="btn btn-success">
+        <span class="fa fa-plus"></span> Create new Ingredient
+    </button>
+    {% endif %}
+    </div>
+</div>
+</div>
 
 <table class="table my-3">
 <thead class="thead-light">
@@ -121,12 +119,12 @@ add another ingredient to this SKU.
 </tbody>
 </table>
 <div class="btn-group">
-{% if in_flow %}
-<input type="submit" class="btn btn-success" value="Finish">
-{% else %}
+{% if edit %}
 <input type="submit" class="btn btn-success" value="Apply Changes">
-<a href="{% url 'formula' %}" class="btn btn-secondary">Cancel</a>
+{% else %}
+<input type="submit" class="btn btn-success" value="Save">
 {% endif %}
+<a href="{% url 'formula' %}" class="btn btn-secondary">Back</a>
 </div>
 </form>
 

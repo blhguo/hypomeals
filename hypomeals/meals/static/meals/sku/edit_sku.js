@@ -1,13 +1,41 @@
 $(function () {
     const addFormulaUrl = $("#addFormulaUrl").attr("href");
-    const editFormulaUrl = $("#editFormulaUrl").attr("href");
     let addFormulaButton = $("#addFormulaButton");
     let editFormulaButton = $("#editFormulaButton");
-    let formulaModalDiv = $("#formulaDiv");
+    let formulaModal = $("#formulaModal");
     let formulaModalBody = $("#formulaBody");
     let loadingSpinner = $("#loadingSpinner");
     let formulaModalSaveButton = $("#formulaSaveButton");
 
+    let customPLDiv = $("#id_custom_product_line").parent("div");
+    let productLineSelect = $("#id_product_line");
+    customPLDiv.find("label").remove();
+    customPLDiv.prop("style", "display: none;");
+
+    function showCustomProductLine() {
+        let selected = productLineSelect
+            .find("option:selected")
+            .prop("value")
+            .toLowerCase();
+        if (selected === "custom") {
+            customPLDiv.prop("style", "");
+        } else {
+            customPLDiv.prop("style", "display: none;");
+        }
+    }
+
+    showCustomProductLine();  // Initializes page if form is already filled
+    productLineSelect.change(function() {
+        showCustomProductLine();
+    });
+
+    /******************** Add/Edit Formula *******************/
+    let formulaSelect = $("#id_formula");
+    let formulaDiv = formulaSelect.parent("div");
+    formulaSelect.addClass("custom-select").removeClass("form-control");
+    let formulaInputGroup = $("#formulaInputGroup");
+    formulaSelect.prependTo(formulaInputGroup);
+    formulaInputGroup.appendTo(formulaDiv);
 
     function formulaModalChanged(_, newContent) {
         let container = formulaModalBody.find("div.container");
@@ -15,10 +43,9 @@ $(function () {
             container.remove();
         }
         newContent.appendTo(formulaModalBody);
-        formulaModalForm = newContent.find("form");
         formulaModalBody.find("#formSubmitBtnGroup").toggle("false");
         formulaModalSaveButton.attr("disabled", false);
-        let buttons = $("#oldButton")
+        let buttons = $("#oldButton");
         buttons.remove()
     }
     formulaModalBody.off("modal:change");
@@ -39,20 +66,30 @@ $(function () {
             .done(formulaAjaxDone)
             .fail(function (_, __, errorThrown) {
                 alert(`Error loading content: ${errorThrown}`);
-                formulaModalDiv.modal("hide");
+                formulaModal.modal("hide");
             })
     });
 
     editFormulaButton.off("click");
 
-    editFormulaButton.click(function () {
-        let formulaName = $("#id_formula option:selected").val()
-        let editFormulaUrl = $("#editFormulaUrl").attr("href").replace("0", formulaName)
+    editFormulaButton.click(function (e) {
+        e.preventDefault();
+        let formulaName = $("#id_formula option:selected").val();
+        if (!formulaName) {
+            makeModalAlert("Error",
+                "You must select a formula before editing it.",
+                null,
+                () => formulaModal.modal("hide"));
+            return;
+        }
+        let editFormulaUrl = $(this)
+            .attr("data-href")
+            .replace("0", formulaName);
         $.getJSON(editFormulaUrl, {})
             .done(formulaAjaxDone)
             .fail(function (_, __, errorThrown) {
                 alert(`Error loading content: ${errorThrown}`);
-                formulaModalDiv.modal("hide");
+                formulaModal.modal("hide");
             })
     });
 });
