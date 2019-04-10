@@ -1191,6 +1191,8 @@ class GoalFilterForm(forms.Form, utils.BootstrapFormControlMixin):
         query = Q()
         if self.cleaned_data["name"]:
             query &= Q(name__icontains=self.cleaned_data["name"])
+        if not user.is_admin:
+            pass
         else:
             if self.cleaned_data["users"]:
                 query &= Q(user__in=self.cleaned_data["users"])
