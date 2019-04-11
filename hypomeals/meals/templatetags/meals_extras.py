@@ -36,3 +36,7 @@ def get_value(dct, key):
 @register.filter
 def percentage(x, decimal_places=2):
     return quantize(x * 100, decimal_places=decimal_places)
+
+@register.filter
+def strip(s, ch=None):
+    return str(s).strip(ch)

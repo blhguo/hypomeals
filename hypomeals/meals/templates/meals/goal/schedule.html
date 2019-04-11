@@ -9,6 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.0.1/css/tempusdominus-bootstrap-4.min.css" />
+<link rel="stylesheet" href="{% static 'meals/goal/schedule.css' %}"/>
 {% endblock %}
 
 {% block style %}
@@ -106,13 +107,13 @@ ul.errorlist {
     </button>
     <button class="btn btn-primary dropdown-toggle"
             data-toggle="dropdown">
-        <span class="fas fa-search-plus"></span> Fit
+        <span class="fas fa-search-plus"></span> Fit...
     </button>
     <div class="dropdown-menu">
         <a href="#" class="dropdown-item" id="currentMonthButton">Month</a>
         <a href="#" class="dropdown-item" id="currentQuarterButton">Quarter</a>
         <a href="#" class="dropdown-item" id="currentYearButton">Year</a>
-        <a href="#" class="dropdown-item" id="fitAllButton">Visible</a>
+        <a href="#" class="dropdown-item" id="fitAllButton">Scheduled</a>
     </div>
 </div>
 </div>
@@ -160,31 +161,36 @@ ul.errorlist {
 <ul class="list-group list-group-flush">
 {% for item in details %}
     {% with item.sku.line_shortnames as lines %}
-    <a class="list-group-item d-flex justify-content-between goalItems
-        align-items-center {% if not lines %}text-muted{% endif %}"
-       data-toggle="tooltip"
-       data-placement="bottom"
-       {% if not lines %}
-       data-schedulable="false"
-       title="This item cannot be scheduled because
-        no manufacturing line produces SKU #{{ item.sku.pk }}"
-       disabled="disabled"
-       {% else %}
-       title="Compatible manufacturing lines: {{ lines|join:', ' }}"
-       draggable="true"
-       style="cursor: pointer"
-       data-schedulable="true"
-       {% endif %}
-       data-goal-item-id="{{ item.id }}"
-       data-sku-id="{{ item.sku.pk }}">
-        {{ item.sku }}
-        <span class="badge badge-pill badge-info">{{ item.quantity|quantize:2 }}</span>
-    </a>
+    {% spaceless %}
+    <input type="checkbox" class="goalItemCheckboxes"
+           id="checkbox-goal-item-{{ item.pk }}"/>
+    <label for="checkbox-goal-item-{{ item.pk }}"
+           class="list-group-item d-flex align-items-baseline justify-content-start">
+        <span class="badge badge-pill badge-info mr-2">{{ item.quantity|quantize:2 }}</span>
+        <span class="mr-2">&times;</span>
+        <span class="goalItems mr-2{% if not lines %}text-muted{% endif %}"
+              data-toggle="tooltip"
+              data-placement="bottom"
+              title="{{ item.sku }}"
+                {% if not lines %}
+              data-schedulable="false"
+              disabled="disabled"
+                {% else %}
+              draggable="true"
+              data-schedulable="true"
+                {% endif %}
+              data-goal-item-id="{{ item.id }}"
+              data-sku-id="{{ item.sku.pk }}">
+            {{ item.sku.name }} (#{{ item.sku.number }})
+        </span>
+    </label>
+    {% endspaceless %}
     {% endwith %}
 {% endfor %}
 </ul>
-<div class="card-footer d-flex justify-content-end">
-    Total: {{ details|length }} item{{ details|pluralize }}
+<div class="card-footer d-flex justify-content-between">
+    <a href="#" class="selectAllButtons" data-goal-id="goal.pk">Select All</a>
+    <span>Total: {{ details|length }} item{{ details|pluralize }}</span>
 </div>
 </div>
 {% endif %}
@@ -255,6 +261,11 @@ ul.errorlist {
 
 <!-- Hidden div with template data -->
 <div style="display: none;">
+<ul id="ownedLines">
+    {% for line in lines %}
+    <li>{{ line }}</li>
+    {% endfor %}
+</ul>
 </div>
 {% endblock %}
 

@@ -10,6 +10,7 @@ let items = new vis.DataSet([]);
 let groups = new vis.DataSet([]);
 let goalItemsMap = new Map();
 let warnings = new vis.DataSet([]);
+let ownedLines = new Set();
 
 $(function() {
     $("[data-toggle='tooltip']").tooltip();
@@ -18,6 +19,10 @@ $(function() {
     let suppressWarningCheckbox = $("#suppressWarningCheckbox");
     $("#showHelpButton").click(function() {
         $("#helpDiv").toggle("fast");
+    });
+
+    $("#ownedLines li").each(function (_, e) {
+        ownedLines.add($(e).text());
     });
 
     let mfgLines = new Set();  // Set of MLs to display groups
@@ -29,8 +34,10 @@ $(function() {
         event.originalEvent.dataTransfer.effectAllowed = "move";
         event.originalEvent.dataTransfer.setData("text",
             JSON.stringify(itemInfo));
-        highlightGroups(itemInfo.lines, true);
-    }).on("click", function() {
+        highlightGroups(intersection(new Set(itemInfo.lines), ownedLines),
+            true);
+    }).on("click", function(e) {
+        e.preventDefault();
         let goalItemId = Number($(this).attr("data-goal-item-id"));
         if (items.get(goalItemId) !== null) {
             timeline.focus(goalItemId);
@@ -50,6 +57,13 @@ $(function() {
         oldItem.start = moment(oldItem.start);
         oldItem.end = moment(oldItem.end);
         let itemInfo = goalItemsMap.get(item.id);
+        if (!ownedLines.has(item.group)) {
+            makeModalAlert("Cannot Schedule",
+                `You are not authorized to manage manufacturing activities on 
+                '${item.group}'. Operation will be reverted.`);
+            items.update(properties.oldData[0]);
+            return;
+        }
         if (!itemInfo.lines.includes(item.group)) {
             makeModalAlert("Cannot Schedule",
                 `Manufacturing Line '${item.group}' cannot produce SKU #${itemInfo.skuId}.
@@ -153,6 +167,10 @@ $(function() {
         if (lines.includes(line)) {
             itemInfo.group = line;
         }
+        if (!ownedLines.has(line)) {
+            // Line not owned by current user
+            itemInfo.editable = false;
+        }
         lines.forEach((l) => mfgLines.add(l));
 
         let endTime = moment(div.find("input[name*=end_time]").val(),
@@ -179,6 +197,7 @@ $(function() {
         goalItemsMap.set(id, itemInfo);
     });
     generateWarnings();
+
 
     $("#submitButton").click(function(e) {
         let scheduled = [];
@@ -235,11 +254,15 @@ $(function() {
     /***************** Timeline *******************/
     groups = new vis.DataSet([]);
     mfgLines.forEach((l) => {
-        groups.add({
+        let group = {
             id: l,
             content: l,
             visible: true,
-        })
+        };
+        if (!ownedLines.has(l)) {
+            group.className = "bg-dark text-light opacity-5";
+        }
+        groups.add(group);
     });
 
     function highlightGroups(groupIds, highlighted) {
@@ -277,8 +300,8 @@ $(function() {
         start = moment(start);
         let itemInfo = goalItemsMap.get(itemId);
         let updates = {id: itemId};
+        itemInfo.overrideHours = overrideHours;
         if (overrideHours) {
-            itemInfo.overrideHours = overrideHours;
             updates["end"] = moment(start).add(overrideHours, "hours");
         } else {
             updates["end"] = getCompletionTime(start, itemInfo.hours);
@@ -308,41 +331,6 @@ $(function() {
         }
         items.update(updates, IGNORE_SENDER_ID);
         checkOverlap(item);
-    }
-
-    function toggleGoalItem(goalItemId, scheduled) {
-        $(`a[data-goal-item-id=${goalItemId}]`)
-            .toggleClass("text-muted", scheduled);
-    }
-
-    function getCompletionTime(startTime, hours) {
-        startTime = moment(startTime);
-        let numDays = Math.floor(hours  / WORK_HOURS_PER_DAY);
-        let remaining = hours % WORK_HOURS_PER_DAY;
-        if (remaining === 0) {
-            numDays--;
-            remaining = WORK_HOURS_PER_DAY;
-        }
-        if ((startTime.hours() <= WORK_HOURS_END) && (startTime.hours() >= WORK_HOURS_START)) {
-            let firstDayEnd = startTime.clone().startOf("day").hours(WORK_HOURS_END);
-            remaining -= (firstDayEnd - startTime) / MILLISECONDS_PER_HOUR;
-        }
-        let endTime = startTime.clone().add(numDays, "days");
-        if (remaining > 0) {
-            if (startTime.hours() <= WORK_HOURS_START) {
-                endTime.startOf("day").hours(WORK_HOURS_START).add(remaining, "hours");
-            } else {
-                endTime.add(1, "days")
-                    .startOf("day")
-                    .hours(WORK_HOURS_START)
-                    .add(remaining, "hours");
-            }
-        } else {
-            endTime.startOf("day").hours(WORK_HOURS_END).add(remaining, "hours");
-        }
-
-        console.log("start", startTime.format(), "hour", hours, "end", endTime.format());
-        return endTime;
     }
 
     function generateWarnings() {
@@ -428,3 +416,76 @@ $(function() {
             center.clone().endOf("week"));
     });
 });
+
+/**
+ * Computes the difference of two sets. Taken from:
+ * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set
+ */
+function difference(setA, setB) {
+    let _difference = new Set(setA);
+    for (let elem of setB) {
+        _difference.delete(elem);
+    }
+    return _difference;
+}
+
+/**
+ * Computes the intersection of two sets.
+ */
+function intersection(setA, setB) {
+    let _intersection = new Set();
+    for (let elem of setB) {
+        if (setA.has(elem)) {
+            _intersection.add(elem);
+        }
+    }
+    return _intersection;
+}
+
+/**
+ * For performance reasons, async query completion time is not feasible. This
+ * is an exact port from the Python version.
+ * @param startTime the start time of a manufacturing activity
+ * @param hours the number of work hours
+ * @return a {@code moment} object representing the end time
+ */
+function getCompletionTime(startTime, hours) {
+    startTime = moment(startTime);
+    let numDays = Math.floor(hours  / WORK_HOURS_PER_DAY);
+    let remaining = hours % WORK_HOURS_PER_DAY;
+    if (remaining === 0) {
+        numDays--;
+        remaining = WORK_HOURS_PER_DAY;
+    }
+    if ((startTime.hours() <= WORK_HOURS_END) && (startTime.hours() >= WORK_HOURS_START)) {
+        let firstDayEnd = startTime.clone().startOf("day").hours(WORK_HOURS_END);
+        remaining -= (firstDayEnd - startTime) / MILLISECONDS_PER_HOUR;
+    }
+    let endTime = startTime.clone().add(numDays, "days");
+    if (remaining > 0) {
+        if (startTime.hours() <= WORK_HOURS_START) {
+            endTime.startOf("day").hours(WORK_HOURS_START).add(remaining, "hours");
+        } else {
+            endTime.add(1, "days")
+                .startOf("day")
+                .hours(WORK_HOURS_START)
+                .add(remaining, "hours");
+        }
+    } else {
+        endTime.startOf("day").hours(WORK_HOURS_END).add(remaining, "hours");
+    }
+
+    console.log("start", startTime.format(), "hour", hours, "end", endTime.format());
+    return endTime;
+}
+
+/**
+ * Toggles a goal item on the palette. Specifically, it applies the text-muted
+ * class to items that are scheduled, and removes the class if it's unscheduled
+ * @param goalItemId the ID of the goal item
+ * @param scheduled whether it is scheduled
+ */
+function toggleGoalItem(goalItemId, scheduled) {
+    $(`span[data-goal-item-id=${goalItemId}]`)
+        .toggleClass("text-muted", scheduled);
+}

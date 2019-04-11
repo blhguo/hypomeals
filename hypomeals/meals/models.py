@@ -44,13 +44,9 @@ class User(AbstractUser):
     @property
     def is_plant_manager(self):
         """
-        This is ugly but it works. It works by listing all permissions that a user has,
-        and taking the first 13 characters ("meals.owns_ml" is 13 characters) of each
-        permission, and checking if "meals.owns_ml" is contained in the resulting set.
-        :return: True iff the user is a Plant Manager for at least one manufacturing
-            line
+        Checks whether the user is plant manager for at least one manufacturing line
         """
-        return "meals.owns_ml" in set(map(lambda s: s[:13], self.get_all_permissions()))
+        return self.groups.filter(permissions__codename__istartswith="owns_ml").exists()
 
     def check_password(self, raw_password):
         if self.netid:
@@ -601,10 +597,12 @@ class ManufacturingLine(
                 "content_type": content_type,
             },
         )[0]
-        group, _ = Group.objects.get_or_create(
-            name=f"Plant Manager ({self.shortname})"
-        )
+        group, _ = Group.objects.get_or_create(name=f"Plant Manager ({self.shortname})")
         group.permissions.add(perm)
+
+        # Admins also own all manufacturing lines
+        admin_group = Group.objects.get(name="Admins")
+        admin_group.add(perm)
 
     def save(
         self, force_insert=False, force_update=False, using=None, update_fields=None

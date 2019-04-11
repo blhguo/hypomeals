@@ -10,9 +10,12 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, F
+from django.db.models.functions import Substr
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
@@ -53,7 +56,7 @@ def edit_goal(request, goal_id=-1):
         if goal_obj.user != request.user:
             messages.error(
                 request,
-                "You do not have permission to view this goal. Did you create it?"
+                "You do not have permission to view this goal. Did you create it?",
             )
             messages.error(request, "You may only view goals created by yourself.")
             raise PermissionDenied
@@ -324,9 +327,20 @@ def disable_goals(request):
 
 
 @login_required
-@auth.user_is_admin_ajax(msg="Only administrators may create a manufacturing schedule.")
 def schedule(request):
-    # TODO: Permission checking is more complicated here
+    if not request.user.is_plant_manager:
+        messages.error(
+            request, "Only Plant Managers may edit the manufacturing schedule"
+        )
+        raise PermissionDenied(
+            "You are not authorized to edit the manufacturing schedule,"
+        )
+    line_shortnames = set(
+        request.user.groups.annotate(codename=F("permissions__codename"))
+        .filter(codename__startswith="owns_ml")
+        .annotate(line=Substr("codename", 9))
+        .values_list("line", flat=True)
+    )
     goal_items = GoalItem.objects.filter(
         Q(schedule__isnull=False) | Q(goal__is_enabled=True)
     )
@@ -362,7 +376,12 @@ def schedule(request):
     return render(
         request,
         template_name="meals/goal/schedule.html",
-        context={"formset": formset, "goals": goal_objs, "goal_items": goal_items},
+        context={
+            "formset": formset,
+            "goals": goal_objs,
+            "goal_items": goal_items,
+            "lines": line_shortnames,
+        },
     )
 
 
