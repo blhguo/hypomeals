@@ -4,8 +4,7 @@ Contains algorithms for generic auto-scheduling
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import List, Mapping
-
+from typing import List, Mapping, Set
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +13,7 @@ logger = logging.getLogger(__name__)
 class Item:
     id: int
     hours: int
-    groups: List[str]
+    groups: Set[str]
 
 
 @dataclass
@@ -61,7 +60,10 @@ def schedule(
     for item in items:
         schedules.append(
             Schedule(
-                item.id, start, start + timedelta(hours=item.hours), item.groups[0]
+                item.id,
+                start,
+                start + timedelta(hours=item.hours),
+                next(iter(item.groups)),
             )
         )
     return list(map(Schedule.to_dict, schedules))

@@ -333,12 +333,6 @@ def schedule(request):
         raise PermissionDenied(
             "You are not authorized to edit the manufacturing schedule,"
         )
-    line_shortnames = set(
-        request.user.groups.annotate(codename=F("permissions__codename"))
-        .filter(codename__startswith="owns_ml")
-        .annotate(line=Substr("codename", 9))
-        .values_list("line", flat=True)
-    )
     goal_items = GoalItem.objects.filter(
         Q(schedule__isnull=False) | Q(goal__is_enabled=True)
     )
@@ -378,7 +372,7 @@ def schedule(request):
             "formset": formset,
             "goals": goal_objs,
             "goal_items": goal_items,
-            "lines": line_shortnames,
+            "lines": request.user.owned_lines,
         },
     )
 
@@ -461,7 +455,11 @@ def auto_schedule(request):
     try:
         for item in items:
             toSchedule.append(
-                scheduling.Item(item["id"], int(item["hours"]), item["groups"])
+                scheduling.Item(
+                    item["id"],
+                    int(item["hours"]),
+                    set(item["groups"]).intersection(request.user.owned_lines),
+                )
             )
     except Exception:
         logger.exception("Invalid auto-schedule request")

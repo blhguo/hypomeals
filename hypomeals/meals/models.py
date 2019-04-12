@@ -9,7 +9,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import BLANK_CHOICE_DASH
+from django.db.models import BLANK_CHOICE_DASH, F
+from django.db.models.functions import Substr
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.text import Truncator
@@ -47,6 +48,16 @@ class User(AbstractUser):
         Checks whether the user is plant manager for at least one manufacturing line
         """
         return self.groups.filter(permissions__codename__istartswith="owns_ml").exists()
+
+    @property
+    def owned_lines(self):
+        prefix = "owns_ml_"
+        return set(
+            self.groups.annotate(codename=F("permissions__codename"))
+            .filter(codename__startswith=prefix)
+            .annotate(line=Substr("codename", len(prefix) + 1))
+            .values_list("line", flat=True)
+        )
 
     def check_password(self, raw_password):
         if self.netid:
