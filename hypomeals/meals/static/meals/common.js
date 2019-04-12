@@ -287,30 +287,44 @@ function makeModalAlert(title, message, success, cancel) {
     return modal;
 }
 
-function getJson(url, data, suppressAlerts) {
+function ajaxJson(url, method, data, suppressAlerts) {
     let deferred = $.Deferred();
-    $.getJSON(url, data)
-        .done(function(data, textStatus) {
-            if (!showNetworkError(data, textStatus, suppressAlerts)) {
-                return;
+    $.ajax({
+        url: url,
+        method: method,
+        data: data,
+    }).done(function(data, textStatus) {
+        if (!showNetworkError(data, textStatus, suppressAlerts)) {
+            return;
+        }
+        if ("error" in data && data.error) {
+            if (!suppressAlerts) {
+                makeModalAlert("Error", data.error);
             }
-            if ("error" in data && data.error) {
-                if (!suppressAlerts) {
-                    makeModalAlert("Error", data.error);
-                }
-                deferred.reject(data.error);
-                return;
+            deferred.reject(data.error);
+            return;
+        }
+        if (!("resp" in data)) {
+            let msg = "The server returned an empty response.";
+            if (!suppressAlerts) {
+                makeModalAlert("Error",
+                    msg + " Please try again later.")
             }
-            if (!("resp" in data)) {
-                let msg = "The server returned an empty response.";
-                if (!suppressAlerts) {
-                    makeModalAlert("Error",
-                        msg + " Please try again later.")
-                }
-                deferred.reject(msg);
-                return;
-            }
-            deferred.resolve(data.resp);
-        });
+            deferred.reject(msg);
+            return;
+        }
+        deferred.resolve(data.resp);
+    }).fail(function(jqxhr, textStatus, errorThrown) {
+        showNetworkError({error: errorThrown}, textStatus, suppressAlerts);
+        deferred.reject(errorThrown);
+    });
     return deferred;
+}
+
+function getJson(url, data, suppressAlerts) {
+    return ajaxJson(url, "get", data, suppressAlerts);
+}
+
+function postJson(url, data, suppressAlerts) {
+    return ajaxJson(url, "post", data, suppressAlerts);
 }

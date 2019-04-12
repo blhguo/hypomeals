@@ -84,7 +84,20 @@ ul.errorlist {
 {% endif %}
 
 <div class="row my-3">
-<div class="col-sm-12">
+<!-- Undo / Redo -->
+<div class="col-sm-2">
+<div class="btn-group">
+    <button type="button"
+            id="undoButton"
+            disabled="disabled"
+            class="btn btn-outline-secondary"><i class="fas fa-undo"></i></button>
+    <button type="button"
+            id="redoButton"
+            disabled="disabled"
+            class="btn btn-outline-secondary"><i class="fas fa-redo"></i></button>
+</div>
+</div>
+<div class="col-sm-10">
 <div class="btn-toolbar d-flex justify-content-end align-items-baseline" role="toolbar">
 <div class="custom-control custom-checkbox mr-2">
     <input type="checkbox" class="custom-control-input" id="suppressWarningCheckbox">
@@ -105,15 +118,20 @@ ul.errorlist {
     <button class="btn btn-success" id="showHelpButton">
         <span class="fas fa-question-circle"></span> Help
     </button>
+    <button class="btn btn-info"
+            id="autoScheduleButton"
+            data-href="{% url 'auto_schedule' %}">
+        <span class="fas fa-robot"></span> Auto-schedule (Beta)
+    </button>
     <button class="btn btn-primary dropdown-toggle"
             data-toggle="dropdown">
         <span class="fas fa-search-plus"></span> Fit...
     </button>
     <div class="dropdown-menu">
-        <a href="#" class="dropdown-item" id="currentMonthButton">Month</a>
-        <a href="#" class="dropdown-item" id="currentQuarterButton">Quarter</a>
-        <a href="#" class="dropdown-item" id="currentYearButton">Year</a>
-        <a href="#" class="dropdown-item" id="fitAllButton">Scheduled</a>
+        <a href="#" class="dropdown-item" id="currentMonthButton"><u>M</u>onth</a>
+        <a href="#" class="dropdown-item" id="currentQuarterButton"><u>Q</u>uarter</a>
+        <a href="#" class="dropdown-item" id="currentYearButton"><u>Y</u>ear</a>
+        <a href="#" class="dropdown-item" id="fitAllButton"><u>S</u>cheduled</a>
     </div>
 </div>
 </div>
@@ -161,14 +179,16 @@ ul.errorlist {
 <ul class="list-group list-group-flush">
 {% for item in details %}
     {% with item.sku.line_shortnames as lines %}
-    {% spaceless %}
+    <div>
     <input type="checkbox" class="goalItemCheckboxes"
+           data-goal-item-id="{{ item.pk }}"
            id="checkbox-goal-item-{{ item.pk }}"/>
     <label for="checkbox-goal-item-{{ item.pk }}"
            class="list-group-item d-flex align-items-baseline justify-content-start">
         <span class="badge badge-pill badge-info mr-2">{{ item.quantity|quantize:2 }}</span>
         <span class="mr-2">&times;</span>
         <span class="goalItems mr-2{% if not lines %}text-muted{% endif %}"
+              style="font-size: small;"
               data-toggle="tooltip"
               data-placement="bottom"
               title="{{ item.sku }}"
@@ -181,10 +201,10 @@ ul.errorlist {
                 {% endif %}
               data-goal-item-id="{{ item.id }}"
               data-sku-id="{{ item.sku.pk }}">
-            {{ item.sku.name }} (#{{ item.sku.number }})
+            {{ item.sku.name|truncatechars:'20' }} (#{{ item.sku.number }})
         </span>
     </label>
-    {% endspaceless %}
+    </div>
     {% endwith %}
 {% endfor %}
 </ul>
@@ -235,7 +255,7 @@ ul.errorlist {
 
 <div class="btn-group">
     <button class="btn btn-success" id="submitButton">Apply Changes</button>
-    <a class="btn btn-secondary" href="{% url 'goals' %}">Back to Goals</a>
+    <a id="backToGoalsButton" class="btn btn-secondary" href="{% url 'goals' %}">Back to Goals</a>
 </div>
 </div>
 </div>
@@ -254,6 +274,39 @@ ul.errorlist {
 <tbody>
 </tbody>
 </table>
+
+<div id="autoScheduleDateDiv">
+<div class="row mb-3">
+<div class="col-sm">
+<div class="alert alert-success">
+    <p>
+    This feature allows you to automatically schedule selected items on
+    available lines during a selected timespan.
+    </p>
+    <p class="mb-0">
+        Simply enter a start and end date below to get started. Don't worry;
+        if you don't like the auto-scheduled results, you can also undo this
+        operation.
+    </p>
+</div>
+</div>
+</div>
+
+<div class="form-row mt-3">
+<div class="input-group">
+    <div class="input-group-prepend">
+        <label class="input-group-text" for="startDate">
+            Timespan
+        </label>
+    </div>
+    <input type="date" id="startDate" class="form-control">
+    <input type="date" id="endDate" class="form-control">
+    {% csrf_token %}
+</div>
+</div>
+
+</div>
+
 </div>
 
 </div>
@@ -271,6 +324,7 @@ ul.errorlist {
 
 {% block scriptend %}
 <script src="{% static 'meals/common.js' %}"></script>
-<script src="https://momentjs.com/downloads/moment.js"></script>
+<script src="{% static 'meals/lib/moment.js' %}"></script>
+<script src="{% static 'meals/lib/undomanager.js' %}"></script>
 <script src="{% static 'meals/goal/schedule.js' %}"></script>
 {% endblock %}

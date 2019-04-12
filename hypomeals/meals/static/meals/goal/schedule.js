@@ -1,4 +1,4 @@
-const IGNORE_SENDER_ID = 1;
+const SENDER_ID_IGNORE = 1;  // Sender should be ignored
 const WORK_HOURS_PER_DAY = 10;  // TODO: Get this from HTML
 const WORK_HOURS_START = 8;
 const WORK_HOURS_END = 18;
@@ -11,12 +11,14 @@ let groups = new vis.DataSet([]);
 let goalItemsMap = new Map();
 let warnings = new vis.DataSet([]);
 let ownedLines = new Set();
+let undoMgr = new UndoManager();
 
 $(function() {
     $("[data-toggle='tooltip']").tooltip();
     let warningUl = $("#warningUl");
     let warningDiv = $("#warningDiv");
-    let suppressWarningCheckbox = $("#suppressWarningCheckbox");
+    let suppressWarningCheckbox = $("#suppressWarningCheckbox")
+        .change(generateWarnings);
     $("#showHelpButton").click(function() {
         $("#helpDiv").toggle("fast");
     });
@@ -25,8 +27,35 @@ $(function() {
         ownedLines.add($(e).text());
     });
 
+    $(".selectAllButtons").click(function() {
+        let checkboxes = $(this)
+            .parents(".card")
+            .find("input[type='checkbox']:enabled");
+        if (checkboxes.length === 0) {
+            makeToast("All Scheduled",
+                "All items in this goal have been scheduled.",
+                3000);
+            return;
+        }
+        if (checkboxes.filter(":checked").length === checkboxes.length) {
+            checkboxes.prop("checked", false);
+            $(this).text("Select All");
+        } else {
+            checkboxes.prop("checked", true);
+            $(this).text("Deselect All");
+        }
+    });
+
+    undoMgr.setCallback(function() {
+        $("#undoButton").prop("disabled", !undoMgr.hasUndo());
+        $("#redoButton").prop("disabled", !undoMgr.hasRedo());
+    });
+
+    $("#undoButton").click(undoMgr.undo);
+    $("#redoButton").click(undoMgr.redo);
+
     let mfgLines = new Set();  // Set of MLs to display groups
-    $(".goalItems[data-schedulable=true]")
+    $("span.goalItems[data-schedulable=true]")
         .on("dragstart", function(event) {
         let src = $(this);
         let goalItemId = Number(src.attr("data-goal-item-id"));
@@ -49,26 +78,15 @@ $(function() {
 
     /**************** Timeline event listeners ***************/
     items.on("update", function(event, properties, senderId) {
-        if (senderId === IGNORE_SENDER_ID) return;
+        if (senderId === SENDER_ID_IGNORE) return;
         let item = properties.data[0];
         let oldItem = properties.oldData[0];
         item.start = moment(item.start);
         item.end = moment(item.end);
         oldItem.start = moment(oldItem.start);
         oldItem.end = moment(oldItem.end);
-        let itemInfo = goalItemsMap.get(item.id);
-        if (!ownedLines.has(item.group)) {
-            makeModalAlert("Cannot Schedule",
-                `You are not authorized to manage manufacturing activities on 
-                '${item.group}'. Operation will be reverted.`);
-            items.update(properties.oldData[0]);
-            return;
-        }
-        if (!itemInfo.lines.includes(item.group)) {
-            makeModalAlert("Cannot Schedule",
-                `Manufacturing Line '${item.group}' cannot produce SKU #${itemInfo.skuId}.
-                Operation will be reverted.`);
-            items.update(properties.oldData[0]);
+        if (!validGroup(item.id, item.group)) {
+            items.update(properties.oldData[0], SENDER_ID_IGNORE);
             return;
         }
         if ("start" in item) {
@@ -82,49 +100,95 @@ $(function() {
                 }
             } catch (e) {
                 if (e.message !== "overlap") throw e;
-                makeModalAlert("Error",
+                makeModalAlert("Overlap detected",
                     `Production overlaps on Manufacturing Line '${item.group}'.
-                    This operation will be reverted.`,
-                    null,
-                    function() {
-                        items.update(oldItem, IGNORE_SENDER_ID);
-                    });
+                    Operation will be reverted.`,
+                    null);
+                items.update(oldItem, SENDER_ID_IGNORE);
+                return;
             }
         }
+        undoMgr.add({
+            undo: function() {
+                items.update(oldItem, SENDER_ID_IGNORE);
+            },
+            redo: function() {
+                items.update(item, SENDER_ID_IGNORE);
+            }
+        });
         generateWarnings();
     });
     items.on("add", function(event, properties, senderId) {
         let item = items.get(properties.items[0]);
         let itemInfo = goalItemsMap.get(item.id);
-        if (!itemInfo.lines.includes(item.group)) {
-            makeModalAlert("Cannot Schedule",
-                `Manufacturing Line '${item.group}'\
-                 cannot produce SKU #${itemInfo.skuId}.
-                This item has been removed.`);
-            items.remove({id: item.id});
-            return false;
-        }
         toggleGoalItem(item.id, true);
         if ("start" in item) {
+            itemInfo.start = item.start;
             try {
                 adjustEnd(item, item.start, itemInfo.overrideHours, !item.suppressWarning);
             } catch (e) {
                 makeModalAlert("Error",
                     `Production overlaps on Manufacturing Line '${item.group}'.
-                    This item will be removed.`,
-                    null,
-                    function () {items.remove({id: item.id});});
+                    This item will be removed.`);
+                items.remove({id: item.id}, SENDER_ID_IGNORE);
             }
         }
         generateWarnings();
+        if (senderId === SENDER_ID_IGNORE) {
+            return;
+        }
+        if (!validGroup(item.id, item.group)) {
+            items.remove({id: item.id}, SENDER_ID_IGNORE);
+            return;
+        }
+        undoMgr.add({
+            undo: function () {
+                items.remove({id: item.id});
+            },
+            redo: function () {
+                let toAdd = Object.assign({}, itemInfo);
+                toAdd = Object.assign(toAdd, item);
+                items.add(toAdd);
+            }
+        });
     });
     items.on("remove", function(event, properties, senderId) {
-        let itemInfo = goalItemsMap.get(properties.items[0]);
+        let itemId = properties.items[0];
+        let item = properties.oldData[0];
+        let itemInfo = goalItemsMap.get(itemId);
         itemInfo.start = null;
         itemInfo.overrideHours = null;
-        toggleGoalItem(properties.items[0], itemInfo.isOrphaned);
+        toggleGoalItem(itemId, itemInfo.isOrphaned);
+        if (senderId === SENDER_ID_IGNORE) {
+            return;
+        }
+        undoMgr.add({
+                undo: function () {
+                    items.add(item, SENDER_ID_IGNORE);
+                },
+                redo: function () {
+                    items.remove({id: itemId}, SENDER_ID_IGNORE)
+                }
+            });
         // generateWarnings();
     });
+
+    function validGroup(itemId, group) {
+        let itemInfo = goalItemsMap.get(itemId);
+        if (!ownedLines.has(group)) {
+            makeModalAlert("Not Authorized",
+                `You are not authorized to manage manufacturing activities on 
+                '${group}'. Operation will be reverted.`);
+            return false;
+        }
+        if (!itemInfo.lines.includes(group)) {
+            makeModalAlert("Cannot Schedule",
+                `Manufacturing Line '${group}' cannot produce SKU #${itemInfo.skuId}.
+                Operation will be reverted.`);
+            return false;
+        }
+        return true;
+    }
 
     /****************** Sync with Form **********************/
     let form = $("form");
@@ -167,10 +231,6 @@ $(function() {
         if (lines.includes(line)) {
             itemInfo.group = line;
         }
-        if (!ownedLines.has(line)) {
-            // Line not owned by current user
-            itemInfo.editable = false;
-        }
         lines.forEach((l) => mfgLines.add(l));
 
         let endTime = moment(div.find("input[name*=end_time]").val(),
@@ -192,7 +252,7 @@ $(function() {
                 }
             }
             goalItemsMap.set(id, itemInfo);
-            items.add(itemInfo);
+            items.add(itemInfo, SENDER_ID_IGNORE);
         }
         goalItemsMap.set(id, itemInfo);
     });
@@ -230,7 +290,7 @@ $(function() {
         let html = null;
         if (scheduled.length > 0) {
             html = $(`<p>You have scheduled the following items:</p>`);
-            let table = $("#confirmationTable");
+            let table = $("#confirmationTable").clone();
             for (let item of scheduled) {
                 table.find("tbody").append($("<tr>").append([
                     $("<td>").text(item.content),
@@ -270,8 +330,9 @@ $(function() {
             groupIds = groups.distinct("id");
         }
         let updates = [];
-        let className = highlighted ? "bg-success text-white" : "1";
+        let className = highlighted ? "bg-success text-white opacity-7" : "1";
         for (let group of groupIds) {
+            if (!ownedLines.has(group)) continue;
             updates.push({id: group, className: className});
         }
         groups.update(updates);
@@ -329,7 +390,7 @@ $(function() {
             updates["className"] = "";
             updates["title"] = `${start.format("lll")} - ${updates.end.format("lll")}`
         }
-        items.update(updates, IGNORE_SENDER_ID);
+        items.update(updates, SENDER_ID_IGNORE);
         checkOverlap(item);
     }
 
@@ -337,6 +398,10 @@ $(function() {
         if (timeline === null) return;  // Timeline is not initialized yet.
         let visibleItems = timeline.getVisibleItems();
         let suppressWarning = $("#suppressWarningCheckbox").prop("checked");
+        if (suppressWarning) {
+            warningDiv.toggle(false);
+            return;
+        }
         let warnings = [];
         for (let itemId of visibleItems) {
             let item = items.get(itemId);
@@ -475,7 +540,7 @@ function getCompletionTime(startTime, hours) {
         endTime.startOf("day").hours(WORK_HOURS_END).add(remaining, "hours");
     }
 
-    console.log("start", startTime.format(), "hour", hours, "end", endTime.format());
+    // console.log("start", startTime.format(), "hour", hours, "end", endTime.format());
     return endTime;
 }
 
@@ -487,5 +552,131 @@ function getCompletionTime(startTime, hours) {
  */
 function toggleGoalItem(goalItemId, scheduled) {
     $(`span[data-goal-item-id=${goalItemId}]`)
-        .toggleClass("text-muted", scheduled);
+        .toggleClass("text-muted", scheduled)
+        .parents("label")
+        .siblings("input")
+        .prop("disabled", scheduled);
 }
+
+/**
+ * Bind shortcut keys
+ */
+$(function() {
+    Mousetrap.bind("ctrl+x ctrl+s", function(e) {
+        e.preventDefault();
+        $("#submitButton").trigger("click");
+    });
+    Mousetrap.bind("ctrl+x ctrl+c", function(e) {
+        e.preventDefault();
+        $("#backToGoalsButton")[0].click();
+    });
+    Mousetrap.bind("ctrl+h", function(e) {
+        e.preventDefault();
+        $("#showHelpButton").trigger("click");
+    });
+    Mousetrap.bind(["ctrl+z", "command+z", "ctrl+/"], undoMgr.undo);
+    Mousetrap.bind(["ctrl+shift+z", "command+shift+z"], undoMgr.redo);
+    ([
+        ["m", "#currentMonthButton"],
+        ["q", "#currentQuarterButton"],
+        ["y", "#currentYearButton"],
+        ["s", "#fitAllButton"]
+    ]).forEach(function(key) {
+        Mousetrap.bind("ctrl+f " + key[0], function(e) {
+            e.preventDefault();
+            $(key[1]).trigger("click");
+        })
+    });
+});
+
+/**
+ * Auto-schedule logic
+ */
+$(function() {
+    let checkboxes = $("#goalItemList input[type='checkbox']:enabled");
+    $("#autoScheduleButton").click(function(ev) {
+        ev.preventDefault();
+        let button = $(this);
+        let selected = checkboxes.filter(":checked")
+            .toArray()
+            .map(e => Number($(e).attr("data-goal-item-id")));
+        if (selected.length === 0) {
+            makeModalAlert("Cannot Auto-schedule",
+                "You must select at least one item from the palette below.");
+            return;
+        }
+        let toSchedule = [];
+        for (let itemInfo of selected.map(e => goalItemsMap.get(e))) {
+            toSchedule.push({
+                id: itemInfo.id,
+                groups: Array.from(intersection(new Set(itemInfo.lines), ownedLines)),
+                hours: itemInfo.hours
+            })
+        }
+        let original = button.html();
+        let modal = makeModalAlert("Auto-schedule",
+            $("#autoScheduleDateDiv"), doSchedule);
+        function doSchedule() {
+            let start = moment(modal.find("#startDate").val(), "YYYY-MM-DD");
+            let end = moment(modal.find("#endDate").val(), "YYYY-MM-DD");
+            if (!start.isValid() || !end.isValid()) {
+                $(modal.find("input[type='date']")[0]).trigger("focus");
+                return false;
+            }
+            button.html(`<div class="spinner-border spinner-border-sm"></div> Auto-scheduling...`)
+                .prop("disabled", true);
+            postJson(button.attr("data-href"), {
+                items: JSON.stringify(Array.from(toSchedule)),
+                start: start.unix(),
+                end: end.unix(),
+                csrfmiddlewaretoken: $("input[name='csrfmiddlewaretoken']").val()
+            }, true).done(function(data) {
+                data = JSON.parse(data);
+                addItems(data);
+                undoMgr.add({
+                    undo: function() {
+                        items.remove(data.map(i => i.id));
+                    },
+                    redo: function() {
+                        addItems(data);
+                    }
+                });
+                makeToast("Auto-schedule",
+                    `Successfully scheduled ${toSchedule.length} items.`, 3000);
+                checkboxes.prop("checked", false);
+            }).fail(function(error) {
+                makeModalAlert("Auto-schedule",
+                    "An error has occurred.\n" + error);
+            }).always(function() {
+                resetButton();
+            });
+        }
+        function resetButton() {
+            button.html(original).prop("disabled", false);
+        }
+        function addItems(data) {
+            for (let scheduled of data) {
+                let itemInfo = goalItemsMap.get(Number(scheduled.id));
+                let item = Object.assign({}, itemInfo);
+                item.group = scheduled.group;
+                item.start = moment.unix(scheduled.start);
+                item.end = moment.unix(scheduled.end);
+
+                items.add(item, SENDER_ID_IGNORE);
+            }
+        }
+        modal.find("input[type='date']").change(function() {
+            let value = $(this).val();
+            if (value.length === 0) {
+                $(this).removeClass("was-validated is-valid is-invalid");
+                return;
+            }
+            $(this).addClass("was-validated");
+            if (moment(value).isValid()) {
+                $(this).removeClass("is-invalid").addClass("is-valid");
+            } else {
+                $(this).removeClass("is-valid").addClass("is-invalid");
+            }
+        })
+    });
+});

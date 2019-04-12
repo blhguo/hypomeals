@@ -10,8 +10,6 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import Permission
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Q, F
@@ -21,9 +19,9 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
 from django.utils.datetime_safe import datetime
 
-from meals import auth
-from meals import utils
+from meals import auth, scheduling, utils
 from meals.constants import WORK_HOURS_END
+from meals.exceptions import UserFacingException
 from meals.forms import (
     SkuQuantityFormset,
     GoalForm,
@@ -440,6 +438,39 @@ def schedule_report(request):
             "ingredients": result.items(),
         },
     )
+
+
+@login_required
+@utils.ajax_view
+@utils.log_exceptions
+def auto_schedule(request):
+    if not request.user.is_plant_manager:
+        raise UserFacingException("You are not authorized to use the auto-scheduler.")
+    items = json.loads(request.POST.get("items", "[]"))
+    start = request.POST.get("start", "")
+    end = request.POST.get("end", "")
+    try:
+        start = datetime.fromtimestamp(int(start))
+        end = datetime.fromtimestamp(int(end))
+    except ValueError:
+        raise UserFacingException("Unable to schedule: invalid start/end time")
+    if not items:
+        # Return empty schedule
+        return "[]"
+    toSchedule = []
+    try:
+        for item in items:
+            toSchedule.append(
+                scheduling.Item(item["id"], int(item["hours"]), item["groups"])
+            )
+    except Exception:
+        logger.exception("Invalid auto-schedule request")
+        raise UserFacingException("Unable to schedule: invalid request.")
+    try:
+        result = scheduling.schedule(toSchedule, start, end)
+    except scheduling.ScheduleException as e:
+        raise UserFacingException(str(e))
+    return json.dumps(result)
 
 
 @login_required

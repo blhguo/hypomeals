@@ -17,7 +17,6 @@ $(function() {
     elements.each(function(i, el) {
         if (i >= keys.length) return;
         if (keys[i] === "###") return;
-        console.log("Binding", keys[i], "to", $(el).attr("href"));
         Mousetrap.bind(keys[i], function(ev) {
             window.location.href = $(el).attr("href");
         })
