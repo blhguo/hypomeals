@@ -576,6 +576,15 @@ $(function() {
     });
     Mousetrap.bind(["ctrl+z", "command+z", "ctrl+/"], undoMgr.undo);
     Mousetrap.bind(["ctrl+shift+z", "command+shift+z"], undoMgr.redo);
+    Mousetrap.bind(["ctrl+shift+s", "command+shift+s"], function(e) {
+        e.preventDefault();
+        $("#autoScheduleButton").trigger("click");
+    });
+    Mousetrap.bind(["ctrl+a", "command+a"], function(e) {
+        e.preventDefault();
+        $("#goalItemList input[type='checkbox']:enabled")
+            .trigger("click");
+    });
     ([
         ["m", "#currentMonthButton"],
         ["q", "#currentQuarterButton"],
@@ -616,11 +625,12 @@ $(function() {
         let original = button.html();
         let modal = makeModalAlert("Auto-schedule",
             $("#autoScheduleDateDiv"), doSchedule);
+        focusDate();
         function doSchedule() {
             let start = moment(modal.find("#startDate").val(), "YYYY-MM-DD");
             let end = moment(modal.find("#endDate").val(), "YYYY-MM-DD");
             if (!start.isValid() || !end.isValid()) {
-                $(modal.find("input[type='date']")[0]).trigger("focus");
+                focusDate();
                 return false;
             }
             button.html(`<div class="spinner-border spinner-border-sm"></div> Auto-scheduling...`)
@@ -650,6 +660,9 @@ $(function() {
             }).always(function() {
                 resetButton();
             });
+        }
+        function focusDate() {
+            $(modal.find("input[type='date']")[0]).trigger("focus");
         }
         function resetButton() {
             button.html(original).prop("disabled", false);

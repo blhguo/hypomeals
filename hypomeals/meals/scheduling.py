@@ -1,9 +1,13 @@
 """
 Contains algorithms for generic auto-scheduling
 """
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import List, Mapping
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -48,13 +52,16 @@ def schedule(
     if len(items) > 1:
         raise ScheduleException("Unable to schedule: too many items.")
     schedules: List[Schedule] = []
+    logger.info(
+        "Scheduling %d items from %s to %s",
+        len(items),
+        start.isoformat(),
+        end.isoformat(),
+    )
     for item in items:
         schedules.append(
             Schedule(
-                item.id,
-                start,
-                start + timedelta(hours=item.hours),
-                item.groups[0],
+                item.id, start, start + timedelta(hours=item.hours), item.groups[0]
             )
         )
     return list(map(Schedule.to_dict, schedules))
