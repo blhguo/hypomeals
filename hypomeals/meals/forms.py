@@ -765,12 +765,14 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
     custom_product_line = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={"placeholder": "Enter a new product line..."}),
+        label="Custom Product Line",
         help_text="Note that this field is case sensitive!",
     )
     product_line = forms.ChoiceField(
         choices=lambda: BLANK_CHOICE_DASH
-        + [("custom", "Custom")]
+        + [("custom", "<Custom>")]
         + get_product_line_choices(),
+        label="Product Line",
         required=True,
     )
     formula = forms.ChoiceField(
@@ -781,6 +783,7 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
         data_source=reverse_lazy("autocomplete_manufacturing_lines"),
         required=True,
         attr="shortname",
+        label="Manufacturing Lines",
         help_text="Enter Manufacturing Lines (shortname) separated by commas",
     )
 
@@ -811,7 +814,7 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
             "manufacturing_lines",
         ]
         widgets = {"comment": forms.Textarea(attrs={"maxlength": 4000})}
-        labels = {"number": "SKU#"}
+        labels = {"number": "SKU#", "setup_cost": "Setup cost", "run_cost": "Run cost"}
         help_texts = {
             "name": "Name of the new SKU.",
             "number": "A numeric identifier for this new SKU."

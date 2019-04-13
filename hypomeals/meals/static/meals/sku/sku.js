@@ -31,22 +31,12 @@ $(function () {
 
     function removeSkus(toRemove) {
         let csrf_token = $("input[name=csrfmiddlewaretoken]").val();
-        $.ajax(removeSkuUrl, {
-            type: "POST",
-            data: {
-                to_remove: JSON.stringify(toRemove),
-                csrfmiddlewaretoken: csrf_token,
-            },
-            dataType: "json",
-        }).done(function (data, textStatus) {
-            if (!showNetworkError(data, textStatus)) {
-                return;
-            }
-            if ("resp" in data) {
-                makeToast("Success", data.resp, -1)
-                    .done(refreshPage);
-            }
-        });
+        postJson(removeSkuUrl, {
+            to_remove: JSON.stringify(toRemove),
+            csrfmiddlewaretoken: csrf_token
+        }).done(function(data) {
+            refreshPage();
+        })
     }
 
     removeButton.on("click", function (ev) {
@@ -58,9 +48,8 @@ $(function () {
         });
         if (toRemove.length < 0) return;
         makeModalAlert(`Remove ${toRemove.length} SKU(s)`,
-            `Are you sure you want to remove ${toRemove.length} SKU(s)?\n` +
-            "This will also remove their associated formulas.\n" +
-            "This cannot be undone.", function () {
+            `Are you sure you want to remove ${toRemove.length} SKU(s)?
+            This cannot be undone.`, function () {
                 removeSkus(toRemove);
             });
     });
@@ -127,6 +116,11 @@ $(function () {
     }
 
     bulkButton.click(function () {
+        if ($(".sku-checkbox:checked").length === 0) {
+            makeModalAlert("Error",
+                "You must select at least one SKU before bulk editing manufacturing lines.");
+            return;
+        }
         $("#ml-content").remove();
         let skus = [];
         skuCheckboxes.each(function (i, cb) {
@@ -185,4 +179,15 @@ $(function () {
     }
 
     $("#resetAllButton").click(refreshPage);
+});
+
+$(function() {
+    Mousetrap.bind("n", function(e) {
+        e.preventDefault();
+        $("#addSkuButton")[0].click();
+    });
+    Mousetrap.bind(["command+a", "ctrl+a"], function(e) {
+        e.preventDefault();
+        $("#selectAll").trigger("click");
+    })
 });

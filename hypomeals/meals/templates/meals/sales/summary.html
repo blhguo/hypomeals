@@ -106,7 +106,12 @@
                             {{ number }}
                         </td>
                         <td class="align-middle">
-                            <a href="{% url 'drilldown' number %}{{ drilldown_params }}">{{ name }}</a>
+                            <a href="{% url 'drilldown' number %}{{ drilldown_params }}"
+                               data-toggle="tooltip"
+                               data-placement="right"
+                               data-title="Click on the name to view drilldown analysis of this SKU.">
+                                {{ name }}
+                            </a>
                         </td>
                         <td nowrap class="align-middle">
                             $ {{ rev_sum|quantize|intcomma }}

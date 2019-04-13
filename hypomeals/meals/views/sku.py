@@ -124,16 +124,12 @@ def edit_sku(request, sku_number):
     reason="Only Product Managers may add SKUs",
 )
 def add_sku(request):
-    skip = request.GET.get("skip", "0") == "1"
-
     if request.method == "POST":
         form = EditSkuForm(request.POST)
         if form.is_valid():
             instance = form.save()
             messages.info(request, f"SKU #{instance.pk} has been saved successfully.")
-            if skip:
-                return redirect("sku")
-            return redirect("edit_formula", instance.pk)
+            return redirect("sku")
     else:
         form = EditSkuForm()
     return render(

@@ -1,6 +1,7 @@
 # pylint: disable-msg=arguments-differ
 import logging
 import re
+from datetime import timedelta
 from decimal import Decimal
 
 from django.conf import settings
@@ -796,7 +797,9 @@ class GoalSchedule(
 
     @property
     def completion_time(self):
-        return self.end_time or utils.compute_end_time(self.start_time, self.hours)
+        if self.override_hours:
+            return self.start_time + timedelta(hours=float(self.override_hours))
+        return utils.compute_end_time(self.start_time, self.hours)
 
     @property
     def completion_hours(self):

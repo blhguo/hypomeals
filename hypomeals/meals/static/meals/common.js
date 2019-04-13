@@ -328,3 +328,77 @@ function getJson(url, data, suppressAlerts) {
 function postJson(url, data, suppressAlerts) {
     return ajaxJson(url, "post", data, suppressAlerts);
 }
+
+/**
+ * Turns an <input> element into an input group, optionally appending/prepending
+ * text/elements
+ * @param input an <input> element, or a jQuery object representing it
+ * @param prepend {string|jQuery} optional element/text to prepend to the
+ *      input element
+ * @param append {string|jQuery} optional element/text to append to the input
+ *      element
+ * @param replaceOriginal {boolean} if true, the new input group will replace
+ *      the original input element
+ * @return {jQuery} the general input element.
+ */
+function makeInputGroup(input, prepend, append, replaceOriginal) {
+    let html = $(`
+<div class="input-group">
+  <div class="input-group-prepend">
+  </div>
+  <div id="placeholder"></div>
+  <div class="input-group-append">
+  </div>
+</div>`);
+    if (prepend !== undefined && prepend !== null) {
+        if (typeof prepend === "string") {
+            prepend = $(`<span class="input-group-text">${prepend}</span>`);
+        } else {
+            prepend = $(prepend)
+        }
+        html.find(".input-group-prepend").append(prepend);
+    }
+    if (append !== undefined && append !== null) {
+        if (typeof append === "string") {
+            append = $(`<span class="input-group-text">${append}</span>`);
+        } else {
+            append = $(append);
+        }
+        html.find(".input-group-append").append(append);
+    }
+    input = $(input);
+    if (input.is("select")) {
+        input.addClass("custom-select").removeClass("form-control");
+    }
+    html.find("#placeholder").replaceWith($(input).clone());
+    if (replaceOriginal) {
+        $(input).replaceWith(html);
+    }
+    return html;
+}
+
+function randomChoice(choices) {
+    return choices[Math.floor(Math.random() * choices.length)];
+}
+
+function upcCheckDigit(upcNumber) {
+    let sum = 0;
+    for (let i of [1, 3, 5, 7, 9, 11]) {
+        sum += Number(upcNumber[i - 1]);
+    }
+    sum *= 3;
+    for (let i of [2, 4, 6, 8, 10]) {
+        sum += Number(upcNumber[i - 1]);
+    }
+    sum %= 10;
+    return sum === 0 ? 0 : (10 - sum);
+}
+
+function generateRandomUpc() {
+    let upc = randomChoice(["0", "1", "6", "7", "8", "9"]);
+    for (let i = 0; i < 10; i++) {
+        upc += String(Math.floor(Math.random() * 10));
+    }
+    upc += upcCheckDigit(upc);
+    return upc;
+}

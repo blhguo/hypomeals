@@ -38,13 +38,17 @@
                 <span class="fas fa-minus"></span> Remove selected
             </button>
         {% endif %}
-        {% if perms.meals.view_ingredient and perms.meals.view_sale and perms.meals.view_sku %}
-            <button data-href="{% url 'generate_sales_report' %}"
-                    disabled
-                    id="generateButton"
-                    class="btn btn-success">
-                <span class="fas fa-align-justify"></span> Generate Sales Report
-            </button>
+        {% if perms.meals.view_sale %}
+        <button class="btn btn-danger dropdown-toggle dropdown-toggle-split"
+                data-toggle="dropdown"></button>
+        <div class="dropdown-menu">
+        <a data-href="{% url 'generate_sales_report' %}"
+            disabled
+            id="generateButton"
+            class="dropdown-item">
+            <span class="fas fa-align-justify"></span> Generate Sales Report
+        </a>
+        </div>
         {% endif %}
     </div>
 </div>

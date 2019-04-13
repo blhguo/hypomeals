@@ -1,4 +1,5 @@
 $(function () {
+    $("[data-toggle='tooltip']").tooltip();
     let submitButton = $("#submitButton");
     let productLineFilterForm = $("#productLineFilterForm");
     const salesSummaryUrl = $("#salesSummaryUrl").attr("href");

@@ -7,7 +7,7 @@ $(function () {
     let loadingSpinner = $("#loadingSpinner");
     let formulaModalSaveButton = $("#formulaSaveButton");
 
-    let customPLDiv = $("#id_custom_product_line").parent("div");
+    let customPLDiv = $("#id_custom_product_line").parents("div.form-group");
     let productLineSelect = $("#id_product_line");
     customPLDiv.find("label").remove();
     customPLDiv.prop("style", "display: none;");
@@ -22,6 +22,17 @@ $(function () {
         } else {
             customPLDiv.prop("style", "display: none;");
         }
+    }
+
+    let randomUpcButton = $(`<button type='button' 
+class='btn btn-outline-secondary'><i class="fas fa-random"></i></button>`);
+    for (let input of [$("#id_case_upc"), $("#id_unit_upc")]) {
+        let button = randomUpcButton.clone();
+        let group = makeInputGroup(input, null, button, true);
+        button.click(function() {
+            let upc = generateRandomUpc();
+            group.find("input").val(upc);
+        })
     }
 
     showCustomProductLine();  // Initializes page if form is already filled
