@@ -1391,7 +1391,7 @@ class EditUserForm(forms.ModelForm, utils.BootstrapFormControlMixin):
         return None
 
     def save(self, commit=False):
-        instance = super().save(commit)
+        instance = super().save(commit=False)
         admin_group = Group.objects.get(name=ADMINS_GROUP)
         if self.cleaned_data.get("set_unusable_password", False):
             instance.set_unusable_password()
@@ -1399,11 +1399,16 @@ class EditUserForm(forms.ModelForm, utils.BootstrapFormControlMixin):
             password = self.cleaned_data.get("password", "")
             if password:
                 instance.set_password(password)
+            else:
+                # Somehow the instance's password would be changed
+                # Restore original password here if the password field is empty.
+                instance.password = self.initial.get("password", "")
 
-        if self.cleaned_data["is_admin"]:
+        if self.cleaned_data.get("is_admin", False):
             admin_group.user_set.add(instance)
         else:
             admin_group.user_set.remove(instance)
 
-        instance.save()
+        if commit:
+            instance.save()
         return instance

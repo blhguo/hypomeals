@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 def edit_goal(request, goal_id=-1):
     if goal_id != -1:
         goal_obj = get_object_or_404(Goal, pk=goal_id)
-        if goal_obj.user != request.user:
+        if goal_obj.user != request.user and not request.user.is_admin:
             messages.error(
                 request,
                 "You do not have permission to view this goal. Did you create it?",

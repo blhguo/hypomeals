@@ -143,14 +143,14 @@
 {% if messages %}
 <div class="alert alert-success" id="messagesDiv">
 {% for message in messages %}
-<p {% if message.tags %}class="{{ message.tags }}{% endif %}">{{ message }}</p>
+<p class="{% if forloop.counter == messages|length %}mb-0{% endif %}">{{ message }}</p>
 {% endfor %}
 </div>
 {% endif %}
 <table class="table">
     <thead class="thead-light">
     <tr>
-        {% if perms.meals.view_formula and perms.meals.view_formulaingredient %}
+        {% if perms.meals.change_formula %}
         <th>
             <div class="custom-control custom-checkbox">
             <input type="checkbox"
@@ -170,7 +170,7 @@
     <tbody class="table-striped">
     {% for formula in formulas %}
     <tr>
-        {% if perms.meals.view_formula and perms.meals.view_formulaingredient %}
+        {% if perms.meals.change_formula %}
         <td>
             <div class="custom-control custom-checkbox">
             <input type="checkbox" data-formula-id="{{ formula.number }}"
@@ -182,16 +182,17 @@
         {% endif %}
         <td>{{ formula.number }}</td>
         <td>
+            {% if perms.meals.change_formula and perms.meals.change_formulaingredient %}
             <a href="{% url "edit_formula" formula.number %}"
-               {% if perms.meals.change_formula and perms.meals.change_formulaingredient %}
                title="Click on the name to edit this formula."
-               {% else %}
                title="You don't have permission to edit this formula."
-               {% endif %}
                data-toggle="tooltip"
                data-placement="right">
                 {{ formula.name }}
             </a>
+            {% else %}
+            {{ formula.name }}
+            {% endif %}
         </td>
         <td>
             <div class="btn-group">

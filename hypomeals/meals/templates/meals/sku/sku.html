@@ -154,11 +154,11 @@
 <!-- Export buttons -->
 <hr>
 <h3>Export</h3>
-<div class="form-check mb-2 w-100">
-    <input class="form-check-input"
+<div class="custom-control custom-checkbox mb-2">
+    <input class="custom-control-input"
            type="checkbox"
            id="exportFormulaCheckbox">
-    <label class="form-check-label"
+    <label class="custom-control-label"
            for="exportFormulaCheckbox">
         Include formulas
         <span class="badge badge-pill badge-info"
@@ -168,11 +168,11 @@
               title="Selecting this option will generate a ZIP file containing a <pre>formulas.csv</pre>">i</span>
     </label>
 </div>
-<div class="form-check mb-2 w-100">
-    <input class="form-check-input"
+<div class="custom-control custom-checkbox mb-2">
+    <input class="custom-control-input"
            type="checkbox"
            id="exportProductLineCheckbox">
-    <label class="form-check-label"
+    <label class="custom-control-label"
            for="exportProductLineCheckbox">
         Include separate Product Lines file
         <span class="badge badge-pill badge-info"
@@ -195,7 +195,7 @@
 {% if messages %}
 <div class="alert alert-success" id="messagesDiv">
 {% for message in messages %}
-<p {% if message.tags %}class="{{ message.tags }}{% endif %}">{{ message }}</p>
+<p class="{% if forloop.counter == messages|length %}mb-0{% endif %}">{{ message }}</p>
 {% endfor %}
 </div>
 {% endif %}

@@ -164,11 +164,6 @@ def remove_skus(request):
 
 
 @login_required
-@auth.permission_required_ajax(
-    perm=("meals.view_skumanufacturingline",),
-    msg="You do not have permission to view Manufacturing Lines, ",
-    reason="Only logged in users may view Manufacturing Lines",
-)
 def view_lines(request):
     skus = json.loads(request.GET.get("skus", "[]"))
     all_set = set()
@@ -221,7 +216,7 @@ def view_lines(request):
     reason="Only Product Managers may edit Manufacturing Lines",
 )
 def edit_lines(request):
-    '''This view refers to editing the mapping between ML and SKUs'''
+    """This view refers to editing the mapping between ML and SKUs"""
     skus = json.loads(request.GET.get("skus", "[]"))
     checked = json.loads(request.GET.get("checked", "[]"))
     unchecked = json.loads(request.GET.get("unchecked", "[]"))
