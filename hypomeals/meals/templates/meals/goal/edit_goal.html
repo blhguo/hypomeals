@@ -124,7 +124,12 @@ Please correct the following error(s):
     {% if form.sku.errors %}<small>{{ form.sku.errors }}</small>{% endif %}
     </td>
     <td class="align-middle">
-    {{ form.quantity }}
+    <div class="input-group">
+        {{ form.quantity }}
+        <div class="input-group-append salesButtons" style="cursor: pointer;">
+            <div class="input-group-text"><i class="fas fa-chart-line"></i></div>
+        </div>
+    </div>
     {% if form.quantity.errors %}<small>{{ form.quantity.errors }}</small>{% endif %}
     </td>
     <td class="align-middle">
@@ -144,7 +149,14 @@ Please correct the following error(s):
         </div>
         </div>
     </td>
-    <td class="align-middle">{{ formset.empty_form.quantity }}</td>
+    <td class="align-middle">
+        <div class="input-group">
+        {{ formset.empty_form.quantity }}
+        <div class="input-group-append salesButtons" style="cursor: pointer;">
+            <div class="input-group-text"><i class="fas fa-chart-line"></i></div>
+        </div>
+    </div>
+    </td>
     <td class="align-middle">
         {{ formset.empty_form.DELETE }}
         <a href="#" class="btn btn-link deleteButtons">Delete</a>

@@ -1,26 +1,8 @@
 $(function() {
+
+    $("#id_name").trigger("focus");
+
     let selectAllCheckbox = $("#selectAllCheckbox");
-    Mousetrap.bind(["command+a", "ctrl+a"], function(e) {
-        e.preventDefault();
-        selectAllCheckbox.prop("checked",
-            !selectAllCheckbox.prop("checked")).trigger("change");
-    });
-
-    Mousetrap.bind(["command+e", "ctrl+e"], function(e) {
-        e.preventDefault();
-        $("#enableGoalsButton").trigger("click");
-    });
-
-    Mousetrap.bind(["command+d", "ctrl+d"], function(e) {
-        e.preventDefault();
-        $("#disableGoalsButton").trigger("click");
-    });
-
-    Mousetrap.bind("n", function(e) {
-        e.preventDefault();
-        console.log("n");
-        window.location.href = $("#addGoalButton").attr("href");
-    });
 
     $("[data-toggle='tooltip']").tooltip();
     $(".downloadCalculationsHeader").tooltip({
@@ -87,4 +69,33 @@ $(function() {
                 }
             });
     }
+
+    Mousetrap.bind(["command+a", "ctrl+a"], function(e) {
+        e.preventDefault();
+        selectAllCheckbox.prop("checked",
+            !selectAllCheckbox.prop("checked")).trigger("change");
+    });
+
+    Mousetrap.bind(["command+e", "ctrl+e"], function(e) {
+        e.preventDefault();
+        $("#enableGoalsButton").trigger("click");
+    });
+
+    Mousetrap.bind(["command+d", "ctrl+d"], function(e) {
+        e.preventDefault();
+        $("#disableGoalsButton").trigger("click");
+    });
+
+    Mousetrap.bind("n", function(e) {
+        e.preventDefault();
+        let url = $("#addGoalButton").attr("href");
+        if (url) {
+            window.location.href = url;
+        }
+    });
+
+    Mousetrap.bind("f1", function(e) {
+        e.preventDefault();
+        $("#showHelpButton").trigger("click");
+    })
 });

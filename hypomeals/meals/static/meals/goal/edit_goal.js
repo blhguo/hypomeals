@@ -6,22 +6,33 @@ $(function () {
     let emptyAlert = $("#emptyAlert");
     let deadlineInputId = $("#deadlineInputId").val();
     let deadlineInput = $(`#${deadlineInputId}`);
+
+    $("#id_name").trigger("focus");
+
     filterSkusUrl = $("#filterSkusUrl").attr("href");
 
     $("#datepicker1").datetimepicker({format: "YYYY-MM-DD"});
 
+<<<<<<< HEAD
     $(".filterButtons").click(renderModal);
     $(".projectionButtons").click(renderModal)
+=======
+    $(".filterButtons").click(renderProductLineModal);
+>>>>>>> 73cf12d55d809bb86572aff57d8d2436c4ae911f
     registerFilterTooltip();
+
+    $(".salesButtons").click(renderSalesProjectionModal);
+    registerSalesProjectionTooltip();
 
     registerFormset(
         formset,
         $("#addRowButton"),
         function(row) {
             registerAutocomplete(row.find("input.meals-autocomplete"));
-            row.find(".filterButtons").click(renderModal);
+            row.find(".filterButtons").click(renderProductLineModal);
             toggleEmptyAlert();
             registerFilterTooltip();
+            registerSalesProjectionTooltip();
         },
         toggleEmptyAlert,
     );
@@ -42,45 +53,11 @@ $(function () {
         setTimeout(function() {
             calendarPopover.popover("hide");
         }, 2000);
-    })
-    const addFormulaUrl = $("#addFormulaUrl").attr("href");
-    const editFormulaUrl = $("#editFormulaUrl").attr("href");
-    let addFormulaButton = $("#addFormulaButton");
-    let editFormulaButton = $("#editFormulaButton");
-    let formulaModalDiv = $("#formulaDiv");
-    let formulaModalBody = $("#formulaBody");
-    let loadingSpinner = $("#loadingSpinner");
-    let formulaModalSaveButton = $("#formulaSaveButton");
-
-
-    function formulaModalChanged(_, newContent) {
-        let container = formulaModalBody.find("div.container");
-        if (container.length > 0) {
-            container.remove();
-        }
-        newContent.appendTo(formulaModalBody);
-        formulaModalForm = newContent.find("form");
-        formulaModalBody.find("#formSubmitBtnGroup").toggle("false");
-        formulaModalSaveButton.attr("disabled", false);
-        let buttons = $("#oldButton")
-        buttons.remove()
-    }
-    formulaModalBody.off("modal:change");
-    formulaModalBody.on("modal:change", formulaModalChanged);
-
-    function formulaAjaxDone(data, textStatus) {
-        if (!showNetworkError(data, textStatus)) {
-            return;
-        }
-        loadingSpinner.toggle(false);
-        formulaModalBody.trigger("modal:change", [$(data.resp)]);
-    }
+    });
 });
 
-
-
-
-function renderModal() {
+function renderProductLineModal() {
+    // "this" is the button being clicked.
     filteringInput = $(this).parents("td").find("input");
     let modal = makeModalAlert("Filter by Product Line", $("#productLineFilter"));
 
@@ -112,9 +89,20 @@ function renderModal() {
     }
 }
 
+function renderSalesProjectionModal() {
+    // TODO: Implement this.
+}
+
 function registerFilterTooltip() {
     $(".filterButtons").tooltip({
         placement: "right",
         title: "Click here to filter by product lines"
     });
+}
+
+function registerSalesProjectionTooltip() {
+    $(".salesButtons").tooltip({
+        placement: "right",
+        title: "Click here to view sales projections"
+    })
 }

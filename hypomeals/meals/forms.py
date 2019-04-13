@@ -794,13 +794,13 @@ class EditSkuForm(forms.ModelForm, utils.BootstrapFormControlMixin):
             "count",
             "product_line",
             "custom_product_line",
-            "comment",
             "formula",
             "formula_scale",
             "manufacturing_lines",
             "manufacturing_rate",
             "setup_cost",
             "run_cost",
+            "comment",
         ]
         exclude = [
             "case_upc",
@@ -1182,18 +1182,10 @@ class GoalFilterForm(forms.Form, utils.BootstrapFormControlMixin):
         widget=forms.TextInput(attrs={"placeholder": "Start typing..."}),
     )
 
-    def query(self, user):
-        """
-        Queries the database for a set of goals.
-        :param user: the user viewing the goals. This is used to check whether user is
-            admin.
-        :return:
-        """
+    def query(self):
         query = Q()
         if self.cleaned_data["name"]:
             query &= Q(name__icontains=self.cleaned_data["name"])
-        if not user.is_admin:
-            query &= Q(user=user)
         else:
             if self.cleaned_data["users"]:
                 query &= Q(user__in=self.cleaned_data["users"])

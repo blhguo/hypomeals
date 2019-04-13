@@ -54,7 +54,7 @@
     <tr>
         <td>{{ ingr.number }}</td>
         <td>{{ ingr.name }}</td>
-        <td>{{ amount.normalize|floatformat:2 }}</td>
+        <td>{{ amount.normalize|floatformat:2|intcomma }}</td>
         <td>{% multiply amount ingr.size 2 %} {{ ingr.unit.symbol }}</td>
     </tr>
     {% endfor %}
