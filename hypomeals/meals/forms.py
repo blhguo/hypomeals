@@ -13,9 +13,10 @@ from django.core.exceptions import ValidationError
 from django.core.files import File
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q, BLANK_CHOICE_DASH, F
+from django.db.models import Q, BLANK_CHOICE_DASH, F, Sum
 from django.forms import formset_factory
 from django.urls import reverse_lazy
+from django.utils.timezone import datetime
 
 from meals import bulk_import
 from meals import utils
@@ -1413,3 +1414,58 @@ class EditUserForm(forms.ModelForm, utils.BootstrapFormControlMixin):
 
         instance.save()
         return instance
+
+
+class ProjectionsFilterForm(forms.Form, utils.BootstrapFormControlMixin):
+    sku = CsvAutocompletedField(
+        model=Sku,
+        data_source=reverse_lazy("autocomplete_skus"),
+        required=False,
+        attr="name",
+        help_text="(Please Enter the Sku Name You Want to Project)",
+    )
+
+    start = forms.DateTimeField(widget=forms.DateInput())
+
+    end = forms.DateTimeField(widget=forms.DateInput())
+
+    def clean(self):
+        if (
+            "start" in self.cleaned_data
+            and self.cleaned_data["start"]
+            and "end" in self.cleaned_data
+            and self.cleaned_data["end"]
+        ):
+            if self.cleaned_data["end"] < self.cleaned_data["start"]:
+                raise ValidationError("End date cannot be less than start date")
+
+        if not self.cleaned_data["sku"]:
+            raise ValidationError("You must enter a valid sku name!")
+        return self.cleaned_data
+
+    def query(self):
+        params = self.cleaned_data
+        sku_filter = Q()
+        if params["sku"]:
+            sku_filter = Q(sku__name__in=params["sku"])
+        if params["start"] and params["end"]:
+            cur_year, cur_week, _ = datetime.today().isocalendar()
+            _, start_week, _ = params["start"].isocalendar()
+            _, end_week, _ = params["end"].isocalendar()
+            if end_week > cur_week:
+                # If this year's data for the time span user selected is not
+                # available, we will start with the previous year's data
+                end_year = cur_year - 1
+            else:
+                end_year = cur_year
+
+            year_span = 4
+            start_year = end_year - year_span + 1
+            data = {}
+            for year in range(start_year, end_year + 1):
+                query_filter = sku_filter & Q(year=year) & Q(week__gte=start_week) & Q(week__lte=end_week)
+                query = Sale.objects.filter(query_filter).aggregate(
+                    Sum("sales")
+                )
+                data[year] = query["sales__sum"]
+        return data

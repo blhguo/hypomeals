@@ -1,0 +1,107 @@
+{% extends "meals/base.html" %}
+{% load staticfiles %}
+{% load humanize %}
+{% load meals_extras %}
+
+{% block sku_active %}active{% endblock %}
+{% block title %}Review Sales{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.0.1/css/tempusdominus-bootstrap-4.min.css" />
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid m-auto">
+<form method="post" action="{% url 'sales_projection' sku.number %}" id="projectionFilterForm">
+{% csrf_token %}
+<div class="row">
+<div class="col-sm-2 my-2">
+<h3>Filter</h3>
+{% if form.non_field_errors %}
+<div class="alert alert-danger">
+    <p>Please correct the following error:</p>
+    {{ form.non_field_errors }}
+</div>
+{% endif %}
+<div class="form-group">
+    <label for="{{ form.sku.id_for_label }}">Customer name:</label>
+    {{ form.sku }}
+    <small>{{ form.sku.help_text }}</small>
+    {% if form.sku.errors %}
+    <small>{{ form.sku.errors }}</small>
+    {% endif %}
+</div>
+<div class="form-group">
+    <label for="{{ form.start.id_for_label }}">Start date:</label>
+    {{ form.start }}
+    {% if form.start.errors %}
+    <small>{{ form.start.errors }}</small>
+    {% endif %}
+</div>
+<div class="form-group">
+    <label for="{{ form.end.id_for_label }}">End date:</label>
+    {{ form.end }}
+    {% if form.end.errors %}
+    <small>{{ form.end.errors }}</small>
+    {% endif %}
+</div>
+<div class="btn-group w-100" role="group">
+<button id="submitButton" class="btn btn-success w-100">
+    <span class="fas fa-filter"></span> Filter
+</button>
+<button id="resetAllButton" class="btn btn-danger w-100">
+    <span class="fas fa-trash-alt"></span> Reset
+</button>
+</div>
+<div>
+</div>
+</div>
+
+
+<!-- Table column -->
+<div class="col-sm-10 my-2">
+{% if messages %}
+<div class="alert alert-success" id="messagesDiv">
+{% for message in messages %}
+<p {% if message.tags %}class="{{ message.tags }}{% endif %}">{{ message }}</p>
+{% endfor %}
+</div>
+{% endif %}
+
+<h3 class="mb-3">Sales Projection for SKU #{{ sku.number }}: {{ sku.name }}</h3>
+
+<div style="overflow: scroll;">
+        <table class="table">
+            <thead class="thead-light">
+                <tr>
+                    <th>Year</th>
+                    <th>Sales</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for year, sales in data.items %}
+                    <tr>
+                        <td class="align-middle">
+                            {{ year }}
+                        </td>
+                        <td class="align-middle">
+                            {{ sales }}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+<!-- Modals here if needed -->
+
+
+<!-- Hidden div with template data -->
+{% endblock %}
+
+{% block scriptend %}
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.0.1/js/tempusdominus-bootstrap-4.min.js"></script>
+<script src="{% static 'meals/common.js' %}"></script>
+<script src="{% static 'meals/sku/sku.js' %}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.min.js"></script>
+<script src="{% static 'meals/sales/drilldown.js' %}"></script>
+{% endblock %}

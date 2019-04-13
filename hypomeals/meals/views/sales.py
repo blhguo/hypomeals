@@ -12,7 +12,7 @@ from django.db.models import Sum, F
 from django.shortcuts import render
 
 from meals.constants import SALES_WAIT_TIME_MINUTES
-from meals.forms import SaleFilterForm, ProductLineFilterForm
+from meals.forms import SaleFilterForm, ProductLineFilterForm, ProjectionsFilterForm
 from meals.models import Sku, Sale, ProductLine, Customer, GoalItem
 from ..bulk_export import export_drilldown, export_sales_summary
 
@@ -166,6 +166,31 @@ def sku_revenue(sku, customers, begin_year):
         rev_sum += sales_tot
         num_sales += num_tot
     return rev_sum, num_sales, sku_ten_year
+
+@login_required
+def sales_projection(request, sku_pk):
+    sku = Sku.objects.filter(pk = sku_pk)[0]
+    if request.method == "POST":
+        form = ProjectionsFilterForm(request.POST)
+        if form.is_valid():
+            data = form.query()
+
+    else:
+        params = {
+            "sku": sku.name,
+            "start": datetime.now() - timedelta(days=10),
+            "end": datetime.now(),
+        }
+        form = ProjectionsFilterForm(params)
+        if form.is_valid():
+            data = form.query()
+        else:
+            data = {}
+    return render(
+        request,
+        template_name="meals/sales/sales_projection.html",
+        context={"data": data, "form": form, "sku": sku},
+    )
 
 @login_required
 def sales_summary(request):

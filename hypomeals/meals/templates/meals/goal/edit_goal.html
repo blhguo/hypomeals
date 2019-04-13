@@ -130,6 +130,7 @@ Please correct the following error(s):
     <td class="align-middle">
         {{ form.DELETE }}
         <a href="#" class="btn btn-link deleteButtons">Delete</a>
+        <a href="#" class="btn btn-link projectionButtons">Projection</a>
     </td>
 </tr>
 {% endfor %}
@@ -147,6 +148,7 @@ Please correct the following error(s):
     <td class="align-middle">
         {{ formset.empty_form.DELETE }}
         <a href="#" class="btn btn-link deleteButtons">Delete</a>
+        <a href="#" class="btn btn-link projectionButtons">Projection</a>
     </td>
 </tr>
 
@@ -184,6 +186,11 @@ add another item.
     </select>
     <small>Only product lines with at least one SKU is shown.</small>
     <div class="mt-4" id="skuListGroup"></div>
+</div>
+</div>
+
+<div style="display: none;">
+<div id="projectionTool">
 </div>
 </div>
 
