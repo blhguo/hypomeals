@@ -195,10 +195,7 @@ LOGGING = {
             "style": "{",
         },
         "simple": {"format": "{levelname} {message}", "style": "{"},
-        "sql_statements": {
-            "format": "{asctime} {levelname} {message} ({sql} {params})",
-            "style": "{",
-        },
+        "sql_statements": {"format": "{asctime} {levelname} {message}", "style": "{"},
     },
     "filters": {"require_debug_true": {"()": "django.utils.log.RequireDebugTrue"}},
     "handlers": {
@@ -250,10 +247,18 @@ LOGGING = {
             "propagate": False,
         },
         # This configures all loggers related to the request-response cycle to log to
-        # a file called server.log
+        # a file called server.log. Import logs are also sent to console.
         **{
-            logger: {"handlers": ["server_file"], "level": "DEBUG", "propagate": False}
-            for logger in ["django.request", "django.server", "django.template"]
+            logger: {
+                "handlers": ["console", "server_file"],
+                "level": level,
+                "propagate": False,
+            }
+            for logger, level in [
+                ("django.request", "DEBUG"),
+                ("django.server", "DEBUG"),
+                ("django.template", "INFO"),
+            ]
         },
     },
 }
