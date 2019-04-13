@@ -96,19 +96,11 @@ $(function () {
         let url = $(this).attr("href");
         let modal = makeModalAlert("View Formula", loadingSpinner);
         modal.find(".modal-dialog").addClass("modal-lg");
-        $.getJSON(url, {})
-            .done(function (data, textStatus) {
-                if (!showNetworkError(data, textStatus)) {
-                    return;
-                }
-                if ("error" in data && data.error != null) {
-                    alert(data.error);
-                    modal.modal("hide");
-                    return;
-                }
+        getJson(url, {})
+            .done(function(data) {
                 modal.find("#loadingSpinner").toggle(false);
-                $(data.resp).appendTo(modal.find(".modal-body"));
-            });
+                $(data).appendTo(modal.find(".modal-body"));
+            }).fail(function(error) {modal.modal("hide");});
         return false;
     }
 

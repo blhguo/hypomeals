@@ -153,10 +153,7 @@
 
 <!-- Export buttons -->
 <hr>
-{#{% if perms.meals.change_sku and perms.meals.change_ingredient and perms.meals.change_formula %}#}
-{#{% if perms.meals.change_formulaingredient and perms.meals.change_productline and perms.meals.change_manufacturingline and perms.meals.change_skumanufacturingline and perms.meals.change_productline %}#}
-{% if perms.meals.view_sku %}
-    <h3>Export</h3>
+<h3>Export</h3>
 <div class="form-check mb-2 w-100">
     <input class="form-check-input"
            type="checkbox"
@@ -188,10 +185,7 @@
 <button class="btn btn-primary w-100" id="exportButton">
     <span class="fas fa-download"></span> Export Current Search
 </button>
-
 <div></div>
-{% endif %}
-{#{% endif %}#}
 </div>
 
 
@@ -227,12 +221,14 @@
     <th nowrap>Count</th>
     <th nowrap>Product Line</th>
     <th nowrap>Formula</th>
-    <th nowrap>Formula Scale Factor</th>
+    <th nowrap>Formula Scale</th>
     <th nowrap>Manufacturing Lines</th>
     <th>Rate</th>
     <th nowrap>Setup Cost</th>
     <th nowrap>Run Cost</th>
+    {% if perms.meals.view_sales %}
     <th>Sales</th>
+    {% endif %}
     <th style="width: 25rem;">Comment</th>
 </tr>
 </thead>
@@ -251,16 +247,17 @@
     {% endif %}
     <td>{{ sku.number }}</td>
     <td nowrap>
+        {% if perms.meals.change_sku %}
         <a href="{% url 'edit_sku' sku.number %}"
-           {% if perms.meals.change_sku %}
            title="Click on the name to edit this SKU."
-           {% else %}
            title="You don't have permission to edit this SKU."
-           {% endif %}
            data-toggle="tooltip"
            data-placement="right">
             {{ sku.name }}
         </a>
+        {% else %}
+        {{ sku.name }}
+        {% endif %}
     </td>
     <td>{{ sku.case_upc.upc_number }}</td>
     <td>{{ sku.unit_upc.upc_number }}</td>
@@ -294,9 +291,11 @@
     <td nowrap>
         $ {{ sku.run_cost|quantize:2|intcomma }}
     </td>
+    {% if perms.meals.view_sales %}
     <td>
         <a href="{% url 'drilldown' sku.number %}">Report</a>
     </td>
+    {% endif %}
     <td style="min-width: 25rem;">{{ sku.comment|truncatewords:20 }}</td>
 </tr>
 {% empty %}

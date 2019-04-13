@@ -152,8 +152,15 @@
 <table class="table">
     <thead class="thead-light">
     <tr>
-        {% if perms.meals.view_ingredient %}
-        <th><input type="checkbox" id="selectAllCheckbox"> </th>
+        {% if perms.meals.change_ingredient or perms.meals.delete_ingredient %}
+        <th>
+        <div class="custom-control custom-checkbox">
+        <input type="checkbox"
+               id="selectAllCheckbox"
+               class="custom-control-input">
+        <label for="selectAllCheckbox" class="custom-control-label"></label>
+        </div>
+        </th>
         {% endif %}
         <th>Ingr#</th>
         <th>Name</th>
@@ -166,8 +173,15 @@
     <tbody class="table-striped">
     {% for ingredient in ingredients %}
     <tr>
-        {% if perms.meals.view_ingredient %}
-        <td><input type="checkbox" class="ingredient-checkbox" id="{{ ingredient.number }}"> </td>
+        {% if perms.meals.change_ingredient or perms.meals.delete_ingredient %}
+        <td>
+        <div class="custom-control custom-checkbox">
+            <input type="checkbox"
+                   id="{{ ingredient.number }}"
+                   class="custom-control-input ingredient-checkbox">
+            <label for="{{ ingredient.number }}" class="custom-control-label"></label>
+        </div>
+        </td>
         {% endif %}
         <td>{{ ingredient.number }}</td>
         <td>

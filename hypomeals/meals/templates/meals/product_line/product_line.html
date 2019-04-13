@@ -24,28 +24,27 @@
 <div class="row mt-3 d-flex justify-content-right align-items-center">
 <div class="col-sm">
     <div class="btn-group" style="float:right;">
-            {% if perms.meals.add_productline %}
-
+        {% if perms.meals.add_productline %}
         <a href="{%  url 'add_product_line' %}"
            class="btn btn-primary">
             <span class="fa fa-plus"></span> Add Product Line
         </a>
-    {% endif %}
+        {% endif %}
         {% if perms.meals.delete_productline %}
-        <button data-href="{% url 'remove_product_lines' %}"
-                disabled
-                id="removeButton"
-                class="btn btn-danger">
-            <span class="fas fa-minus"></span> Remove selected
-        </button>
+            <button data-href="{% url 'remove_product_lines' %}"
+                    disabled
+                    id="removeButton"
+                    class="btn btn-danger">
+                <span class="fas fa-minus"></span> Remove selected
+            </button>
         {% endif %}
         {% if perms.meals.view_ingredient and perms.meals.view_sale and perms.meals.view_sku %}
-        <button data-href="{% url 'generate_sales_report' %}"
-                disabled
-                id="generateButton"
-                class="btn btn-success">
-            <span class="fas fa-align-justify"></span> Generate Sales Report
-        </button>
+            <button data-href="{% url 'generate_sales_report' %}"
+                    disabled
+                    id="generateButton"
+                    class="btn btn-success">
+                <span class="fas fa-align-justify"></span> Generate Sales Report
+            </button>
         {% endif %}
     </div>
 </div>
@@ -68,7 +67,7 @@
         </th>
         {% endif %}
         <th>Name</th>
-        <th>Options</th>
+        <th>Actions</th>
     </tr>
     </thead>
     <tbody class="table-striped">
@@ -85,32 +84,33 @@
         </td>
         {% endif %}
         <td>
-            <a href="{% url "edit_product_line" product_line.pk %}"
-               {% if perms.meals.change_productline %}
-               title="Click on the name to edit this product line."
-               {% else %}
-               title="You don't have permission to edit this Product Line."
-               {% endif %}
-               data-toggle="tooltip"
-               data-placement="right">
-                {{ product_line.name }}
-            </a>
+        {% if perms.meals.change_productline %}
+        <a href="{% url "edit_product_line" product_line.pk %}"
+           title="Click on the name to edit this product line."
+           title="You don't have permission to edit this Product Line."
+           data-toggle="tooltip"
+           data-placement="right">
+            {{ product_line.name }}
+        </a>
+        {% else %}
+        {{ product_line.name }}
+        {% endif %}
         </td>
         <td>
-            <a class="btn btn-link viewPLSkus"
-               href="#"
-               data-toggle="modal"
-               data-target="#modalDiv"
-               data-pl-id="{{ product_line.pk }}">
-                View
-            </a>
+        <a class="viewPLSkus"
+           href="#"
+           data-toggle="modal"
+           data-target="#modalDiv"
+           data-pl-id="{{ product_line.pk }}">
+            View SKUs
+        </a>
         </td>
     </tr>
     {% endfor %}
     </tbody>
 </table>
 <div>
-    <p>Found {{ product_lines.paginator.count }} matches in {{ duration }} seconds</p>
+    <p>Found {{ product_lines|length }} match{{ product_lines|pluralize:'es' }} in {{ duration }} seconds</p>
 </div>
 </div>
 </div>

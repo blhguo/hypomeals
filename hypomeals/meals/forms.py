@@ -133,6 +133,8 @@ class ImportForm(forms.Form, BootstrapFormControlMixin):
         self._imported = False
         self.session_key = session_key
         super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "custom-file-input"
 
     def _unzip(self):
         zip_file = zipfile.ZipFile(self.cleaned_data["zip"])

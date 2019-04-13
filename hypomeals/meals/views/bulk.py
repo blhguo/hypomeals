@@ -59,16 +59,18 @@ def _render_collision(collision: CollisionException):
 
 @login_required
 @auth.permission_required_ajax(
-    perm=("meals.change_sku",
-          "meals.change_ingredient",
-          "meals.change_formula",
-          "meals.change_formulaingredient",
-          "meals.change_productline",
-          "meals.change_manufacturingline",
-          "meals.change_skumanufacturingline",
-          "meals.change_productline", ),
+    perm=(
+        "meals.change_sku",
+        "meals.change_ingredient",
+        "meals.change_formula",
+        "meals.change_formulaingredient",
+        "meals.change_productline",
+        "meals.change_manufacturingline",
+        "meals.change_skumanufacturingline",
+        "meals.change_productline",
+    ),
     msg="You do not have permission to import data, ",
-    reason="Only Product Managers may import",
+    reason="Only Product Managers may bulk import.",
 )
 def import_page(request):
 
@@ -139,16 +141,18 @@ def collision(request):
 
 @login_required
 @auth.permission_required_ajax(
-    perm=("meals.change_sku",
-          "meals.change_ingredient",
-          "meals.change_formula",
-          "meals.change_formulaingredient",
-          "meals.change_productline",
-          "meals.change_manufacturingline",
-          "meals.change_skumanufacturingline",
-          "meals.change_productline", ),
+    perm=(
+        "meals.change_sku",
+        "meals.change_ingredient",
+        "meals.change_formula",
+        "meals.change_formulaingredient",
+        "meals.change_productline",
+        "meals.change_manufacturingline",
+        "meals.change_skumanufacturingline",
+        "meals.change_productline",
+    ),
     msg="You do not have permission to import data, ",
-    reason="Only Product Managers may import",
+    reason="Only Product Managers may bulk import.",
 )
 def import_success(request, inserted=None, updated=None, ignored=None):
     if inserted is None:

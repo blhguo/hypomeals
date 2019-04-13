@@ -125,18 +125,15 @@
 </div>
 
 <!-- Export controls -->
-{#{% if perms.meals.change_sku and perms.meals.change_ingredient and perms.meals.change_formula %}#}
-{#{% if perms.meals.change_formulaingredient and perms.meals.change_productline and perms.meals.change_manufacturingline and perms.meals.change_skumanufacturingline and perms.meals.change_productline %}#}
 {% if perms.meals.view_formula and perms.meals.view_formulaingredient %}
-    <div class="w-100">
+<div class="w-100">
 <hr>
 <h3>Export</h3>
 <button class="btn btn-primary mb-2 w-100" id="exportButton">
     <span class="fas fa-download"></span> Export Current Search
 </button>
 </div>
-  {% endif %}
-{#{% endif %}#}
+{% endif %}
 </div>
 
 
