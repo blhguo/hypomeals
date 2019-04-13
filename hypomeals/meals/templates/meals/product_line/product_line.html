@@ -91,7 +91,6 @@
         {% if perms.meals.change_productline %}
         <a href="{% url "edit_product_line" product_line.pk %}"
            title="Click on the name to edit this product line."
-           title="You don't have permission to edit this Product Line."
            data-toggle="tooltip"
            data-placement="right">
             {{ product_line.name }}

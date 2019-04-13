@@ -255,7 +255,6 @@
         {% if perms.meals.change_sku %}
         <a href="{% url 'edit_sku' sku.number %}"
            title="Click on the name to edit this SKU."
-           title="You don't have permission to edit this SKU."
            data-toggle="tooltip"
            data-placement="right">
             {{ sku.name }}
