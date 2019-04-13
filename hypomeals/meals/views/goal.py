@@ -18,9 +18,9 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
 from django.utils.datetime_safe import datetime
 
-from meals import auth
-from meals import utils
+from meals import auth, scheduling, utils
 from meals.constants import WORK_HOURS_END
+from meals.exceptions import UserFacingException
 from meals.forms import (
     SkuQuantityFormset,
     GoalForm,
@@ -53,7 +53,7 @@ def edit_goal(request, goal_id=-1):
         if goal_obj.user != request.user:
             messages.error(
                 request,
-                "You do not have permission to view this goal. Did you create it?"
+                "You do not have permission to view this goal. Did you create it?",
             )
             messages.error(request, "You may only view goals created by yourself.")
             raise PermissionDenied
@@ -329,9 +329,14 @@ def disable_goals(request):
 
 
 @login_required
-@auth.user_is_admin_ajax(msg="Only administrators may create a manufacturing schedule.")
 def schedule(request):
-    # TODO: Permission checking is more complicated here
+    if not request.user.is_plant_manager:
+        messages.error(
+            request, "Only Plant Managers may edit the manufacturing schedule"
+        )
+        raise PermissionDenied(
+            "You are not authorized to edit the manufacturing schedule,"
+        )
     goal_items = GoalItem.objects.filter(
         Q(schedule__isnull=False) | Q(goal__is_enabled=True)
     )
@@ -367,7 +372,12 @@ def schedule(request):
     return render(
         request,
         template_name="meals/goal/schedule.html",
-        context={"formset": formset, "goals": goal_objs, "goal_items": goal_items},
+        context={
+            "formset": formset,
+            "goals": goal_objs,
+            "goal_items": goal_items,
+            "lines": request.user.owned_lines,
+        },
     )
 
 
@@ -426,6 +436,43 @@ def schedule_report(request):
             "ingredients": result.items(),
         },
     )
+
+
+@login_required
+@utils.ajax_view
+@utils.log_exceptions
+def auto_schedule(request):
+    if not request.user.is_plant_manager:
+        raise UserFacingException("You are not authorized to use the auto-scheduler.")
+    items = json.loads(request.POST.get("items", "[]"))
+    start = request.POST.get("start", "")
+    end = request.POST.get("end", "")
+    try:
+        start = datetime.fromtimestamp(int(start))
+        end = datetime.fromtimestamp(int(end))
+    except ValueError:
+        raise UserFacingException("Unable to schedule: invalid start/end time")
+    if not items:
+        # Return empty schedule
+        return "[]"
+    toSchedule = []
+    try:
+        for item in items:
+            toSchedule.append(
+                scheduling.Item(
+                    item["id"],
+                    int(item["hours"]),
+                    set(item["groups"]).intersection(request.user.owned_lines),
+                )
+            )
+    except Exception:
+        logger.exception("Invalid auto-schedule request")
+        raise UserFacingException("Unable to schedule: invalid request.")
+    try:
+        result = scheduling.schedule(toSchedule, start, end)
+    except scheduling.ScheduleException as e:
+        raise UserFacingException(str(e))
+    return json.dumps(result)
 
 
 @login_required
