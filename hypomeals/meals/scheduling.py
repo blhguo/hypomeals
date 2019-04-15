@@ -8,6 +8,7 @@ from typing import List, Mapping, Set
 
 from meals.models import GoalItem, ManufacturingLine, GoalSchedule
 from meals.utils import compute_end_time
+from django.utils import six as timezone
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,8 @@ def schedule(
     :param end: the latest time when the items can be scheduled to finish
     :return: a list of schedules
     """
+    start = start.replace(tzinfo=timezone.get_current_timezone())
+    end = end.replace(tzinfo=timezone.get_current_timezone())
     if len(items) > 1:
         raise ScheduleException("Unable to schedule: too many items.")
     schedules: List[Schedule] = []
@@ -71,14 +74,15 @@ def schedule(
         time_block = []
         cur_start = start
         # Special check
-        first_goal_item = relevant_goals[0]
-        if first_goal_item.start_time < start:
-            cur_start = first_goal_item.start_time
+        if relevant_goals:
+            first_goal_item = relevant_goals[0]
+            if first_goal_item.start_time < start:
+                cur_start = first_goal_item.start_time
         for schedule in relevant_goals:
             goal_item = schedule.goal_item
             time_block.append((cur_start, goal_item.start))
             cur_start = goal_item.end
-        if (cur_start < end):
+        if cur_start < end:
             time_block.append((cur_start, end))
         ml_schedules[ml.shortname] = time_block
 
@@ -108,7 +112,7 @@ def schedule(
                 )
             )
             st, et = ml_schedules[ml][min_block_id]
-            if (et == item_end_time):
+            if et == item_end_time:
                 del ml_schedules[ml][min_block_id]
             else:
                 ml_schedules[ml][min_block_id] = (item_end_time, et)

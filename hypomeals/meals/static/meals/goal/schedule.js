@@ -344,9 +344,7 @@ $(function() {
             returnType: "Array",
         });
         if (itemsInGroup.length === 1) return false;
-        itemsInGroup.sort(function(a, b) {
-            return moment(a.start) - moment(b.start);
-        });
+        itemsInGroup.sort(sortItemByStartTime);
         for (let i = 0; i < itemsInGroup.length - 1; i++) {
             if (moment(itemsInGroup[i + 1].start) <= moment(itemsInGroup[i].end)) {
                 throw Error("overlap");
@@ -558,6 +556,10 @@ function toggleGoalItem(goalItemId, scheduled) {
         .prop("disabled", scheduled);
 }
 
+function sortItemByStartTime(a, b) {
+    return moment(a.start) - moment(b.start);
+}
+
 /**
  * Bind shortcut keys
  */
@@ -614,6 +616,14 @@ $(function() {
                 "You must select at least one item from the palette below.");
             return;
         }
+        let existing = Object();
+        for (let group of groups.getIds()) {
+            existing[group] = items.get({
+                filter: item => item.group === group,
+                order: sortItemByStartTime
+            }).map(item => item.id);
+        }
+
         let toSchedule = [];
         for (let itemInfo of selected.map(e => goalItemsMap.get(e))) {
             toSchedule.push({
@@ -637,6 +647,7 @@ $(function() {
                 .prop("disabled", true);
             postJson(button.attr("data-href"), {
                 items: JSON.stringify(Array.from(toSchedule)),
+                existing: JSON.stringify(existing),
                 start: start.unix(),
                 end: end.unix(),
                 csrfmiddlewaretoken: $("input[name='csrfmiddlewaretoken']").val()

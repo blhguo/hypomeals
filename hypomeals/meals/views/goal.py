@@ -445,6 +445,7 @@ def auto_schedule(request):
     if not request.user.is_plant_manager:
         raise UserFacingException("You are not authorized to use the auto-scheduler.")
     items = json.loads(request.POST.get("items", "[]"))
+    existing = json.loads(request.POST.get("existing", "{}"))
     start = request.POST.get("start", "")
     end = request.POST.get("end", "")
     try:
@@ -456,9 +457,18 @@ def auto_schedule(request):
         # Return empty schedule
         return "[]"
     toSchedule = []
+    toExisting = []
     try:
         for item in items:
             toSchedule.append(
+                scheduling.Item(
+                    GoalItem.objects.get(id=item["id"]),
+                    int(item["hours"]),
+                    set(item["groups"]).intersection(request.user.owned_lines),
+                )
+            )
+        for item in existing:
+            toExisting.append(
                 scheduling.Item(
                     GoalItem.objects.get(id=item["id"]),
                     int(item["hours"]),
