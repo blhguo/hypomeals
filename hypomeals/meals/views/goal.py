@@ -448,9 +448,10 @@ def auto_schedule(request):
     existing = json.loads(request.POST.get("existing", "{}"))
     start = request.POST.get("start", "")
     end = request.POST.get("end", "")
+    current_timezone = timezone.get_current_timezone()
     try:
-        start = datetime.fromtimestamp(int(start), tz=timezone.get_current_timezone())
-        end = datetime.fromtimestamp(int(end), tz=timezone.get_current_timezone())
+        start = datetime.fromtimestamp(int(start), tz=current_timezone)
+        end = datetime.fromtimestamp(int(end), tz=current_timezone)
     except ValueError:
         raise UserFacingException("Unable to schedule: invalid start/end time")
     if not items:
@@ -475,10 +476,10 @@ def auto_schedule(request):
                 scheduling.ExistingItem(
                     GoalItem.objects.get(id=item["id"]),
                     datetime.fromtimestamp(
-                        int(item["start"]), tz=timezone.get_current_timezone()
+                        int(item["start"]), tz=current_timezone
                     ),
                     datetime.fromtimestamp(
-                        int(item["end"]), tz=timezone.get_current_timezone()
+                        int(item["end"]), tz=current_timezone
                     ),
                 )
                 for item in items

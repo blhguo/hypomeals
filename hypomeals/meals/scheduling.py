@@ -4,12 +4,11 @@ Contains algorithms for generic auto-scheduling
 import functools
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import List, Mapping, Set
 
-from meals.models import GoalItem, ManufacturingLine, GoalSchedule
+from meals.models import GoalItem
 from meals.utils import compute_end_time
-from django.utils import six as timezone
 
 logger = logging.getLogger(__name__)
 
@@ -102,8 +101,10 @@ def schedule(
     for item in items:
         min_earliest_time = end
         min_ml = None
+        min_block_id = None
         for ml in item.groups:
             earliest_time = end
+            earliest_block_id = None
             for id, (st, et) in enumerate(ml_schedules[ml]):
                 if compute_end_time(st, item.hours) <= et:
                     earliest_time = st
@@ -124,9 +125,10 @@ def schedule(
                     min_ml,
                 )
             )
-            st, et = ml_schedules[ml][min_block_id]
+            st, et = ml_schedules[min_ml][min_block_id]
             if et == item_end_time:
-                del ml_schedules[ml][min_block_id]
+                del ml_schedules[min_ml][min_block_id]
             else:
-                ml_schedules[ml][min_block_id] = (item_end_time, et)
+                ml_schedules[min_ml][min_block_id] = (item_end_time, et)
+    logger.info("Scheduled %d items: %s", len(schedules), schedules)
     return list(map(Schedule.to_dict, schedules))

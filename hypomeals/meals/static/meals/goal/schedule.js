@@ -78,6 +78,7 @@ $(function() {
 
     /**************** Timeline event listeners ***************/
     items.on("update", function(event, properties, senderId) {
+        generateWarnings();
         if (senderId === SENDER_ID_IGNORE) return;
         let item = properties.data[0];
         let oldItem = properties.oldData[0];
@@ -116,7 +117,6 @@ $(function() {
                 items.update(item, SENDER_ID_IGNORE);
             }
         });
-        generateWarnings();
     });
     items.on("add", function(event, properties, senderId) {
         let item = items.get(properties.items[0]);
@@ -159,6 +159,7 @@ $(function() {
         itemInfo.start = null;
         itemInfo.overrideHours = null;
         toggleGoalItem(itemId, itemInfo.isOrphaned);
+        generateWarnings([itemId]);
         if (senderId === SENDER_ID_IGNORE) {
             return;
         }
@@ -170,7 +171,6 @@ $(function() {
                     items.remove({id: itemId}, SENDER_ID_IGNORE)
                 }
             });
-        // generateWarnings();
     });
 
     function validGroup(itemId, group) {
@@ -392,8 +392,11 @@ $(function() {
         checkOverlap(item);
     }
 
-    function generateWarnings() {
+    function generateWarnings(exclude) {
         if (timeline === null) return;  // Timeline is not initialized yet.
+        if (!exclude || !Array.isArray(exclude)) {
+            exclude = [];
+        }
         let visibleItems = timeline.getVisibleItems();
         let suppressWarning = $("#suppressWarningCheckbox").prop("checked");
         if (suppressWarning) {
@@ -402,6 +405,9 @@ $(function() {
         }
         let warnings = [];
         for (let itemId of visibleItems) {
+            if (exclude.includes(itemId)) {
+                continue;
+            }
             let item = items.get(itemId);
             let itemInfo = goalItemsMap.get(itemId);
             if (itemInfo.isOrphaned) {
@@ -662,7 +668,7 @@ $(function() {
                 addItems(data);
                 undoMgr.add({
                     undo: function() {
-                        items.remove(data.map(i => i.id));
+                        data.forEach(i => items.remove(i.id, SENDER_ID_IGNORE));
                     },
                     redo: function() {
                         addItems(data);

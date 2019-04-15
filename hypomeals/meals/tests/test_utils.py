@@ -68,59 +68,53 @@ class UtilsTest(BaseTestCase):
             utils.next_alphanumeric_str("HelloWorld!")
 
     def test_compute_end_time(self):
+        tz = timezone.get_current_timezone()
         test_cases = [
             (
-                ((start_time.replace(tzinfo=timezone.get_current_timezone())), hours),
-                end_time.replace(tzinfo=timezone.get_current_timezone()),
-                msg,
-            )
-            for (start_time, hours), end_time, msg in (
-                (
-                    (datetime(2019, 2, 21, 9, 0, 0), 1),
-                    datetime(2019, 2, 21, 10, 0, 0),
-                    "9AM, 1 hour, 10AM",
-                ),
-                (
-                    (datetime(2019, 2, 21, 9, 0, 0), 10),
-                    datetime(2019, 2, 22, 9, 0, 0),
-                    "9AM, 10 hours, 9AM next day",
-                ),
-                (
-                    (datetime(2019, 2, 21, 9, 0, 0), 24),
-                    datetime(2019, 2, 23, 13, 0, 0),
-                    "9AM, 24 hours, 1PM two days later",
-                ),
-                (
-                    (datetime(2019, 2, 21, 20, 0, 0), 11),
-                    datetime(2019, 2, 23, 9, 0, 0),
-                    "8PM, 11 hours, 9AM two days later (no work first day)",
-                ),
-                (
-                    (datetime(2019, 2, 21, 18, 0, 0), 10),
-                    datetime(2019, 2, 22, 18, 0, 0),
-                    "6PM, 10 hours, 6PM next day",
-                ),
-                (
-                    (datetime(2019, 2, 21, 8, 0, 0), 10),
-                    datetime(2019, 2, 21, 18, 0, 0),
-                    "8AM, 10 hours, 6PM",
-                ),
-                (
-                    (datetime(2019, 2, 21, 8, 0, 0), 0.5),
-                    datetime(2019, 2, 21, 8, 30, 0),
-                    "8AM, 30 minutes, 8:30AM",
-                ),
-                (
-                    (datetime(2019, 2, 21, 8, 0, 0), 10.5),
-                    datetime(2019, 2, 22, 8, 30, 0),
-                    "8AM, 10.5 hours, 8:30AM next day",
-                ),
-                (
-                    (datetime(2019, 2, 21, 1, 0, 0), 4),
-                    datetime(2019, 2, 21, 12, 0, 0),
-                    "1AM, 4 hours, 12PM same day",
-                )
-            )
+                (tz.localize(datetime(2019, 2, 21, 9, 0, 0)), 1),
+                tz.localize(datetime(2019, 2, 21, 10, 0, 0)),
+                "9AM, 1 hour, 10AM",
+            ),
+            (
+                (tz.localize(datetime(2019, 2, 21, 9, 0, 0)), 10),
+                tz.localize(datetime(2019, 2, 22, 9, 0, 0)),
+                "9AM, 10 hours, 9AM next day",
+            ),
+            (
+                (tz.localize(datetime(2019, 2, 21, 9, 0, 0)), 24),
+                tz.localize(datetime(2019, 2, 23, 13, 0, 0)),
+                "9AM, 24 hours, 1PM two days later",
+            ),
+            (
+                (tz.localize(datetime(2019, 2, 21, 20, 0, 0)), 11),
+                tz.localize(datetime(2019, 2, 23, 9, 0, 0)),
+                "8PM, 11 hours, 9AM two days later (no work first day)",
+            ),
+            (
+                (tz.localize(datetime(2019, 2, 21, 18, 0, 0)), 10),
+                tz.localize(datetime(2019, 2, 22, 18, 0, 0)),
+                "6PM, 10 hours, 6PM next day",
+            ),
+            (
+                (tz.localize(datetime(2019, 2, 21, 8, 0, 0)), 10),
+                tz.localize(datetime(2019, 2, 21, 18, 0, 0)),
+                "8AM, 10 hours, 6PM",
+            ),
+            (
+                (tz.localize(datetime(2019, 2, 21, 8, 0, 0)), 0.5),
+                tz.localize(datetime(2019, 2, 21, 8, 30, 0)),
+                "8AM, 30 minutes, 8:30AM",
+            ),
+            (
+                (tz.localize(datetime(2019, 2, 21, 8, 0, 0)), 10.5),
+                tz.localize(datetime(2019, 2, 22, 8, 30, 0)),
+                "8AM, 10.5 hours, 8:30AM next day",
+            ),
+            (
+                (tz.localize(datetime(2019, 2, 21, 1, 0, 0)), 4),
+                tz.localize(datetime(2019, 2, 21, 12, 0, 0)),
+                "1AM, 4 hours, 12PM same day",
+            ),
         ]
         for (start_time, hours), expected, msg in test_cases:
             self.assertEqual(utils.compute_end_time(start_time, hours), expected, msg)
