@@ -3,7 +3,7 @@
     <div class="row">
     <div class="col-sm mb-4">
     <div class="btn-group float-right" role="group">
-        {% if request.user.is_admin %}
+        {% if perms.meals.add_ingredient and perms.meals.add_formulaingredient %}
             <button type="button"
                     id="addRowButton"
                     class="btn btn-primary">

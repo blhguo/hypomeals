@@ -39,14 +39,10 @@
 </div>
 
 {% if messages %}
-<div class="row">
-<div class="col-sm">
-    <div class="alert alert-success mt-2 mb-4" id="messagesDiv">
-    {% for message in messages %}
-    <p class="mb-0{% if message.tags %} {{ message.tags }}{% endif %}">{{ message }}</p>
-    {% endfor %}
-    </div>
-</div>
+<div class="alert alert-success mt-2 mb-4" id="messagesDiv">
+{% for message in messages %}
+<p class="{% if forloop.counter == messages|length %}mb-0{% endif %}">{{ message }}</p>
+{% endfor %}
 </div>
 {% endif %}
 

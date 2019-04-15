@@ -58,7 +58,20 @@ def _render_collision(collision: CollisionException):
 
 
 @login_required
-@auth.user_is_admin_ajax(msg="Only administrators may perform bulk import.")
+@auth.permission_required_ajax(
+    perm=(
+        "meals.change_sku",
+        "meals.change_ingredient",
+        "meals.change_formula",
+        "meals.change_formulaingredient",
+        "meals.change_productline",
+        "meals.change_manufacturingline",
+        "meals.change_skumanufacturingline",
+        "meals.change_productline",
+    ),
+    msg="You do not have permission to import data, ",
+    reason="Only Product Managers may bulk import.",
+)
 def import_page(request):
 
     if request.method == "POST":
@@ -127,6 +140,20 @@ def collision(request):
 
 
 @login_required
+@auth.permission_required_ajax(
+    perm=(
+        "meals.change_sku",
+        "meals.change_ingredient",
+        "meals.change_formula",
+        "meals.change_formulaingredient",
+        "meals.change_productline",
+        "meals.change_manufacturingline",
+        "meals.change_skumanufacturingline",
+        "meals.change_productline",
+    ),
+    msg="You do not have permission to import data, ",
+    reason="Only Product Managers may bulk import.",
+)
 def import_success(request, inserted=None, updated=None, ignored=None):
     if inserted is None:
         inserted = {}

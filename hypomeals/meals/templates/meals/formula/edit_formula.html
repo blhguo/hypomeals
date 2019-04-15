@@ -53,17 +53,16 @@ Please correct the following error(s):
     </div>
 {% endfor %}
 
+{% if perms.meals.change_formula %}
 <div class="row mb-2">
 <div class="col-sm">
     <div class="btn-group float-right" role="group">
-    {% if request.user.is_admin %}
     <button type="button"
             id="addRowButton"
             class="btn btn-primary">
         <span class="fa fa-plus"></span> Add row
     </button>
-    {% endif %}
-    {% if request.user.is_admin %}
+    {% if perms.meals.add_ingredient %}
     <button type="button"
             id="createIngrButton"
             data-toggle="modal"
@@ -75,6 +74,7 @@ Please correct the following error(s):
     </div>
 </div>
 </div>
+{% endif %}
 
 <table class="table my-3">
 <thead class="thead-light">
@@ -124,7 +124,7 @@ add another ingredient to this SKU.
 {% else %}
 <input type="submit" class="btn btn-success" value="Save">
 {% endif %}
-<a href="{% url 'formula' %}" class="btn btn-secondary">Back</a>
+<a href="#" onclick="history.back()" class="btn btn-secondary">Back</a>
 </div>
 </form>
 
@@ -169,7 +169,7 @@ add another ingredient to this SKU.
 <!-- Hidden div for template data -->
 <div style="display: none;">
 <a href="{% url 'add_ingredient' %}" id="addIngredientUrl"></a>
-{% if request.user.is_admin %}
+{% if perms.meals.delete_formula and perms.meals.delete_formulaingredient %}
 <input id="hasChangePerm" type="checkbox" checked="checked">
 {% else %}
 <input id="hasChangePerm" type="checkbox">

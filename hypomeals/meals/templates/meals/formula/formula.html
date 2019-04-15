@@ -56,14 +56,14 @@
 </div>
 <div class="col-sm-4">
     <div class="btn-group my-4" style="float:right;">
-        {% if request.user.is_admin %}
+        {% if perms.meals.add_formula and perms.meals.add_formulaingredient %}
         <a id="addFormulaButton"
            href="{%  url 'add_formula' %}"
            class="btn btn-primary">
             <span class="fa fa-plus"></span> Add a new Formula
         </a>
         {% endif %}
-        {% if request.user.is_admin %}
+        {% if perms.meals.delete_formula and perms.meals.delete_formulaingredient %}
         <button type="button"
                 class="btn btn-danger"
                 disabled
@@ -125,6 +125,7 @@
 </div>
 
 <!-- Export controls -->
+{% if perms.meals.view_formula and perms.meals.view_formulaingredient %}
 <div class="w-100">
 <hr>
 <h3>Export</h3>
@@ -132,7 +133,9 @@
     <span class="fas fa-download"></span> Export Current Search
 </button>
 </div>
+{% endif %}
 </div>
+
 
 
 <!-- Table column -->
@@ -140,14 +143,14 @@
 {% if messages %}
 <div class="alert alert-success" id="messagesDiv">
 {% for message in messages %}
-<p {% if message.tags %}class="{{ message.tags }}{% endif %}">{{ message }}</p>
+<p class="{% if forloop.counter == messages|length %}mb-0{% endif %}">{{ message }}</p>
 {% endfor %}
 </div>
 {% endif %}
 <table class="table">
     <thead class="thead-light">
     <tr>
-        {% if request.user.is_admin %}
+        {% if perms.meals.change_formula %}
         <th>
             <div class="custom-control custom-checkbox">
             <input type="checkbox"
@@ -167,7 +170,7 @@
     <tbody class="table-striped">
     {% for formula in formulas %}
     <tr>
-        {% if request.user.is_admin %}
+        {% if perms.meals.change_formula %}
         <td>
             <div class="custom-control custom-checkbox">
             <input type="checkbox" data-formula-id="{{ formula.number }}"
@@ -179,16 +182,17 @@
         {% endif %}
         <td>{{ formula.number }}</td>
         <td>
+            {% if perms.meals.change_formula and perms.meals.change_formulaingredient %}
             <a href="{% url "edit_formula" formula.number %}"
-               {% if request.user.is_admin %}
                title="Click on the name to edit this formula."
-               {% else %}
                title="You don't have permission to edit this formula."
-               {% endif %}
                data-toggle="tooltip"
                data-placement="right">
                 {{ formula.name }}
             </a>
+            {% else %}
+            {{ formula.name }}
+            {% endif %}
         </td>
         <td>
             <div class="btn-group">

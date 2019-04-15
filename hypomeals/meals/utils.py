@@ -517,6 +517,18 @@ def compute_end_time(start_time: datetime, num_hours: float) -> datetime:
 
 
 def ajax_view(func):
+    """
+    A decorator that turns a view into an AJAX-only view. This does the following
+    things:
+    * If the user tries to access the view via the browser, he/she is redirected to
+        the error page.
+    * Any string returned from the function is taken as the response, while anything
+        else is taken as-is.
+    * If a `UserFacingException` is raised, it is automatically converted to the "error"
+        field in the `JsonResponse`, and the `resp` field is set to null.
+
+    Works especially well with various AJAX-handling functions in `common.js`.
+    """
     @functools.wraps(func)
     def wrapper(request, *args, **kwargs):
         from meals.exceptions import UserFacingException  # noqa

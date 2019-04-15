@@ -21,7 +21,7 @@ $(function() {
 
     ingredientCheckboxes.change(function() {
         removeButton.attr("disabled",
-            $(".ingredient-checkbox:selected").length > 0);
+            $(".ingredient-checkbox:checked").length === 0);
     });
 
     selectAllCheckbox.on("change", function(ev) {

@@ -1,6 +1,7 @@
 # pylint: disable-msg=arguments-differ
 import logging
 import re
+from datetime import timedelta
 from decimal import Decimal
 
 from django.conf import settings
@@ -9,7 +10,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import BLANK_CHOICE_DASH
+from django.db.models import BLANK_CHOICE_DASH, F
+from django.db.models.functions import Substr
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.text import Truncator
@@ -44,13 +46,19 @@ class User(AbstractUser):
     @property
     def is_plant_manager(self):
         """
-        This is ugly but it works. It works by listing all permissions that a user has,
-        and taking the first 13 characters ("meals.owns_ml" is 13 characters) of each
-        permission, and checking if "meals.owns_ml" is contained in the resulting set.
-        :return: True iff the user is a Plant Manager for at least one manufacturing
-            line
+        Checks whether the user is plant manager for at least one manufacturing line
         """
-        return "meals.owns_ml" in set(map(lambda s: s[:13], self.get_all_permissions()))
+        return self.groups.filter(permissions__codename__istartswith="owns_ml").exists()
+
+    @property
+    def owned_lines(self):
+        prefix = "owns_ml_"
+        return set(
+            self.groups.annotate(codename=F("permissions__codename"))
+            .filter(codename__startswith=prefix)
+            .annotate(line=Substr("codename", len(prefix) + 1))
+            .values_list("line", flat=True)
+        )
 
     def check_password(self, raw_password):
         if self.netid:
@@ -601,10 +609,12 @@ class ManufacturingLine(
                 "content_type": content_type,
             },
         )[0]
-        group, _ = Group.objects.get_or_create(
-            name=f"Plant Manager ({self.shortname})"
-        )
+        group, _ = Group.objects.get_or_create(name=f"Plant Manager ({self.shortname})")
         group.permissions.add(perm)
+
+        # Admins also own all manufacturing lines
+        admin_group = Group.objects.get(name="Admins")
+        admin_group.add(perm)
 
     def save(
         self, force_insert=False, force_update=False, using=None, update_fields=None
@@ -787,7 +797,9 @@ class GoalSchedule(
 
     @property
     def completion_time(self):
-        return self.end_time or utils.compute_end_time(self.start_time, self.hours)
+        if self.override_hours:
+            return self.start_time + timedelta(hours=float(self.override_hours))
+        return utils.compute_end_time(self.start_time, self.hours)
 
     @property
     def completion_hours(self):

@@ -167,9 +167,9 @@ def edit_user(request, pk):
     instance = User.objects.filter(pk=pk)[0]
     initial_data = {"is_admin": instance.is_admin, "password": instance.password}
     if request.method == "POST":
-        form = EditUserForm(request.POST, instance=instance, initial=initial_data)
+        form = EditUserForm(request.POST, instance=instance)
         if form.is_valid():
-            instance = form.save()
+            instance = form.save(commit=True)
             messages.info(request, f"Successfully saved User '{instance.username}'")
             return redirect("users")
     else:

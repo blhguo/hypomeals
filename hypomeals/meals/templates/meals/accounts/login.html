@@ -4,72 +4,72 @@
 {% block title %}Login{% endblock %}
 
 {% block body %}
-    <div class="container m-auto">
-    <div class="row my-4">
-        <div class="col-sm-7 mr-auto">
-        <h1>HypoMeals</h1>
-        <h3>Manufacturing Management and Business Insight Platform</h3>
-        <p>
-            HypoMeals&reg; is your one-stop solution for industry-standard,
-            high-performance manufacturing management and business analytics
-            platform. Powered by <3 from the HypoMeals team.
-        </p>
+<div class="container m-auto">
+<div class="row my-4">
+    <div class="col-sm-7 mr-auto">
+    <h1>HypoMeals</h1>
+    <h3>Manufacturing Management and Business Insight Platform</h3>
+    <p>
+        HypoMeals&reg; is your one-stop solution for industry-standard,
+        high-performance manufacturing management and business analytics
+        platform. Powered by <3 from the HypoMeals team.
+    </p>
+    </div>
+    <div class="col-sm-5 ml-auto">
+    {% if messages %}
+        <div class="alert alert-success" id="messagesDiv">
+            {% for message in messages %}
+                <p class="{% if forloop.counter == messages|length %}mb-0{% endif %}">{{ message }}</p>
+            {% endfor %}
         </div>
-        <div class="col-sm-5 ml-auto">
-        {% if messages %}
-        <div class="alert alert-danger" id="messagesDiv">
-        {% for message in messages %}
-        <p class="mb-0 {% if message.tags %}{{ message.tags }}"{% endif %}>{{ message }}</p>
-        {% endfor %}
+    {% endif %}
+    <div class="alert alert-success">
+    If you have a username and a password, enter them below and click the
+    "Login" button. If you wish to use Duke NetID to sign on, click the "Duke
+    NetID" button.
+    </div>
+    <div class="card m-auto">
+    <div class="card-body">
+    <h5 class="card-title">Log in</h5>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="form-group">
+        <label for="{{ form.username.id_for_label }}">Username:</label>
+        <input type="text"
+               name="username"
+               class="form-control"
+               id="{{ form.username.id_for_label }}">
+        <small>
+            {% if form.username.errors %}
+            {{ form.username.errors }}
+            {% endif %}
+        </small>
         </div>
-        {% endif %}
-        <div class="alert alert-success">
-        If you have a username and a password, enter them below and click the
-        "Login" button. If you wish to use Duke NetID to sign on, click the "Duke
-        NetID" button.
+        <div class="form-group">
+        <label for="{{ form.password.id_for_label }}">Password:</label>
+        <input type="password"
+               name="password"
+               class="form-control"
+               id="{{ form.password.id_for_label }}">
+        <small>
+            {% if form.password.errors %}
+            {{ form.password.errors }}
+            {% endif %}
+        </small>
         </div>
-        <div class="card m-auto">
-        <div class="card-body">
-        <h5 class="card-title">Log in</h5>
-        <form method="post">
-            {% csrf_token %}
-            {{ form.non_field_errors }}
-            <div class="form-group">
-            <label for="{{ form.username.id_for_label }}">Username:</label>
-            <input type="text"
-                   name="username"
-                   class="form-control"
-                   id="{{ form.username.id_for_label }}">
-            <small>
-                {% if form.username.errors %}
-                {{ form.username.errors }}
-                {% endif %}
-            </small>
-            </div>
-            <div class="form-group">
-            <label for="{{ form.password.id_for_label }}">Password:</label>
-            <input type="password"
-                   name="password"
-                   class="form-control"
-                   id="{{ form.password.id_for_label }}">
-            <small>
-                {% if form.password.errors %}
-                {{ form.password.errors }}
-                {% endif %}
-            </small>
-            </div>
-        <button type="submit" class="btn btn-primary">Login</button>
-        </form>
-        </div>
-        <hr class="my-0">
-        <div class="card-body">
-        <h5 class="card-title">Log in with</h5>
-        <a href="{% url 'sso' %}" id="ssoLink" class="btn btn-success">Duke Shibboleth</a>
-        </div>
-        </div>
+    <button type="submit" class="btn btn-primary">Login</button>
+    </form>
+    </div>
+    <hr class="my-0">
+    <div class="card-body">
+    <h5 class="card-title">Log in with</h5>
+    <a href="{% url 'sso' %}" id="ssoLink" class="btn btn-success">Duke Shibboleth</a>
     </div>
     </div>
-    </div>
+</div>
+</div>
+</div>
 {% endblock %}
 
 {% block scriptend %}

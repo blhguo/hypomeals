@@ -1,4 +1,5 @@
 {% extends 'meals/base.html' %}
+{% load meals_extras %}
 
 {% block title %}Permission Denied{% endblock %}
 
@@ -14,6 +15,7 @@
             </div>
         </div>
         <div class="col-sm-10">
+            <h3>Unauthorized</h3>
             {% if exception %}{{ exception }}{% else %}
             You don't have permission to view this page,
             {% endif %}
@@ -24,8 +26,10 @@
                 {% endfor %}
             </ul>
             {% else %}.{% endif %}
-            Please contact the administrator, if you believe you are seeing this
-            message in error.
+            You are currently logged in as {{ request.user.groups|values_list:'name'|join:', ' }}.
+            <br/>
+            This incident has been reported. Please contact the administrator,
+            if you believe you are seeing this message in error.
             <br/>
             <a class="mb-0" href="{% url 'index' %}">Back to Dashboard</a>
         </div>

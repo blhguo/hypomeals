@@ -3,17 +3,17 @@
 <html lang="en">
 <head>
     <!-- Required meta tags -->
-    <!-- <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"> -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet"
-          href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css"
-          integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS"
-          crossorigin="anonymous">
+    <link rel="stylesheet" href="{% static 'meals/lib/bootstrap.min.css' %}">
     <!--FontAwesome CSS -->
-    <link href="https://use.fontawesome.com/releases/v5.0.6/css/all.css" rel="stylesheet">
-    <link href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css"
+          integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf"
+          crossorigin="anonymous">
+    <!-- JQuery UI CSS -->
+    <link href="{% static 'meals/lib/jquery-ui.css' %}" rel="stylesheet">
     <link rel="shortcut icon" type="image/png" href="{% static 'meals/favicon.ico' %}"/>
     <title>{% block title %}{% endblock %}</title>
     {% block head %}
@@ -36,23 +36,19 @@
 <body>
 {# Adapted from https://getbootstrap.com/docs/4.1/components/navbar/  #}
 
-<nav class="navbar navbar-expand-sm navbar-light bg-light sticky-top">
-    <a class="navbar-brand" href="/">HypoMeals</a>
+<nav class="navbar navbar-expand-lg navbar-light bg-light sticky-top">
+    <a class="navbar-brand" href="/">
+        <img src="{% static 'meals/favicon.ico' %}" width="40" height="40" alt="logo">
+    </a>
     <button class="navbar-toggler"
             type="button"
             data-toggle="collapse"
-            data-target="#navbarSupportedContent"
-            aria-controls="navbarSupportedContent"
-            aria-expanded="false"
-            aria-label="Toggle navigation">
+            data-target="#navbar">
         <span class="navbar-toggler-icon"></span>
     </button>
 
-    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+    <div class="collapse navbar-collapse" id="navbar">
         <ul class="navbar-nav mr-auto">
-            <li class="nav-item {% block dashboard_active %}{% endblock %}">
-                <a class="nav-link" href="/">Dashboard</a>
-            </li>
             <li class="nav-item {% block sku_active %}{% endblock %}">
                 <a class="nav-link" href="{% url 'sku' %}">SKUs</a>
             </li>
@@ -65,9 +61,11 @@
             <li class="nav-item {% block formula_active %}{% endblock %}">
                 <a class="nav-link" href="{% url 'formula' %}">Formulas</a>
             </li>
+            {% if perms.meals.view_sale %}
             <li class="nav-item {% block sales_summary_active %}{% endblock %}">
                 <a class="nav-link" href="{% url 'sales_summary' %}">Sales Summary</a>
             </li>
+            {% endif %}
             <li class="nav-item dropdown {% block manufacturing_active %}{% endblock %}">
                 <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">
                     Manufacturing

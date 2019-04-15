@@ -10,10 +10,10 @@
 <div class="container-fluid m-auto">
 <form method="post" action="{% url 'sku' %}" id="skuFilterForm">
 {% csrf_token %}
-<div class="row">
+<div class="row my-2">
 <div class="col-sm-8">
 <nav>
-    <ul class="pagination my-4" id="pageList">
+    <ul class="pagination" id="pageList">
     {% if skus.has_previous %}
         <li class="page-item">
         <a class="page-link" page="{{ skus.previous_page_number }}" href="#">
@@ -57,15 +57,15 @@
 </nav>
 </div>
 <div class="col-sm-4">
-<div class="btn-group my-4" style="float: right;">
-    {% if request.user.is_admin %}
+<div class="btn-group float-right">
+    {% if perms.meals.add_sku %}
     <a id="addSkuButton"
         href="{% url 'add_sku' %}"
         class="btn btn-primary">
         <span class="fa fa-plus"></span> Add a new SKU
     </a>
     {% endif %}
-    {% if request.user.is_admin %}
+    {% if perms.meals.delete_sku %}
     <button type="button"
             class="btn btn-danger"
             disabled
@@ -76,18 +76,23 @@
         <span class="fa fa-minus"></span> Remove selected
     </button>
     {% endif %}
-    {% if request.user.is_admin %}
-    <button type="button" class="btn btn-info"
+    {% if perms.meals.change_skumanufacturingline %}
+    <button class="btn btn-danger dropdown-toggle dropdown-toggle-split"
+            data-toggle="dropdown"></button>
+    <div class="dropdown-menu">
+    <a class="dropdown-item"
+       href="#"
        disabled
        id="bulkButton">
-        Bulk Edit Manufacturing Lines
-    </button>
+        <i class="fas fa-edit"></i> Bulk Edit Manufacturing Lines
+    </a>
+    </div>
     {%  endif %}
 </div>
 </div>
 </div>
-<div class="row">
-<div class="col-sm-2 my-2">
+<div class="row mb-2">
+<div class="col-sm-2">
 <h3>Search</h3>
 {% if form.non_field_errors %}
 <div class="alert alert-danger">
@@ -154,11 +159,11 @@
 <!-- Export buttons -->
 <hr>
 <h3>Export</h3>
-<div class="form-check mb-2 w-100">
-    <input class="form-check-input"
+<div class="custom-control custom-checkbox mb-2">
+    <input class="custom-control-input"
            type="checkbox"
            id="exportFormulaCheckbox">
-    <label class="form-check-label"
+    <label class="custom-control-label"
            for="exportFormulaCheckbox">
         Include formulas
         <span class="badge badge-pill badge-info"
@@ -168,11 +173,11 @@
               title="Selecting this option will generate a ZIP file containing a <pre>formulas.csv</pre>">i</span>
     </label>
 </div>
-<div class="form-check mb-2 w-100">
-    <input class="form-check-input"
+<div class="custom-control custom-checkbox mb-2">
+    <input class="custom-control-input"
            type="checkbox"
            id="exportProductLineCheckbox">
-    <label class="form-check-label"
+    <label class="custom-control-label"
            for="exportProductLineCheckbox">
         Include separate Product Lines file
         <span class="badge badge-pill badge-info"
@@ -185,17 +190,17 @@
 <button class="btn btn-primary w-100" id="exportButton">
     <span class="fas fa-download"></span> Export Current Search
 </button>
-
 <div></div>
 </div>
 
 
+
 <!-- Table column -->
-<div class="col-sm-10 my-2">
+<div class="col-sm-10">
 {% if messages %}
 <div class="alert alert-success" id="messagesDiv">
 {% for message in messages %}
-<p {% if message.tags %}class="{{ message.tags }}{% endif %}">{{ message }}</p>
+<p class="{% if forloop.counter == messages|length %}mb-0{% endif %}">{{ message }}</p>
 {% endfor %}
 </div>
 {% endif %}
@@ -203,7 +208,7 @@
 <table class="table">
 <thead class="thead-light">
 <tr>
-    {% if request.user.is_admin %}
+    {% if perms.meals.delete_sku and perms.meals.change_skumanufacturingline %}
     <th>
         <div class="custom-control custom-checkbox">
         <input type="checkbox"
@@ -221,19 +226,21 @@
     <th nowrap>Count</th>
     <th nowrap>Product Line</th>
     <th nowrap>Formula</th>
-    <th nowrap>Formula Scale Factor</th>
+    <th nowrap>Formula Scale</th>
     <th nowrap>Manufacturing Lines</th>
     <th>Rate</th>
     <th nowrap>Setup Cost</th>
     <th nowrap>Run Cost</th>
+    {% if perms.meals.view_sales %}
     <th>Sales</th>
+    {% endif %}
     <th style="width: 25rem;">Comment</th>
 </tr>
 </thead>
 <tbody class="">
 {% for sku in skus %}
 <tr>
-    {% if request.user.is_admin %}
+    {% if perms.meals.delete_sku and perms.meals.change_skumanufacturingline %}
     <td>
         <div class="custom-control custom-checkbox">
         <input type="checkbox" data-sku-id="{{ sku.number }}"
@@ -245,16 +252,16 @@
     {% endif %}
     <td>{{ sku.number }}</td>
     <td nowrap>
+        {% if perms.meals.change_sku %}
         <a href="{% url 'edit_sku' sku.number %}"
-           {% if request.user.is_admin %}
            title="Click on the name to edit this SKU."
-           {% else %}
-           title="You don't have permission to edit this SKU."
-           {% endif %}
            data-toggle="tooltip"
            data-placement="right">
             {{ sku.name }}
         </a>
+        {% else %}
+        {{ sku.name }}
+        {% endif %}
     </td>
     <td>{{ sku.case_upc.upc_number }}</td>
     <td>{{ sku.unit_upc.upc_number }}</td>
@@ -288,9 +295,11 @@
     <td nowrap>
         $ {{ sku.run_cost|quantize:2|intcomma }}
     </td>
+    {% if perms.meals.view_sales %}
     <td>
         <a href="{% url 'drilldown' sku.number %}">Report</a>
     </td>
+    {% endif %}
     <td style="min-width: 25rem;">{{ sku.comment|truncatewords:20 }}</td>
 </tr>
 {% empty %}

@@ -5,9 +5,13 @@
 <div class="col-sm-12">
     <div class="alert alert-success">
     <h5>Formula #{{ formula.number }}:
+        {% if perms.meals.change_formula %}
         <a href="{% url 'edit_formula' formula.number %}">{{ formula.name }}</a>
+        {% else %}{{ formula.name }}
+        {% endif %}
     </h5>
-    View ingredients of the formula below. To edit the formula, click on its name.
+    View ingredients of the formula below.
+    {% if perms.meals.change_formula %}To edit the formula, click on its name.{% endif %}
     </div>
 </div>
 </div>

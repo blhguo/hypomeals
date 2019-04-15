@@ -69,7 +69,9 @@ $(function() {
                 }
             });
     }
+});
 
+$(function() {
     Mousetrap.bind(["command+a", "ctrl+a"], function(e) {
         e.preventDefault();
         selectAllCheckbox.prop("checked",

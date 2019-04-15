@@ -6,6 +6,7 @@ $(function () {
     let emptyAlert = $("#emptyAlert");
     let deadlineInputId = $("#deadlineInputId").val();
     let deadlineInput = $(`#${deadlineInputId}`);
+    let isScheduled = $("#isScheduledCheckbox").prop("checked");
 
     $("#id_name").trigger("focus");
 

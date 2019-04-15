@@ -19,12 +19,25 @@ from meals.forms import SaleFilterForm, ProductLineFilterForm, ProjectionsFilter
 from meals.models import Sku, Sale, ProductLine, Customer, GoalItem
 from ..bulk_export import export_drilldown, export_sales_summary
 
+from meals import auth
+
 logger = logging.getLogger(__name__)
 
 GRAPH_DATA_POINTS = 10
 
 
 @login_required
+@auth.permission_required_ajax(
+    perm=(
+        "meals.view_sku",
+        "meals.view_sale",
+        "meals.view_productline",
+        "meals.view_customer",
+    ),
+    msg="You do not have permission to view sales records",
+    reason="Only authorized users (Analysts, Product Managers, Plant Managers, "
+    "and Business Managers) may view sales records.",
+)
 def sales_drilldown(request, sku_pk):
     start = time.time()
     export = request.GET.get("export", "0") == "1"
@@ -82,8 +95,8 @@ def sales_drilldown(request, sku_pk):
         customers = Customer.objects.filter(name__in=customer_names)
     else:
         customers = Customer.objects.all()
-    rev_sum, num_sales, sku_ten_year = sku_revenue(sku, customers, begin_year)
-    sku_summary_report = [sku_summary(sku, rev_sum, num_sales, sku_ten_year), ]
+    rev_sum, num_sales, sku_ten_year = _sku_revenue(sku, customers, begin_year)
+    sku_summary_report = [_sku_summary(sku, rev_sum, num_sales, sku_ten_year)]
     return render(
         request,
         template_name="meals/sales/drilldown.html",
@@ -101,7 +114,7 @@ def sales_drilldown(request, sku_pk):
     )
 
 
-def sku_summary(sku, rev_sum, num_sales, sku_info):
+def _sku_summary(sku, rev_sum, num_sales, sku_info):
     activities_sku = GoalItem.objects.filter(sku=sku)
     manufacture_run_size = Decimal(0)
     for activity in activities_sku:
@@ -135,11 +148,11 @@ def sku_summary(sku, rev_sum, num_sales, sku_info):
     )
 
 
-def sku_ready():
+def _sales_ready():
     return all(map(operator.attrgetter("sales_ready"), Sku.objects.all()))
 
 
-def time_estimate():
+def _time_estimate():
     cnt = 0
     for sku in Sku.objects.all():
         if not sku.sales_ready:
@@ -147,17 +160,15 @@ def time_estimate():
     return cnt * SALES_WAIT_TIME_MINUTES
 
 
-def sku_revenue(sku, customers, begin_year):
+def _sku_revenue(sku, customers, begin_year):
     sku_ten_year = []
     rev_sum = Decimal(0)
     num_sales = Decimal(0)
     sales_all = (
-        Sale.objects.filter(
-            sku=sku, customer__in=customers, year__gte=begin_year
-        )
-            .order_by("year")
-            .values("year")
-            .annotate(revenue=Sum(F("sales") * F("price")), count=Sum(F("sales")))
+        Sale.objects.filter(sku=sku, customer__in=customers, year__gte=begin_year)
+        .order_by("year")
+        .values("year")
+        .annotate(revenue=Sum(F("sales") * F("price")), count=Sum(F("sales")))
     )
     for sales_per_year in sales_all:
         year = sales_per_year["year"]
@@ -170,7 +181,13 @@ def sku_revenue(sku, customers, begin_year):
         num_sales += num_tot
     return rev_sum, num_sales, sku_ten_year
 
+
 @login_required
+@auth.permission_required_ajax(
+    perm=("meals.view_sale",),
+    msg="You do not have permission to view the sales projection",
+    reason="Only Analysts amy view sales projections.",
+)
 def sales_projection(request):
     if request.method == "POST":
         form = ProjectionsFilterForm(request.POST)
@@ -181,18 +198,14 @@ def sales_projection(request):
         start_date = request.GET.get("start_date", datetime.now() - timedelta(days=10))
         end_date = request.GET.get("end_date", datetime.now())
         sku = Sku.objects.filter(number=number)[0]
-        params = {
-            "sku": sku.name,
-            "start": start_date,
-            "end": end_date,
-        }
+        params = {"sku": sku.name, "start": start_date, "end": end_date}
         form = ProjectionsFilterForm(params)
         if form.is_valid():
             data = form.query()
         else:
             data = {}
     rev = []
-    for k,v in data.items():
+    for k, v in data.items():
         rev.append(float(v))
     avg = int(statistics.mean(rev))
     std = round(statistics.stdev(rev), 1)
@@ -210,14 +223,26 @@ def sales_projection(request):
         context={"data": data, "form": form, "sku": sku, "avg": avg, "std": std},
     )
 
+
 @login_required
+@auth.permission_required_ajax(
+    perm=(
+        "meals.view_sku",
+        "meals.view_sale",
+        "meals.view_customer",
+        "meals.view_productline",
+    ),
+    msg="You do not have permission to view the sales records",
+    reason="Only authorized users (Analysts, Product Managers, Plant Managers, "
+    "and Business Managers) may view sales records.",
+)
 def sales_summary(request):
     export = request.GET.get("export", "0") == "1"
-    if not sku_ready():
+    if not _sales_ready():
         return render(
             request,
             template_name="meals/sales/sku_not_ready.html",
-            context={"time_estimate": time_estimate()},
+            context={"time_estimate": _time_estimate()},
         )
 
     if request.method == "POST":
@@ -275,8 +300,8 @@ def sales_summary(request):
         begin_year = end_year - 9
         pl_summary_report = []
         for sku in skus:
-            rev_sum, num_sales, sku_ten_year = sku_revenue(sku, customers, begin_year)
-            sku_summary_report = sku_summary(sku, rev_sum, num_sales, sku_ten_year)
+            rev_sum, num_sales, sku_ten_year = _sku_revenue(sku, customers, begin_year)
+            sku_summary_report = _sku_summary(sku, rev_sum, num_sales, sku_ten_year)
             pl_summary_report.append(sku_summary_report)
         sales_summary_result.append((pl.name, pl_summary_report))
     if export:

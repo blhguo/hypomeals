@@ -21,6 +21,11 @@ logger = logging.getLogger(__name__)
 
 
 @login_required
+@auth.permission_required_ajax(
+    perm=("meals.view_sku", ),
+    msg="You do not have permission to view SKUs",
+    reason="Only logged in users may view SKUs",
+)
 def sku(request):
     start = time.time()
     export = request.GET.get("export", "0") == "1"
@@ -85,7 +90,11 @@ def sku(request):
 
 
 @login_required
-@auth.user_is_admin_ajax(msg="Only administrators may edit SKUs.")
+@auth.permission_required_ajax(
+    perm=("meals.change_sku",),
+    msg="You do not have permission to edit SKUs,",
+    reason="Only Product Managers may edit SKUs",
+)
 def edit_sku(request, sku_number):
     instance = get_object_or_404(Sku, number=sku_number)
     if request.method == "POST":
@@ -109,18 +118,18 @@ def edit_sku(request, sku_number):
 
 
 @login_required
-@auth.user_is_admin_ajax(msg="Only administrators may add a new SKU.")
+@auth.permission_required_ajax(
+    perm=("meals.add_sku",),
+    msg="You do not have permission to add SKUs, ",
+    reason="Only Product Managers may add SKUs",
+)
 def add_sku(request):
-    skip = request.GET.get("skip", "0") == "1"
-
     if request.method == "POST":
         form = EditSkuForm(request.POST)
         if form.is_valid():
             instance = form.save()
             messages.info(request, f"SKU #{instance.pk} has been saved successfully.")
-            if skip:
-                return redirect("sku")
-            return redirect("edit_formula", instance.pk)
+            return redirect("sku")
     else:
         form = EditSkuForm()
     return render(
@@ -132,7 +141,11 @@ def add_sku(request):
 
 @login_required
 @require_POST
-@auth.permission_required_ajax(perm="meals.delete_sku")
+@auth.permission_required_ajax(
+    perm=("meals.delete_sku",),
+    msg="You do not have permission to delete SKUs, ",
+    reason="Only Product Managers may delete SKUs",
+)
 def remove_skus(request):
     to_remove = jsonpickle.loads(request.POST.get("to_remove", "[]"))
     try:
@@ -147,7 +160,6 @@ def remove_skus(request):
 
 
 @login_required
-@auth.permission_required_ajax(perm="meals.delete_sku")
 def view_lines(request):
     skus = json.loads(request.GET.get("skus", "[]"))
     all_set = set()
@@ -194,8 +206,13 @@ def view_lines(request):
 
 
 @login_required
-@auth.permission_required_ajax(perm="meals.delete_sku")
+@auth.permission_required_ajax(
+    perm=("meals.change_skumanufacturingline",),
+    msg="You do not have permission to edit Manufacturing Lines, ",
+    reason="Only Product Managers may edit Manufacturing Lines",
+)
 def edit_lines(request):
+    """This view refers to editing the mapping between ML and SKUs"""
     skus = json.loads(request.GET.get("skus", "[]"))
     checked = json.loads(request.GET.get("checked", "[]"))
     unchecked = json.loads(request.GET.get("unchecked", "[]"))

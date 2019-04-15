@@ -9,10 +9,10 @@
 <div class="container-fluid m-auto">
 <form method="post" action="{% url 'ingredient' %}" id="ingredientFilterForm">
 {%  csrf_token %}
-<div class="row">
+<div class="row my-2">
 <div class="col-sm-8">
 <nav>
-<ul class="pagination my-4" id="pageList">
+<ul class="pagination" id="pageList">
 {% if ingredients.has_previous %}
     <li class="page-item">
         <a class="page-link" page="{{  ingredients.previous_page_number }}" href="#">
@@ -56,15 +56,15 @@
 </nav>
 </div>
 <div class="col-sm-4">
-    <div class="btn-group my-4" style="float:right;">
-        {% if request.user.is_admin %}
+    <div class="btn-group float-right">
+        {% if perms.meals.add_ingredient %}
         <a id="addIngredientButton"
            href="{%  url 'add_ingredient' %}"
            class="btn btn-primary">
             <span class="fa fa-plus"></span> Add a new Ingredient
         </a>
         {% endif %}
-        {% if request.user.is_admin %}
+        {% if perms.meals.delete_ingredient %}
         <button type="button"
                 class="btn btn-danger"
                 disabled
@@ -78,7 +78,7 @@
     </div>
 </div>
 </div>
-<div class="row">
+<div class="row mb-2">
 <div class="col-sm-2">
 <h3>Search</h3>
 {%  if form.non_field_errors %}
@@ -144,7 +144,7 @@
 {% if messages %}
 <div class="alert alert-success" id="messagesDiv">
 {% for message in messages %}
-<p {% if message.tags %}class="{{ message.tags }}{% endif %}">{{ message }}</p>
+<p class="{% if forloop.counter == messages|length %}mb-0{% endif %}">{{ message }}</p>
 {% endfor %}
 </div>
 {% endif %}
@@ -152,8 +152,15 @@
 <table class="table">
     <thead class="thead-light">
     <tr>
-        {% if request.user.is_admin %}
-        <th><input type="checkbox" id="selectAllCheckbox"> </th>
+        {% if perms.meals.change_ingredient or perms.meals.delete_ingredient %}
+        <th>
+        <div class="custom-control custom-checkbox">
+        <input type="checkbox"
+               id="selectAllCheckbox"
+               class="custom-control-input">
+        <label for="selectAllCheckbox" class="custom-control-label"></label>
+        </div>
+        </th>
         {% endif %}
         <th>Ingr#</th>
         <th>Name</th>
@@ -166,13 +173,20 @@
     <tbody class="table-striped">
     {% for ingredient in ingredients %}
     <tr>
-        {% if request.user.is_admin %}
-        <td><input type="checkbox" class="ingredient-checkbox" id="{{ ingredient.number }}"> </td>
+        {% if perms.meals.change_ingredient or perms.meals.delete_ingredient %}
+        <td>
+        <div class="custom-control custom-checkbox">
+            <input type="checkbox"
+                   id="{{ ingredient.number }}"
+                   class="custom-control-input ingredient-checkbox">
+            <label for="{{ ingredient.number }}" class="custom-control-label"></label>
+        </div>
+        </td>
         {% endif %}
         <td>{{ ingredient.number }}</td>
         <td>
             <a href="{% url "edit_ingredient" ingredient.number %}"
-               {% if request.user.is_admin %}
+               {% if perms.meals.change_ingredient %}
                title="Click on the name to edit this ingredient."
                {% else %}
                title="You don't have permission to edit this ingredient."

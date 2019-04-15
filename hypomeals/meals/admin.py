@@ -1,4 +1,7 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
 
 from .models import (
     User,
@@ -19,20 +22,27 @@ from .models import (
     Sale,
 )
 
-# Register your models here.
-admin.site.register(User)
-admin.site.register(Upc)
-admin.site.register(ProductLine)
-admin.site.register(Vendor)
-admin.site.register(Ingredient)
-admin.site.register(Sku)
-admin.site.register(FormulaIngredient)
-admin.site.register(Goal)
-admin.site.register(GoalItem)
-admin.site.register(Formula)
-admin.site.register(SkuManufacturingLine)
-admin.site.register(ManufacturingLine)
-admin.site.register(Unit)
-admin.site.register(GoalSchedule)
-admin.site.register(Customer)
-admin.site.register(Sale)
+models = [
+    Upc,
+    ProductLine,
+    Vendor,
+    Ingredient,
+    Sku,
+    Formula,
+    FormulaIngredient,
+    Goal,
+    GoalItem,
+    GoalSchedule,
+    ManufacturingLine,
+    SkuManufacturingLine,
+    Unit,
+    Customer,
+    Sale,
+    Permission,
+    ContentType
+]
+
+admin.site.register(User, UserAdmin)
+
+for model in models:
+    admin.site.register(model)

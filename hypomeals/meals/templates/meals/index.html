@@ -11,12 +11,10 @@
         <li><a href="{% url "sku" %}">Review SKUs</a></li>
         <li><a href="{% url 'ingredient' %}">Review Ingredients</a></li>
         <li><a href="{% url 'goals' %}">Review Goals</a></li>
-        {% if request.user.is_admin %}
+        {% if perms.meals.add_sku %}
         <li><a href="{% url 'import' %}">Import</a></li>
         {% endif %}
     </ul>
     </div>
     </div>
 {% endblock %}
-
-{% block dashboard_active %} active{% endblock %}
