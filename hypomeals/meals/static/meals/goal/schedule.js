@@ -621,7 +621,13 @@ $(function() {
             existing[group] = items.get({
                 filter: item => item.group === group,
                 order: sortItemByStartTime
-            }).map(item => item.id);
+            }).map(function(item) {
+                return {
+                    id: item.id,
+                    start: moment(item.start).unix(),
+                    end: moment(item.end).unix(),
+                }
+            });
         }
 
         let toSchedule = [];

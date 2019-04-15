@@ -1,6 +1,7 @@
 """
 Contains algorithms for generic auto-scheduling
 """
+import functools
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -16,6 +17,17 @@ class Item:
     item: GoalItem
     hours: int
     groups: Set[str]
+
+
+@functools.total_ordering
+@dataclass
+class ExistingItem:
+    item: GoalItem
+    start: datetime
+    end: datetime
+
+    def __lt__(self, other):
+        return self.start < other.start
 
 
 @dataclass
@@ -41,11 +53,16 @@ class ScheduleException(Exception):
 
 
 def schedule(
-    items: List[Item], start: datetime, end: datetime
+    items: List[Item],
+    existing_items: Mapping[str, List[ExistingItem]],
+    start: datetime,
+    end: datetime,
 ) -> List[Mapping[str, str]]:
     """
     Schedules the items according the following algorithm:
     :param items: a list of Item objects to be scheduled
+    :param existing_items: a list of ExistingItem objects that are already on the
+        timeline and therefore cannot be changed.
     :param start: the earliest time when the items can be scheduled to start
     :param end: the latest time when the items can be scheduled to finish
     :return: a list of schedules
@@ -59,10 +76,11 @@ def schedule(
         start.isoformat(),
         end.isoformat(),
     )
+    logger.info("Existing=%s", existing_items)
     for item in items:
         schedules.append(
             Schedule(
-                item.id,
+                item.item.id,
                 start,
                 start + timedelta(hours=item.hours),
                 next(iter(item.groups)),
