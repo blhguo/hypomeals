@@ -346,7 +346,7 @@ $(function() {
         if (itemsInGroup.length === 1) return false;
         itemsInGroup.sort(sortItemByStartTime);
         for (let i = 0; i < itemsInGroup.length - 1; i++) {
-            if (moment(itemsInGroup[i + 1].start) <= moment(itemsInGroup[i].end)) {
+            if (moment(itemsInGroup[i + 1].start) < moment(itemsInGroup[i].end)) {
                 throw Error("overlap");
             }
         }
@@ -621,7 +621,13 @@ $(function() {
             existing[group] = items.get({
                 filter: item => item.group === group,
                 order: sortItemByStartTime
-            }).map(item => item.id);
+            }).map(function(item) {
+                return {
+                    id: item.id,
+                    start: moment(item.start).unix(),
+                    end: moment(item.end).unix(),
+                }
+            });
         }
 
         let toSchedule = [];
