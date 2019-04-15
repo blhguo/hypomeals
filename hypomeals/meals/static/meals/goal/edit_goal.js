@@ -38,20 +38,6 @@ $(function () {
     function toggleEmptyAlert() {
         emptyAlert.toggle(formset.find("tbody tr:visible").length === 0);
     }
-
-    deadlineInput.on("focus", function() {
-        let calendarPopover = $("#calendarIcon");
-        calendarPopover.popover({
-            container: "body",
-            placement: "top",
-            offset: 100,
-            title: "Show Calendar",
-            content: "Click here to show the calendar widget."
-        }).popover("show");
-        setTimeout(function() {
-            calendarPopover.popover("hide");
-        }, 2000);
-    });
 });
 
 function renderProductLineModal() {
@@ -85,21 +71,6 @@ function renderProductLineModal() {
     }
 }
 
-function changeSalesProjectionModal() {
-    let salesProjectionUrl = $("#salesProjectionUrl").attr("href");
-
-    let skuNumber = $("#sku_number").attr("href");
-    let startDate = $("#id_start").val();
-    let endDate = $("#id_end").val();
-
-    getJson(salesProjectionUrl, {
-        sku: skuNumber, start_date: startDate, end_date: endDate
-    }).done(function(data) {
-        let modal = makeModalAlert("Sales Projection", $(data),
-            changeSalesProjectionModal);
-    });
-}
-
 function querySalesProjection(skuNumber, start, end, quantityInput) {
     let salesProjectionUrl = $("#salesProjectionUrl").attr("href");
     getJson(salesProjectionUrl, {
@@ -115,6 +86,7 @@ function querySalesProjection(skuNumber, start, end, quantityInput) {
             quantityInput.val($(this).attr("data-quantity"));
             modal.modal("hide");
         });
+        modal.find("div.date").datetimepicker({format: "YYYY-MM-DD"});
         modal.find("#submitButton").click(function() {
             let start = modal.find("#id_start").val();
             let end = modal.find("#id_end").val();

@@ -13,24 +13,30 @@
 </div>
 {% endif %}
 <div class="form-inline">
-    <div class="input-group">
+    <div class="input-group date" id="startDatePicker" data-target-input="#id_start">
     <div class="input-group-prepend">
     <label class="input-group-text" for="{{ form.start.id_for_label }}">Start date</label>
     </div>
     {{ form.start }}
     {% if form.start.errors %}
-    <small>{{ form.start.errors }}</small>
+    <div class="tooltip">{{ form.start.errors }}</div>
     {% endif %}
+    <div class="input-group-append mr-2" data-target="#startDatePicker" data-toggle="datetimepicker">
+        <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+    </div>
     </div>
 
-    <div class="input-group">
+    <div class="input-group date" id="endDatePicker" data-target-input="#id_end">
     <div class="input-group-prepend">
     <label class="input-group-text" for="{{ form.end.id_for_label }}">End date</label>
     </div>
     {{ form.end }}
     {% if form.end.errors %}
-    <small>{{ form.end.errors }}</small>
+    <div class="invalid-tooltip">{{ form.end.errors }}</div>
     {% endif %}
+    <div class="input-group-append mr-2" data-target="#endDatePicker" data-toggle="datetimepicker">
+        <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+    </div>
     </div>
     <button type="button" id="submitButton" class="btn btn-primary">Submit</button>
 </div>

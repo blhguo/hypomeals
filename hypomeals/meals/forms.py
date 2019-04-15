@@ -1420,14 +1420,18 @@ class EditUserForm(forms.ModelForm, utils.BootstrapFormControlMixin):
 
 
 class ProjectionsFilterForm(forms.Form, utils.BootstrapFormControlMixin):
-    start = forms.DateTimeField(widget=forms.DateInput())
+    start = forms.DateTimeField(
+        widget=forms.DateInput(attrs={"data-target": "#startDatePicker"})
+    )
 
-    end = forms.DateTimeField(widget=forms.DateInput())
+    end = forms.DateTimeField(widget=forms.DateInput(
+        attrs={"data-target": "#endDatePicker"}
+    ))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
-            field.widget.attrs["class"] = "mr-2"
+            field.widget.attrs["class"] = "datetimepicker-input"
 
     def clean(self):
         if (
