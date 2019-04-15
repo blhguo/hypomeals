@@ -23,7 +23,7 @@ urlpatterns = [
     # Sales
     path("sales/summary/", views.sales_summary, name="sales_summary"),
     path("sales/drilldown/<int:sku_pk>", views.sales_drilldown, name="drilldown"),
-    path("sales/sales-projection/<int:sku_pk>", views.sales_projection, name="sales_projection"),
+    path("sales/sales-projection", views.sales_projection, name="sales_projection"),
     path("ac-customers", views.autocomplete_customers, name="autocomplete_customers"),
     # SKU views
     path("sku", views.sku, name="sku"),

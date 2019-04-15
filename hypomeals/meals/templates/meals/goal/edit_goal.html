@@ -135,7 +135,6 @@ Please correct the following error(s):
     <td class="align-middle">
         {{ form.DELETE }}
         <a href="#" class="btn btn-link deleteButtons">Delete</a>
-        <a href="#" class="btn btn-link projectionButtons">Projection</a>
     </td>
 </tr>
 {% endfor %}
@@ -160,7 +159,6 @@ Please correct the following error(s):
     <td class="align-middle">
         {{ formset.empty_form.DELETE }}
         <a href="#" class="btn btn-link deleteButtons">Delete</a>
-        <a href="#" class="btn btn-link projectionButtons">Projection</a>
     </td>
 </tr>
 
@@ -208,7 +206,8 @@ add another item.
 
 <!-- Hidden div for template data -->
 <div style="display: none;">
-<a href="{% url 'filter_skus' %}" id="filterSkusUrl"></a>
+    <a href="{% url 'filter_skus' %}" id="filterSkusUrl"></a>
+    <a href="{% url 'sales_projection' %}" id="salesProjectionUrl"></a>
 <input type="text" id="deadlineInputId" value="{{ form.deadline.id_for_label }}">
 </div>
 {% endblock %}

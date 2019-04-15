@@ -11,14 +11,10 @@ $(function () {
 
     filterSkusUrl = $("#filterSkusUrl").attr("href");
 
+
     $("#datepicker1").datetimepicker({format: "YYYY-MM-DD"});
 
-<<<<<<< HEAD
-    $(".filterButtons").click(renderModal);
-    $(".projectionButtons").click(renderModal)
-=======
     $(".filterButtons").click(renderProductLineModal);
->>>>>>> 73cf12d55d809bb86572aff57d8d2436c4ae911f
     registerFilterTooltip();
 
     $(".salesButtons").click(renderSalesProjectionModal);
@@ -89,8 +85,52 @@ function renderProductLineModal() {
     }
 }
 
+function changeSalesProjectionModal() {
+    let salesProjectionUrl = $("#salesProjectionUrl").attr("href");
+
+    skuNumber = $("#sku_number").attr("href");
+    start_date = $("#id_start").val();
+    end_date = $("#id_end").val();
+
+
+    $.getJSON(salesProjectionUrl,
+        {sku: skuNumber, start_date: start_date, end_date: end_date})
+        .done(populateSales)
+        .fail(function (_, __, errorThrown) {
+                alert(`Error loading content: ${errorThrown}`);
+            });
+    function populateSales(data, textStatus) {
+        let sales = data.resp;
+        console.log(sales)
+        let modal = makeCustomAlert("Sales Projection", sales, changeSalesProjectionModal);
+        $("#modalCopyButton").click(function() {
+            quantityInput.val($("#avgValue").html().trim());
+            modal.modal("hide");
+        });
+    }
+}
+
 function renderSalesProjectionModal() {
-    // TODO: Implement this.
+    let salesProjectionUrl = $("#salesProjectionUrl").attr("href");
+
+    quantityInput = $(this).parents("td").find("input");
+    skuInputValue = $(this).parents("td").parents("tr").children("td").find("input").val()
+    start = skuInputValue.search("#")+1;
+    end = skuInputValue.length-1;
+    skuNumber = skuInputValue.substring(start, end)
+    $.getJSON(salesProjectionUrl, {sku: skuNumber}).done(populateSales).fail(function (_, __, errorThrown) {
+                alert(`Error loading content: ${errorThrown}`);
+                formulaModal.modal("hide");
+            });
+    function populateSales(data, textStatus) {
+        let sales = data.resp;
+        console.log(sales)
+        let modal = makeCustomAlert("Sales Projection", sales, changeSalesProjectionModal);
+        $("#modalCopyButton").click(function() {
+            quantityInput.val(101);
+            modal.modal("hide");
+        });
+    }
 }
 
 function registerFilterTooltip() {

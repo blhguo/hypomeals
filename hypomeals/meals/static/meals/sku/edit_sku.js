@@ -89,7 +89,7 @@ $(function () {
             .done(formulaAjaxDone)
             .fail(function (_, __, errorThrown) {
                 alert(`Error loading content: ${errorThrown}`);
-                formulaModal.modal("hide");
+                // formulaModal.modal("hide");
             })
     });
 });

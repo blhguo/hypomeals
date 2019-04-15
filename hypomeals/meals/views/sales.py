@@ -2,6 +2,7 @@ import json
 import logging
 import operator
 import time
+import statistics
 from collections import defaultdict
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -9,7 +10,9 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Sum, F
+from django.http import JsonResponse
 from django.shortcuts import render
+from django.template.loader import render_to_string
 
 from meals.constants import SALES_WAIT_TIME_MINUTES
 from meals.forms import SaleFilterForm, ProductLineFilterForm, ProjectionsFilterForm
@@ -168,28 +171,43 @@ def sku_revenue(sku, customers, begin_year):
     return rev_sum, num_sales, sku_ten_year
 
 @login_required
-def sales_projection(request, sku_pk):
-    sku = Sku.objects.filter(pk = sku_pk)[0]
+def sales_projection(request):
     if request.method == "POST":
         form = ProjectionsFilterForm(request.POST)
         if form.is_valid():
             data = form.query()
-
     else:
+        number = request.GET.get("sku", 0)
+        start_date = request.GET.get("start_date", datetime.now() - timedelta(days=10))
+        end_date = request.GET.get("end_date", datetime.now())
+        sku = Sku.objects.filter(number=number)[0]
         params = {
             "sku": sku.name,
-            "start": datetime.now() - timedelta(days=10),
-            "end": datetime.now(),
+            "start": start_date,
+            "end": end_date,
         }
         form = ProjectionsFilterForm(params)
         if form.is_valid():
             data = form.query()
         else:
             data = {}
+    rev = []
+    for k,v in data.items():
+        rev.append(float(v))
+    avg = int(statistics.mean(rev))
+    std = round(statistics.stdev(rev), 1)
+    form_html = render_to_string(
+        request=request,
+        template_name="meals/sales/sales_projection.html",
+        context={"data": data, "form": form, "sku": sku, "avg": avg, "std": std},
+    )
+    if request.is_ajax():
+        resp = {"error": None, "resp": form_html}
+        return JsonResponse(resp)
     return render(
         request,
         template_name="meals/sales/sales_projection.html",
-        context={"data": data, "form": form, "sku": sku},
+        context={"data": data, "form": form, "sku": sku, "avg": avg, "std": std},
     )
 
 @login_required

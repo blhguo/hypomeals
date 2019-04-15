@@ -226,7 +226,7 @@ function makeToast(title, message, timeout, toastDiv) {
 function makeModalAlert(title, message, success, cancel) {
     let modalHtml = `
 <div class="modal fade" tabindex="-1" role="dialog">
-  <div class="modal-dialog modal-dialog-centered" role="document">
+  <div class="modal-dialog modal-dialog-centered bd-example-modal-lg" style="width:3000px;" role="document">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">${title}</h5>
@@ -277,6 +277,77 @@ function makeModalAlert(title, message, success, cancel) {
             }
         }
         modal.modal("hide");
+    });
+    modal.on("hidden.bs.modal", function() {
+        modal.modal("dispose");
+        modal.remove();
+    });
+    $("body").append(modal);
+    modal.modal("show");
+    return modal;
+}
+
+
+function makeCustomAlert(title, message, success, cancel) {
+    let modalHtml = `
+<div class="modal fade" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-lg" style="width:3000px;" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">${title}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+      </div>
+      <div class="modal-footer">
+        <button type="button" 
+            id="modalSuccessButton" 
+            class="btn btn-primary">Query</button>
+        <button type="button" 
+            id="modalCopyButton" 
+            class="btn btn-primary">Copy to Goal</button>
+        <button type="button" 
+            id="modalCancelButton"
+            class="btn btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+    let modal = $(modalHtml);
+    let modalBody = modal.find(".modal-body");
+    if (typeof message === "string" || message instanceof String) {
+        message = $("<p>").attr("style", "white-space: pre-line")
+            .html(message);
+    } else {
+        message = $(message).clone(true, true);
+    }
+    modalBody.append(message);
+    let successButton = modal.find("#modalSuccessButton");
+    if (success === undefined || success === null) {
+        successButton.toggle(false);
+    } else {
+        successButton.on("click", function () {
+            if (_.isFunction(success)) {
+                if (success(modal) === false) {
+                    return;
+                }
+            }
+            modal.modal("hide");
+        });
+    }
+    modal.find("#modalCancelButton").on("click", function() {
+        if (_.isFunction(cancel)) {
+            if (cancel(modal) === false) {
+                return;
+            }
+        }
+        modal.modal("hide");
+    });
+    modal.find("#modalCopyButton").on("click", function() {
+       modal.find()
     });
     modal.on("hidden.bs.modal", function() {
         modal.modal("dispose");
