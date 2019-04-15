@@ -6,12 +6,14 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import List, Mapping, Set
 
+from meals.models import GoalItem
+
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class Item:
-    id: int
+    item: GoalItem
     hours: int
     groups: Set[str]
 

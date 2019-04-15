@@ -460,7 +460,7 @@ def auto_schedule(request):
         for item in items:
             toSchedule.append(
                 scheduling.Item(
-                    item["id"],
+                    GoalItem.objects.get(id=item["id"]),
                     int(item["hours"]),
                     set(item["groups"]).intersection(request.user.owned_lines),
                 )
