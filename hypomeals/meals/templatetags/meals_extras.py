@@ -17,7 +17,7 @@ def multiply(a, b, decimal_places=2):
 
 @register.filter
 def quantize(x, decimal_places=2):
-    return x.quantize(Decimal(10) ** -decimal_places)
+    return x.quantize(Decimal(10) ** -int(decimal_places))
 
 
 @register.filter

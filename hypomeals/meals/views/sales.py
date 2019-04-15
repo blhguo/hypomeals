@@ -15,11 +15,12 @@ from django.shortcuts import render
 from django.template.loader import render_to_string
 
 from meals.constants import SALES_WAIT_TIME_MINUTES
+from meals.exceptions import UserFacingException
 from meals.forms import SaleFilterForm, ProductLineFilterForm, ProjectionsFilterForm
 from meals.models import Sku, Sale, ProductLine, Customer, GoalItem
 from ..bulk_export import export_drilldown, export_sales_summary
 
-from meals import auth
+from meals import auth, utils
 
 logger = logging.getLogger(__name__)
 
@@ -188,40 +189,39 @@ def _sku_revenue(sku, customers, begin_year):
     msg="You do not have permission to view the sales projection",
     reason="Only Analysts amy view sales projections.",
 )
+@utils.ajax_view
 def sales_projection(request):
-    if request.method == "POST":
-        form = ProjectionsFilterForm(request.POST)
-        if form.is_valid():
-            data = form.query()
+    sku_number = request.GET.get("sku", None)
+    if not sku_number:
+        raise UserFacingException("Invalid request: no SKU was provided")
+    start_date = request.GET.get("start", None) or datetime.now() - timedelta(days=10)
+    end_date = request.GET.get("end", None) or datetime.now()
+    sku_qs = Sku.objects.filter(number=sku_number)
+    if sku_qs.exists():
+        sku = sku_qs[0]
     else:
-        number = request.GET.get("sku", 0)
-        start_date = request.GET.get("start_date", datetime.now() - timedelta(days=10))
-        end_date = request.GET.get("end_date", datetime.now())
-        sku = Sku.objects.filter(number=number)[0]
-        params = {"sku": sku.name, "start": start_date, "end": end_date}
-        form = ProjectionsFilterForm(params)
-        if form.is_valid():
-            data = form.query()
-        else:
-            data = {}
-    rev = []
-    for k, v in data.items():
-        rev.append(float(v))
-    avg = int(statistics.mean(rev))
-    std = round(statistics.stdev(rev), 1)
+        raise UserFacingException(
+            f"Invalid request: SKU #{sku_number} cannot be found."
+        )
+
+    params = {"start": start_date, "end": end_date}
+    form = ProjectionsFilterForm(params)
+    if form.is_valid():
+        data = form.query(sku_number)
+    else:
+        data = {}
+
+    if data:
+        avg = statistics.mean(data.values())
+        std = statistics.stdev(data.values())
+    else:
+        avg = std = Decimal("0.0")
     form_html = render_to_string(
         request=request,
-        template_name="meals/sales/sales_projection.html",
+        template_name="meals/sales/projection.html",
         context={"data": data, "form": form, "sku": sku, "avg": avg, "std": std},
     )
-    if request.is_ajax():
-        resp = {"error": None, "resp": form_html}
-        return JsonResponse(resp)
-    return render(
-        request,
-        template_name="meals/sales/sales_projection.html",
-        context={"data": data, "form": form, "sku": sku, "avg": avg, "std": std},
-    )
+    return form_html
 
 
 @login_required

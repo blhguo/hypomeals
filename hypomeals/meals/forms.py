@@ -4,6 +4,7 @@ import re
 import zipfile
 from collections import OrderedDict, defaultdict
 from datetime import timedelta
+from decimal import Decimal
 from pathlib import Path
 
 from django import forms
@@ -1419,17 +1420,14 @@ class EditUserForm(forms.ModelForm, utils.BootstrapFormControlMixin):
 
 
 class ProjectionsFilterForm(forms.Form, utils.BootstrapFormControlMixin):
-    sku = CsvAutocompletedField(
-        model=Sku,
-        data_source=reverse_lazy("autocomplete_skus"),
-        required=False,
-        attr="name",
-        help_text="(Please Enter the Sku Name You Want to Project)",
-    )
-
     start = forms.DateTimeField(widget=forms.DateInput())
 
     end = forms.DateTimeField(widget=forms.DateInput())
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "mr-2"
 
     def clean(self):
         if (
@@ -1441,15 +1439,12 @@ class ProjectionsFilterForm(forms.Form, utils.BootstrapFormControlMixin):
             if self.cleaned_data["end"] < self.cleaned_data["start"]:
                 raise ValidationError("End date cannot be less than start date")
 
-        if not self.cleaned_data["sku"]:
-            raise ValidationError("You must enter a valid sku name!")
         return self.cleaned_data
 
-    def query(self):
+    def query(self, sku_number):
         params = self.cleaned_data
-        sku_filter = Q()
-        if params["sku"]:
-            sku_filter = Q(sku__name__in=params["sku"])
+        data = {}
+        sku_filter = Q(sku__pk=sku_number)
         if params["start"] and params["end"]:
             cur_year, cur_week, _ = datetime.today().isocalendar()
             _, start_week, _ = params["start"].isocalendar()
@@ -1463,11 +1458,13 @@ class ProjectionsFilterForm(forms.Form, utils.BootstrapFormControlMixin):
 
             year_span = 4
             start_year = end_year - year_span + 1
-            data = {}
             for year in range(start_year, end_year + 1):
-                query_filter = sku_filter & Q(year=year) & Q(week__gte=start_week) & Q(week__lte=end_week)
-                query = Sale.objects.filter(query_filter).aggregate(
-                    Sum("sales")
+                query_filter = (
+                    sku_filter
+                    & Q(year=year)
+                    & Q(week__gte=start_week)
+                    & Q(week__lte=end_week)
                 )
-                data[year] = query["sales__sum"]
+                query = Sale.objects.filter(query_filter).aggregate(Sum("sales"))
+                data[year] = query["sales__sum"] or Decimal("0")
         return data

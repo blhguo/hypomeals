@@ -1,0 +1,92 @@
+{% load staticfiles %}
+{% load humanize %}
+{% load meals_extras %}
+
+<form method="post" action="{% url 'sales_projection' %}" id="projectionFilterForm">
+{% csrf_token %}
+<div class="row mb-4">
+<div class="col-sm-12">
+{% if form.non_field_errors %}
+<div class="alert alert-danger">
+    <p>Please correct the following error:</p>
+    {{ form.non_field_errors }}
+</div>
+{% endif %}
+<div class="form-inline">
+    <div class="input-group">
+    <div class="input-group-prepend">
+    <label class="input-group-text" for="{{ form.start.id_for_label }}">Start date</label>
+    </div>
+    {{ form.start }}
+    {% if form.start.errors %}
+    <small>{{ form.start.errors }}</small>
+    {% endif %}
+    </div>
+
+    <div class="input-group">
+    <div class="input-group-prepend">
+    <label class="input-group-text" for="{{ form.end.id_for_label }}">End date</label>
+    </div>
+    {{ form.end }}
+    {% if form.end.errors %}
+    <small>{{ form.end.errors }}</small>
+    {% endif %}
+    </div>
+    <button type="button" id="submitButton" class="btn btn-primary">Submit</button>
+</div>
+
+</div>
+</div>
+
+<div class="row">
+<div class="col-sm-12">
+
+<h5 class="mb-3">Sales Projection for SKU #{{ sku.number }}: {{ sku.name }}</h5>
+
+<div style="overflow: scroll;">
+<table class="table">
+    <thead class="thead-light">
+        <tr>
+            <th>Year</th>
+            <th>Sales</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for year, sales in data.items %}
+        <tr>
+            <td class="align-middle">
+                {{ year }}
+            </td>
+            <td class="align-middle">
+                {{ sales|quantize:'2' }}
+                <i style="cursor: pointer;"
+                   data-toggle="tooltip"
+                   data-placement="right"
+                   title="Click here to use the value in the goal."
+                   data-quantity="{{ sales|quantize }}"
+                   class="far fa-copy copyButtons"></i>
+            </td>
+        </tr>
+    {% endfor %}
+    <tr></tr>
+    <tr>
+        <td>Mean</td>
+        <td>
+            {{ avg|quantize }} <i style="cursor: pointer;"
+                                  data-quantity="{{ avg|quantize }}"
+                                  class="far fa-copy copyButtons"></i>
+        </td>
+    </tr>
+    <tr>
+        <td>Standard Deviation</td>
+        <td>{{ std|quantize }}</td>
+    </tr>
+    </tbody>
+</table>
+</div>
+
+
+<!-- Hidden div with template data -->
+<div style="display: none;">
+    <a href="{{ sku.number }}" id="sku_number"></a>
+</div>

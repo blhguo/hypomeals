@@ -1,5 +1,6 @@
 let filteringInput = null;
 let filterSkusUrl = null;
+const SKU_NUMBER_REGEX = /^.*\(#(\d+)\)$/gm;
 
 $(function () {
     let formset = $("form");
@@ -18,7 +19,7 @@ $(function () {
     $(".filterButtons").click(renderProductLineModal);
     registerFilterTooltip();
 
-    $(".salesButtons").click(renderSalesProjectionModal);
+    $(".salesButtons").click(showSalesProjection);
     registerSalesProjectionTooltip();
 
     registerFormset(
@@ -59,7 +60,6 @@ function renderProductLineModal() {
     let modal = makeModalAlert("Filter by Product Line", $("#productLineFilter"));
 
     modal.find("#productLineSelect").change(function() {
-        console.log(`selected: ${$(this).val()}`);
         $.getJSON(filterSkusUrl, {product_line: $(this).val()}, populateSkus);
     });
 
@@ -70,7 +70,6 @@ function renderProductLineModal() {
             return;
         }
         let skus = data.resp;
-        console.log("SKUs: ", skus);
         let listGroup = $(`<ul class="list-group"></ul>`);
         for (let i = 0; i < skus.length; i++) {
             $(`<li class="list-group-item list-group-item-action">`)
@@ -89,49 +88,53 @@ function renderProductLineModal() {
 function changeSalesProjectionModal() {
     let salesProjectionUrl = $("#salesProjectionUrl").attr("href");
 
-    skuNumber = $("#sku_number").attr("href");
-    start_date = $("#id_start").val();
-    end_date = $("#id_end").val();
+    let skuNumber = $("#sku_number").attr("href");
+    let startDate = $("#id_start").val();
+    let endDate = $("#id_end").val();
 
+    getJson(salesProjectionUrl, {
+        sku: skuNumber, start_date: startDate, end_date: endDate
+    }).done(function(data) {
+        let modal = makeModalAlert("Sales Projection", $(data),
+            changeSalesProjectionModal);
+    });
+}
 
-    $.getJSON(salesProjectionUrl,
-        {sku: skuNumber, start_date: start_date, end_date: end_date})
-        .done(populateSales)
-        .fail(function (_, __, errorThrown) {
-                alert(`Error loading content: ${errorThrown}`);
-            });
-    function populateSales(data, textStatus) {
-        let sales = data.resp;
-        console.log(sales)
-        let modal = makeCustomAlert("Sales Projection", sales, changeSalesProjectionModal);
-        $("#modalCopyButton").click(function() {
-            quantityInput.val($("#avgValue").html().trim());
+function querySalesProjection(skuNumber, start, end, quantityInput) {
+    let salesProjectionUrl = $("#salesProjectionUrl").attr("href");
+    getJson(salesProjectionUrl, {
+        sku: skuNumber,
+        start: start,
+        end: end,
+    }).done(ajaxDone);
+    function ajaxDone(data) {
+        let modal = makeModalAlert("Sales Projection", $(data));
+        modal.find("[data-toggle=tooltip]").tooltip();
+        modal.find(".modal-dialog").addClass("modal-lg");
+        modal.find(".copyButtons").click(function() {
+            quantityInput.val($(this).attr("data-quantity"));
+            modal.modal("hide");
+        });
+        modal.find("#submitButton").click(function() {
+            let start = modal.find("#id_start").val();
+            let end = modal.find("#id_end").val();
+            querySalesProjection(skuNumber, start, end, quantityInput);
             modal.modal("hide");
         });
     }
 }
 
-function renderSalesProjectionModal() {
-    let salesProjectionUrl = $("#salesProjectionUrl").attr("href");
-
-    quantityInput = $(this).parents("td").find("input");
-    skuInputValue = $(this).parents("td").parents("tr").children("td").find("input").val()
-    start = skuInputValue.search("#")+1;
-    end = skuInputValue.length-1;
-    skuNumber = skuInputValue.substring(start, end)
-    $.getJSON(salesProjectionUrl, {sku: skuNumber}).done(populateSales).fail(function (_, __, errorThrown) {
-                alert(`Error loading content: ${errorThrown}`);
-                formulaModal.modal("hide");
-            });
-    function populateSales(data, textStatus) {
-        let sales = data.resp;
-        console.log(sales)
-        let modal = makeCustomAlert("Sales Projection", sales, changeSalesProjectionModal);
-        $("#modalCopyButton").click(function() {
-            quantityInput.val(101);
-            modal.modal("hide");
-        });
+function showSalesProjection() {
+    let quantityInput = $(this).parents("td").find("input");
+    let skuInputValue = $($(this).parents("tr").find("td")[0])
+        .find("input").val();
+    if (!skuInputValue.match(SKU_NUMBER_REGEX)) {
+        makeModalAlert("Error",
+            "Please select a valid SKU before using this tool.");
+        return;
     }
+    let skuNumber = SKU_NUMBER_REGEX.exec(skuInputValue)[1];
+    querySalesProjection(skuNumber, null, null, quantityInput);
 }
 
 function registerFilterTooltip() {
