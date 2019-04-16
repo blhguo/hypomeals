@@ -24,104 +24,242 @@
 </div>
 </div>
 <div class="row mb-4">
-    <div class="col-sm">
-    {% if edit %}
-    <form method="post" action="{% url 'edit_user' user.pk %}" id="editUserForm">
-    {% else %}
-    <form method="post" action="{% url 'add_user' %}" id="editUserForm">
+<div class="col-sm">
+{% if edit %}
+<form method="post" action="{% url 'edit_user' user.pk %}" id="editUserForm">
+{% else %}
+<form method="post" action="{% url 'add_user' %}" id="editUserForm">
+{% endif %}
+{% csrf_token %}
+{% if form.non_field_errors %}
+<div class="alert alert-danger">
+<h5 style="color: red">Please correct the following errors before proceeding:</h5>
+{{ form.non_field_errors }}
+</div>
+{% endif %}
+
+<div class="form-group">
+<div class="row">
+    <div class="col-sm-2"> {{ form.username.label_tag }}</div>
+    <div class="col-sm-10"> {{ form.username }}
+    <small>{{ form.username.help_text }}</small>
+    {% if form.username.errors %}
+        <div class="invalid-feedback"
+             data-target="#{{ form.username.id_for_label }}">
+            {{ form.username.errors|join:'' }}
+        </div>
     {% endif %}
-    {% csrf_token %}
-    {% if form.non_field_errors %}
-    <div class="alert alert-danger">
-    <h5 style="color: red">Please correct the following errors before proceeding:</h5>
-    {{ form.non_field_errors }}
     </div>
+</div>
+</div>
+
+<div class="form-group">
+<div class="row">
+    <div class="col-sm-2"> {{ form.first_name.label_tag }}</div>
+    <div class="col-sm-10"> {{ form.first_name }}
+    {% if form.first_name.errors %}
+        <div class="invalid-tooltip"
+             data-target="#{{ form.first_name.id_for_label }}">
+            {{ form.first_name.errors|join:'' }}
+        </div>
     {% endif %}
-
-    <div class="form-group">
-    {{ form.username.label_tag }}
-    {{ form.username }}
-    {% if form.username.help_text %}<small>{{ form.username.help_text }}</small>{% endif %}
-    {% if form.username.errors %}{{ form.username.errors }}{% endif %}
     </div>
+</div>
+</div>
 
-    <div class="form-group">
-    {{ form.first_name.label_tag }}
-    {{ form.first_name }}
-    {% if form.first_name.help_text %}<small>{{ form.first_name.help_text }}</small>{% endif %}
-    {% if form.first_name.errors %}{{ form.first_name.errors }}{% endif %}
+<div class="form-group">
+<div class="row">
+    <div class="col-sm-2"> {{ form.last_name.label_tag }}</div>
+    <div class="col-sm-10"> {{ form.last_name }}
+    {% if form.last_name.errors %}
+        <div class="invalid-tooltip"
+             data-target="#{{ form.last_name.id_for_label }}">
+            {{ form.last_name.errors|join:'' }}
+        </div>
+    {% endif %}
     </div>
+</div>
+</div>
 
-    <div class="form-group">
-    {{ form.last_name.label_tag }}
-    {{ form.last_name }}
-    {% if form.last_name.help_text %}<small>{{ form.last_name.help_text }}</small>{% endif %}
-    {% if form.last_name.errors %}{{ form.last_name.errors }}{% endif %}
+<div class="form-group">
+<div class="row">
+    <div class="col-sm-2"> {{ form.email.label_tag }}</div>
+    <div class="col-sm-10"> {{ form.email }}
+    {% if form.email.errors %}
+        <div class="invalid-tooltip"
+             data-target="#{{ form.email.id_for_label }}">
+            {{ form.email.errors|join:'' }}
+        </div>
+    {% endif %}
     </div>
+</div>
+</div>
 
-    <div class="form-group">
-    {{ form.email.label_tag }}
-    {{ form.email }}
-    {% if form.email.help_text %}<small>{{ form.email.help_text }}</small>{% endif %}
-    {% if form.email.errors %}{{ form.email.errors }}{% endif %}
+<div class="form-group">
+<div class="row">
+    <div class="col-sm-2"> {{ form.netid.label_tag }}</div>
+    <div class="col-sm-10"> {{ form.netid }}
+    <small>{{ form.netid.help_text }}</small>
+    {% if form.netid.errors %}
+        <div class="invalid-tooltip"
+             data-target="#{{ form.netid.id_for_label }}">
+            {{ form.netid.errors|join:'' }}
+        </div>
+    {% endif %}
     </div>
+</div>
+</div>
 
-    <div class="form-group">
-    {{ form.netid.label_tag }}
-    {{ form.netid }}
-    {% if form.netid.help_text %}<small>{{ form.netid.help_text }}</small>{% endif %}
-    {% if form.netid.errors %}{{ form.netid.errors }}{% endif %}
+<div class="form-group">
+<div class="row">
+    <div class="col-sm-2"> {{ form.password.label_tag }}</div>
+    <div class="col-sm-10"> {{ form.password }}
+    <small>{{ form.password.help_text }}</small>
+    {% if form.password.errors %}
+        <div class="invalid-tooltip"
+             data-target="#{{ form.password.id_for_label }}">
+            {{ form.password.errors|join:'' }}
+        </div>
+    {% endif %}
     </div>
+</div>
+</div>
 
-    <div class="form-group">
-    {{ form.password.label_tag }}
-    {{ form.password }}
-    {% if form.password.help_text %}<small>{{ form.password.help_text }}</small>{% endif %}
-    {% if form.password.errors %}{{ form.password.errors }}{% endif %}
-    </div>
+<div class="form-group">
+<div class="custom-control custom-checkbox">
+{{ form.set_unusable_password }}
+<label class="custom-control-label"
+       for="id_set_unusable_password">
+    Set unusable password?
+    <span class="badge badge-pill badge-info"
+          data-toggle="tooltip"
+          data-placement="right"
+          title="{{ form.set_unusable_password.help_text }}">
+        i
+    </span>
+</label>
+<br/>
+</div>
+</div>
 
-    <div class="form-group">
+<hr>
+<div class="alert alert-success">
+<h5>Roles</h5>
+<p>Assign roles to this user in this section. Click
+<a href="#" id="showPermMatrix">here</a> for a detailed description
+    of what permissions are granted by each role.</p>
+<p class="mb-0">Plant Manager roles are parameterized over manufacturing lines. To
+grant a user a Plant Manager role for manufacturing line <em>X</em>, enter
+    <em>X</em> into
+the text field next to the checkbox. As you enter, this field will be
+autocompleted.</p>
+</div>
+
+<div class="form-inline mb-3">
     <div class="custom-control custom-checkbox">
     {{ form.is_admin }}
-    <label class="custom-control-label" for="id_is_admin">Admin?</label>
-    {% if form.is_admin.help_text %}<small>{{ form.is_admin.help_text }}</small>{% endif %}
-    {% if form.is_admin.errors %}{{ form.is_admin.errors }}{% endif %}
+    <label class="custom-control-label mr-2" for="id_is_admin">Admin</label>
     </div>
-
-    </div>
-    <div class="form-group">
     <div class="custom-control custom-checkbox">
-    {{ form.set_unusable_password }}
-    <label class="custom-control-label"
-           for="id_set_unusable_password">
-        Set unusable password?
-        <span class="badge badge-pill badge-info"
-              data-toggle="tooltip"
-              data-placement="right"
-              title="{{ form.set_unusable_password.help_text }}">
-            i
-        </span>
-    </label>
-    <br/>
-    {% if form.set_unusable_password.errors %}{{ form.set_unusable_password.errors }}{% endif %}
+    {{ form.is_analyst }}
+    <label class="custom-control-label mr-2" for="id_is_analyst">Analyst</label>
     </div>
+    <div class="custom-control custom-checkbox">
+    {{ form.is_business_manager }}
+    <label class="custom-control-label mr-2" for="id_is_business_manager">Business Manager</label>
     </div>
+    <div class="custom-control custom-checkbox">
+    {{ form.is_product_manager }}
+    <label class="custom-control-label mr-2" for="id_is_plant_manager">Product Manager</label>
+    </div>
+    <div class="custom-control custom-checkbox">
+    {{ form.is_plant_manager }}
+    <label class="custom-control-label mr-2" for="id_is_plant_manager">Plant Manager</label>
+    </div>
+    {{ form.lines }}
+    {% if form.lines.errors %}
+    <div class="invalid-feedback"
+         data-target="#{{ form.lines.id_for_label }}">
+        {{ form.lines.errors|join:'' }}
+    </div>
+    {% endif %}
+</div>
 
-    <input type="submit" id="editUserSubmitButton" style="display: none;">
-    </form>
-    <div class="btn-group" id="formSubmitBtnGroup">
-        {% if edit %}
-        <a href="#" id="nextButton" class="btn btn-success">Apply Changes</a>
-        {% else %}
-        <a href="#" id="nextButton" class="btn btn-success">Save</a>
-        {% endif %}
-        <a href="{% url 'users' %}" class="btn btn-secondary">Cancel</a>
-    </div>
-    </div>
+<div class="btn-group" id="formSubmitBtnGroup">
+    {% if edit %}
+    <button type="submit" id="nextButton" class="btn btn-success">Apply Changes</button>
+    {% else %}
+    <button type="submit" id="nextButton" class="btn btn-success">Save</button>
+    {% endif %}
+    <a href="{% url 'users' %}" class="btn btn-secondary">Cancel</a>
+</div>
+</form>
+
 </div>
 </div>
+</div>
+
+<div style="display: none;">
+<table class="table" id="permMatrixTable">
+<thead class="thead-light">
+<tr>
+    <th></th>
+    <th>Core Data</th>
+    <th>Sales</th>
+    <th>Goals</th>
+    <th>Schedules</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+    <td>User</td>
+    <td>Read-only</td>
+    <td>Read-only</td>
+    <td>No access</td>
+    <td>No access</td>
+</tr>
+<tr>
+    <td>Analyst</td>
+    <td>Read-only</td>
+    <td>Read-only</td>
+    <td>Read-only</td>
+    <td>Read-only</td>
+</tr>
+<tr>
+    <td>Product Manager</td>
+    <td>Read-write</td>
+    <td>Read-only</td>
+    <td>Read-only</td>
+    <td>Read-only</td>
+</tr>
+<tr>
+    <td>Business Manager</td>
+    <td>Read-only</td>
+    <td>Read-only</td>
+    <td>Read-write</td>
+    <td>Read-only</td>
+</tr>
+<tr>
+    <td>Plant Manager for <em>X</em></td>
+    <td>Read-only</td>
+    <td>Read-only</td>
+    <td>Read-only</td>
+    <td>Read-write for <em>X</em></td>
+</tr>
+<tr>
+    <td>Admin</td>
+    <td>Read-write</td>
+    <td>Read-only</td>
+    <td>Read-write</td>
+    <td>Read-write</td>
+</tr>
+</tbody>
+</table>
+</div>
+
 {% endblock %}
 
 {% block scriptend %}
+<script src="{% static 'meals/common.js' %}"></script>
 <script src="{% static 'meals/accounts/edit_user.js' %}"></script>
 {% endblock %}

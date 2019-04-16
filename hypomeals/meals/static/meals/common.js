@@ -74,8 +74,7 @@ $(function() {
     $(".meals-autocomplete").each(function (i, e) {
         let element = $(e);
         let url = element.attr("data-autocomplete-url");
-        let isMultiple = element.attr("class")
-            .search("meals-autocomplete-multiple") !== -1;
+        let isMultiple = element.hasClass("meals-autocomplete-multiple");
         registerAutocomplete(element, url, isMultiple);
     });
 
@@ -102,6 +101,7 @@ $(function() {
             }
         });
     }
+    registerFormErrors();
 });
 
 /**
@@ -401,4 +401,19 @@ function generateRandomUpc() {
     }
     upc += upcCheckDigit(upc);
     return upc;
+}
+
+function registerFormErrors() {
+    let errors = $(".invalid-tooltip, .invalid-feedback");
+    for (let error of errors.toArray()) {
+        error = $(error);
+        let input = $(error.attr("data-target"));
+        input.addClass("is-invalid")
+            .change(resetInput)
+            .on("keyup", resetInput);
+        function resetInput() {
+            input.removeClass("is-invalid");
+            error.toggle(false);
+        }
+    }
 }

@@ -22,7 +22,7 @@ from meals.constants import (
     MIX_UNIT_EXP_REGEX,
     UNIT_ACCEPTED_FORMS,
     SECONDS_PER_HOUR,
-)
+    ANALYST_GROUP, BUSINESS_MANAGER_GROUP, PRODUCT_MANAGER_GROUP)
 from meals.validators import validate_alphanumeric, validate_netid
 
 logger = logging.getLogger(__name__)
@@ -49,6 +49,18 @@ class User(AbstractUser):
         Checks whether the user is plant manager for at least one manufacturing line
         """
         return self.groups.filter(permissions__codename__istartswith="owns_ml").exists()
+
+    @property
+    def is_analyst(self):
+        return self.groups.filter(name=ANALYST_GROUP).exists()
+
+    @property
+    def is_business_manager(self):
+        return self.groups.filter(name=BUSINESS_MANAGER_GROUP).exists()
+
+    @property
+    def is_product_manager(self):
+        return self.groups.filter(name=PRODUCT_MANAGER_GROUP).exists()
 
     @property
     def owned_lines(self):

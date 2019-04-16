@@ -1,7 +1,9 @@
 $(function() {
     $("[data-toggle=tooltip]").tooltip();
-    let form = $("#editUserForm");
-    $("#nextButton").click(function() {
-        form.submit();
-    });
+
+    $("#showPermMatrix").click(function() {
+        let table = $("#permMatrixTable").clone();
+        makeModalAlert("Permission Matrix", table)
+            .find(".modal-dialog").addClass("modal-lg")
+    })
 });

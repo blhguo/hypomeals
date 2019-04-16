@@ -21,7 +21,13 @@ from django.utils.timezone import datetime
 
 from meals import bulk_import
 from meals import utils
-from meals.constants import ADMINS_GROUP
+from meals.constants import (
+    ADMINS_GROUP,
+    BUSINESS_MANAGER_GROUP,
+    PRODUCT_MANAGER_GROUP,
+    ANALYST_GROUP,
+    USERS_GROUP,
+)
 from meals.importers import CollisionOccurredException
 from meals.models import (
     FormulaIngredient,
@@ -1341,7 +1347,7 @@ class GoalScheduleFormsetBase(forms.BaseFormSet):
 
 
 GoalScheduleFormset = formset_factory(
-    GoalScheduleForm, formset=GoalScheduleFormsetBase, extra=0, can_delete=True,
+    GoalScheduleForm, formset=GoalScheduleFormsetBase, extra=0, can_delete=True
 )
 
 
@@ -1350,6 +1356,30 @@ class EditUserForm(forms.ModelForm, utils.BootstrapFormControlMixin):
         required=False,
         widget=forms.CheckboxInput(attrs={"class": "custom-control-input"}),
     )
+    is_analyst = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={"class": "custom-control-input"}),
+    )
+    is_business_manager = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={"class": "custom-control-input"}),
+    )
+    is_product_manager = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={"class": "custom-control-input"}),
+    )
+    is_plant_manager = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={"class": "custom-control-input"}),
+    )
+    lines = CsvAutocompletedField(
+        model=ManufacturingLine,
+        attr="shortname",
+        data_source=reverse_lazy("autocomplete_manufacturing_lines"),
+        return_qs=True,
+        required=False,
+    )
+
     password = forms.CharField(
         required=False,
         widget=forms.PasswordInput(),
@@ -1379,18 +1409,24 @@ class EditUserForm(forms.ModelForm, utils.BootstrapFormControlMixin):
 
     def clean_username(self):
         if "username" in self.cleaned_data:
-            if self.instance is None:
-                if self.cleaned_data["username"].startswith("netid_user_"):
-                    raise ValidationError(
-                        "Usernames starting with 'netid_user_' are "
-                        "reserved and cannot be used."
-                    )
+            original = self.instance.username if self.instance else ""
+            if self.cleaned_data["username"].startswith("netid_user_"):
+                raise ValidationError(
+                    "Usernames starting with 'netid_user_' are "
+                    "reserved and cannot be used."
+                )
             return self.cleaned_data["username"]
-        return None
+        original = self.instance.username if self.instance else ""
+        new = self.cleaned_data.get("username", "")
+        if new != original and new.startswith("netid_user_"):
+            raise ValidationError(
+                "Usernames starting with 'netid_user_' are "
+                "reserved and cannot be used."
+            )
+        return new
 
     def save(self, commit=False):
         instance = super().save(commit=False)
-        admin_group = Group.objects.get(name=ADMINS_GROUP)
         if self.cleaned_data.get("set_unusable_password", False):
             instance.set_unusable_password()
         else:
@@ -1402,10 +1438,35 @@ class EditUserForm(forms.ModelForm, utils.BootstrapFormControlMixin):
                 # Restore original password here if the password field is empty.
                 instance.password = self.initial.get("password", "")
 
-        if self.cleaned_data.get("is_admin", False):
-            admin_group.user_set.add(instance)
-        else:
-            admin_group.user_set.remove(instance)
+        # Assign roles
+        users_group = Group.objects.get(name=USERS_GROUP)
+        users_group.user_set.add(instance)
+        for field_name, group_name in [
+            ("is_admin", ADMINS_GROUP),
+            ("is_business_manager", BUSINESS_MANAGER_GROUP),
+            ("is_product_manager", PRODUCT_MANAGER_GROUP),
+            ("is_analyst", ANALYST_GROUP),
+        ]:
+            group = Group.objects.get(name=group_name)
+            if self.cleaned_data.get(field_name, False):
+                logger.info("Assigning %s to %s", field_name, instance.username)
+                group.user_set.add(instance)
+            else:
+                logger.info("Revoking %s for %s", field_name, instance.username)
+                group.user_set.remove(instance)
+
+        all_plant_manager_groups = Group.objects.filter(
+            name__startswith="Plant Manager"
+        )
+        for group in all_plant_manager_groups:
+            group.user_set.remove(instance)
+
+        if self.cleaned_data.get("is_plant_manager", False):
+            lines = self.cleaned_data.get("lines", [])
+            logger.info("Assigning PlM for %s for lines: ", instance.username, lines)
+            for line in lines:
+                group = Group.objects.get(name=f"Plant Manager ({line.shortname})")
+                group.user_set.add(instance)
 
         if commit:
             instance.save()

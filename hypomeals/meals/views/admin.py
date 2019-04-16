@@ -165,7 +165,14 @@ def add_user(request):
 @auth.user_is_admin_ajax(msg="Only an administrator may edit user information.")
 def edit_user(request, pk):
     instance = User.objects.filter(pk=pk)[0]
-    initial_data = {"is_admin": instance.is_admin, "password": instance.password}
+    initial_data = {
+        "is_admin": instance.is_admin,
+        "password": instance.password,
+        "is_analyst": instance.is_analyst,
+        "is_business_manager": instance.is_business_manager,
+        "is_plant_manager": instance.is_plant_manager,
+        "lines": ", ".join(instance.owned_lines)
+    }
     if request.method == "POST":
         form = EditUserForm(request.POST, instance=instance)
         if form.is_valid():
