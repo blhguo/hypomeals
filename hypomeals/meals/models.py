@@ -614,7 +614,7 @@ class ManufacturingLine(
 
         # Admins also own all manufacturing lines
         admin_group = Group.objects.get(name="Admins")
-        admin_group.add(perm)
+        admin_group.permissions.add(perm)
 
     def save(
         self, force_insert=False, force_update=False, using=None, update_fields=None
