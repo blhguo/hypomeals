@@ -73,8 +73,12 @@
                 <div class="dropdown-menu">
                     <a class="dropdown-item" href="{% url 'lines' %}">Lines</a>
                     <a class="dropdown-item" href="{% url 'goals' %}">Goals</a>
+                    {% if perms.meals.view_goal %}
                     {% if request.user.is_plant_manager %}
                     <a class="dropdown-item" href="{% url 'schedule' %}">Schedule</a>
+                    {% else %}
+                    <a class="dropdown-item" href="{% url 'all_schedules' %}">Schedule</a>
+                    {% endif %}
                     {% endif %}
                 </div>
             </li>

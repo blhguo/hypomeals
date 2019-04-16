@@ -92,6 +92,7 @@ urlpatterns = [
     ),
     path("goals/schedule", views.schedule, name="schedule"),
     path("goals/schedule/report/", views.schedule_report, name="schedule_report"),
+    path("goals/schedule/all", views.all_schedules, name="all_schedules"),
     path("goals/schedule/auto", views.auto_schedule, name="auto_schedule"),
     path("filter_skus/", views.filter_skus, name="filter_skus"),
     # Manufacturing line views

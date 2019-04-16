@@ -28,6 +28,7 @@ $(function () {
         function(row) {
             registerAutocomplete(row.find("input.meals-autocomplete"));
             row.find(".filterButtons").click(renderProductLineModal);
+            row.find(".salesButtons").click(showSalesProjection);
             toggleEmptyAlert();
             registerFilterTooltip();
             registerSalesProjectionTooltip();

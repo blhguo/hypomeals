@@ -386,7 +386,7 @@ def schedule(request):
 @auth.permission_required_ajax(
     perm=("meals.view_goal",),
     msg="You do not have permission to the manufacturing report,",
-    reason="Only analysts view the manufacturing report",
+    reason="Only analysts may view the manufacturing report",
 )
 def schedule_report(request):
     line_shortname = request.GET.get("l", "")
@@ -435,7 +435,32 @@ def schedule_report(request):
             "activities": schedules,
             "formulas": ingredients,
             "ingredients": result.items(),
+            "show_formulas": True,
+            "show_ingredients": True,
         },
+    )
+
+
+@login_required
+@auth.permission_required_ajax(
+    perm=("meals.view_goal",),
+    msg="You do not have permission to view the manufacturing schedule",
+    reason="Only analysts may view the manufacturing schedule."
+)
+def all_schedules(request):
+    activities = GoalSchedule.objects.all()
+    return render(
+        request,
+        template_name="meals/goal/schedule_report.html",
+        context={
+            "time": timezone.now(),
+            "line": None,
+            "start": "",
+            "end": "",
+            "activities": activities,
+            "show_formulas": False,
+            "show_ingredients": False,
+        }
     )
 
 
