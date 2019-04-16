@@ -1239,18 +1239,6 @@ class GoalScheduleForm(forms.ModelForm):
         logger.info("Found line %s for goal item %d", qs[0].pk, self.item.pk)
         return qs[0]
 
-    def should_delete(self):
-        delete = (
-            "start_time" not in self.cleaned_data
-            or not self.cleaned_data["start_time"]
-            or "line" not in self.cleaned_data
-            or not self.cleaned_data["line"]
-            or "end_time" not in self.cleaned_data
-            or not self.cleaned_data["end_time"]
-        )
-        logger.info("should delete=%s", delete)
-        return delete
-
     def clean(self):
         if "line" in self.cleaned_data and self.cleaned_data["line"]:
             if (
@@ -1270,7 +1258,7 @@ class GoalScheduleForm(forms.ModelForm):
             ):
                 self.cleaned_data["end_time"] = self.cleaned_data[
                     "start_time"
-                ] + timedelta(hours=10)
+                ] + timedelta(hours=int(self.cleaned_data["override_hours"]))
             else:
                 self.cleaned_data["end_time"] = utils.compute_end_time(
                     self.cleaned_data["start_time"], self.item.hours
@@ -1327,9 +1315,14 @@ class GoalScheduleFormsetBase(forms.BaseFormSet):
                 continue
             _forms.sort(key=lambda f: f.cleaned_data["start_time"])
             for i in range(len(_forms) - 1):
-                end_time = utils.compute_end_time(
-                    _forms[i].cleaned_data["start_time"], _forms[i].item.hours
-                )
+                if _forms[i].cleaned_data["override_hours"]:
+                    end_time = _forms[i].cleaned_data["start_time"] + timedelta(
+                        hours=int(_forms[i].cleaned_data["override_hours"])
+                    )
+                else:
+                    end_time = utils.compute_end_time(
+                        _forms[i].cleaned_data["start_time"], _forms[i].item.hours
+                    )
                 if _forms[i + 1].cleaned_data["start_time"] < end_time:
                     raise ValidationError(
                         "Overlap detected on Manufacturing Line '%(line)s' between "
@@ -1348,7 +1341,7 @@ class GoalScheduleFormsetBase(forms.BaseFormSet):
 
 
 GoalScheduleFormset = formset_factory(
-    GoalScheduleForm, formset=GoalScheduleFormsetBase, extra=0
+    GoalScheduleForm, formset=GoalScheduleFormsetBase, extra=0, can_delete=True,
 )
 
 
@@ -1424,9 +1417,9 @@ class ProjectionsFilterForm(forms.Form, utils.BootstrapFormControlMixin):
         widget=forms.DateInput(attrs={"data-target": "#startDatePicker"})
     )
 
-    end = forms.DateTimeField(widget=forms.DateInput(
-        attrs={"data-target": "#endDatePicker"}
-    ))
+    end = forms.DateTimeField(
+        widget=forms.DateInput(attrs={"data-target": "#endDatePicker"})
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

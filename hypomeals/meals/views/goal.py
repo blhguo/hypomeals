@@ -350,15 +350,16 @@ def schedule(request):
             with transaction.atomic():
                 instances = []
                 deleted = 0
-                for form in formset:
-                    if not form.should_delete():
-                        instances.append(form.save(commit=True))
-                    else:
+                for i, form in enumerate(formset):
+                    if form.cleaned_data.get("DELETE", False):
                         # Unschedule this goal item
+                        logger.info("Deleting form %d", i)
                         num_deleted, _ = GoalSchedule.objects.filter(
                             goal_item=form.item
                         ).delete()
                         deleted += num_deleted
+                    else:
+                        instances.append(form.save(commit=True))
             msg = (
                 f"Successfully scheduled {len(instances)} and "
                 f"unscheduled {deleted} goals."
@@ -475,12 +476,8 @@ def auto_schedule(request):
             existing_items[group] = [
                 scheduling.ExistingItem(
                     GoalItem.objects.get(id=item["id"]),
-                    datetime.fromtimestamp(
-                        int(item["start"]), tz=current_timezone
-                    ),
-                    datetime.fromtimestamp(
-                        int(item["end"]), tz=current_timezone
-                    ),
+                    datetime.fromtimestamp(int(item["start"]), tz=current_timezone),
+                    datetime.fromtimestamp(int(item["end"]), tz=current_timezone),
                 )
                 for item in items
             ]

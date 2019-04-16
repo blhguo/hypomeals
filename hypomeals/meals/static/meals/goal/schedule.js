@@ -1,4 +1,5 @@
 const SENDER_ID_IGNORE = 1;  // Sender should be ignored
+const SENDER_ID_INIT = 2;
 const WORK_HOURS_PER_DAY = 10;  // TODO: Get this from HTML
 const WORK_HOURS_START = 8;
 const WORK_HOURS_END = 18;
@@ -80,14 +81,14 @@ $(function() {
     items.on("update", function(event, properties, senderId) {
         generateWarnings();
         if (senderId === SENDER_ID_IGNORE) return;
-        let item = properties.data[0];
-        let oldItem = properties.oldData[0];
+        let item = Object.assign({}, properties.data[0]);
+        let oldItem = Object.assign({}, properties.oldData[0]);
         item.start = moment(item.start);
         item.end = moment(item.end);
         oldItem.start = moment(oldItem.start);
         oldItem.end = moment(oldItem.end);
         if (!validGroup(item.id, item.group)) {
-            items.update(properties.oldData[0], SENDER_ID_IGNORE);
+            items.update(oldItem, SENDER_ID_IGNORE);
             return;
         }
         if ("start" in item) {
@@ -95,9 +96,9 @@ $(function() {
                 let newHours = item.end.diff(item.start, "hours");
                 if (newHours !== (oldItem.end.diff(oldItem.start, "hours"))) {
                     // User has overridden the duration
-                    adjustEnd(item, item.start, newHours, true);
+                    item.end = adjustEnd(item, item.start, newHours, true);
                 } else {
-                    adjustEnd(item, item.start, null, true);
+                    item.end = adjustEnd(item, item.start, null, true);
                 }
             } catch (e) {
                 if (e.message !== "overlap") throw e;
@@ -121,11 +122,17 @@ $(function() {
     items.on("add", function(event, properties, senderId) {
         let item = items.get(properties.items[0]);
         let itemInfo = goalItemsMap.get(item.id);
+        if (!validGroup(item.id, item.group)) {
+            items.remove({id: item.id}, SENDER_ID_IGNORE);
+            return;
+        }
         toggleGoalItem(item.id, true);
         if ("start" in item) {
             itemInfo.start = item.start;
             try {
-                adjustEnd(item, item.start, itemInfo.overrideHours, !item.suppressWarning);
+                adjustEnd(item, item.start,
+                    itemInfo.overrideHours,
+                    senderId !== SENDER_ID_IGNORE);
             } catch (e) {
                 makeModalAlert("Error",
                     `Production overlaps on Manufacturing Line '${item.group}'.
@@ -135,10 +142,6 @@ $(function() {
         }
         generateWarnings();
         if (senderId === SENDER_ID_IGNORE) {
-            return;
-        }
-        if (!validGroup(item.id, item.group)) {
-            items.remove({id: item.id}, SENDER_ID_IGNORE);
             return;
         }
         undoMgr.add({
@@ -212,7 +215,6 @@ $(function() {
             rate: Number(div.attr("data-sku-rate")),
             hours: Number(div.attr("data-hours")),
             quantity: Number(div.attr("data-quantity")),
-            suppressWarning: true,
         };
 
         if (itemInfo.isOrphaned) {
@@ -267,6 +269,7 @@ $(function() {
             let startTime = formDiv.find("input[name*=start_time]");
             let endTime = formDiv.find("input[name*=end_time]");
             let overrideHours = formDiv.find("input[name*=override_hours]");
+            let deleteInput = formDiv.find("input[name*=DELETE]");
             let scheduledItem = items.get(itemId);
             let itemInfo = goalItemsMap.get(itemId);
             if (scheduledItem !== null) {
@@ -279,11 +282,9 @@ $(function() {
                     overrideHours.val("");
                 }
                 scheduled.push(scheduledItem);
+                deleteInput.prop("checked", false);
             } else {
-                select.find("option:eq(0)").prop("selected", true);
-                startTime.val("");
-                endTime.val("");
-                overrideHours.val("");
+                deleteInput.prop("checked", true);
             }
         }
 
@@ -303,8 +304,9 @@ $(function() {
         } else {
             html = $("<p>No items were scheduled.</p>");
         }
-        html.append($(`<p class='mb-3'>Items not listed here will 
-<b>all be unscheduled.</b> Do you want to save this schedule?</p>`));
+        html.append($(`<p class='mb-3'>There are ${goalItemsMap.size - scheduled.length} \
+item(s) unscheduled. Items not listed here will <b>all be unscheduled.</b> \
+Do you want to save this schedule?</p>`));
         makeModalAlert("Confirm", html, function() {
             form.submit();
         }).find(".modal-dialog")
@@ -390,6 +392,7 @@ $(function() {
         }
         items.update(updates, SENDER_ID_IGNORE);
         checkOverlap(item);
+        return updates["end"];
     }
 
     function generateWarnings(exclude) {
