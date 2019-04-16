@@ -2,7 +2,7 @@
 This file defines some constants (e.g., units) used throughout the project
 """
 import re
-from datetime import time
+from datetime import datetime
 
 from django.utils import timezone
 
@@ -64,8 +64,12 @@ UNIT_ACCEPTED_FORMS = {
 
 MIX_UNIT_EXP_REGEX = re.compile(r"^(\d*\.?\d+)\s*(\D.*|)$")
 
-WORK_HOURS_START = time(hour=8, tzinfo=timezone.get_current_timezone())
-WORK_HOURS_END = time(hour=18, tzinfo=timezone.get_current_timezone())
+WORK_HOURS_START = (
+    timezone.get_current_timezone().localize(datetime(2000, 1, 1, 8, 0)).timetz()
+)
+WORK_HOURS_END = (
+    timezone.get_current_timezone().localize(datetime(2000, 1, 1, 18, 0)).timetz()
+)
 WORK_HOURS_PER_DAY = 10  # Per req. 4.4.4, factories run 10 hours per day
 HOURS_PER_DAY = 24
 SECONDS_PER_HOUR = 3600

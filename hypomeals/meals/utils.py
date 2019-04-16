@@ -488,7 +488,7 @@ def compute_end_time(start_time: datetime, num_hours: float) -> datetime:
     :param num_hours: total number of hours to complete production on a MfgLine
     :return: the datetime at which production is scheduled to complete
     """
-    start_time = start_time.replace(tzinfo=timezone.get_current_timezone())
+    start_time = start_time.astimezone(timezone.get_current_timezone())
     num_days = int(num_hours / WORK_HOURS_PER_DAY)
     remaining_hours = num_hours % WORK_HOURS_PER_DAY
     if remaining_hours == 0:

@@ -223,7 +223,7 @@ generate_calculation_csv = login_required(
 
 @login_required
 @auth.permission_required_ajax(
-    perm=("meals.view_goal", ),
+    perm=("meals.view_goal",),
     msg="You do not have permission to view manufacturing goals,",
     reason="Only analysts may view manufacturing goals",
 )
@@ -256,7 +256,7 @@ def goals(request):
 
 @login_required
 @auth.permission_required_ajax(
-    perm=("meals.view_goal", "meals.view_sku", ),
+    perm=("meals.view_goal", "meals.view_sku"),
     msg="You do not have permission to view manufacturing goals,",
     reason="Only analysts may view manufacturing goals",
 )
@@ -439,37 +439,56 @@ def schedule_report(request):
 
 
 @login_required
-@utils.ajax_view
 @utils.log_exceptions
+@utils.ajax_view
 def auto_schedule(request):
     if not request.user.is_plant_manager:
         raise UserFacingException("You are not authorized to use the auto-scheduler.")
     items = json.loads(request.POST.get("items", "[]"))
+    existing = json.loads(request.POST.get("existing", "{}"))
     start = request.POST.get("start", "")
     end = request.POST.get("end", "")
+    current_timezone = timezone.get_current_timezone()
     try:
-        start = datetime.fromtimestamp(int(start))
-        end = datetime.fromtimestamp(int(end))
+        start = datetime.fromtimestamp(int(start), tz=current_timezone)
+        end = datetime.fromtimestamp(int(end), tz=current_timezone)
     except ValueError:
         raise UserFacingException("Unable to schedule: invalid start/end time")
     if not items:
         # Return empty schedule
         return "[]"
-    toSchedule = []
+    to_schedule = []
+    existing_items = {}
     try:
+        owned_lines = request.user.owned_lines
         for item in items:
-            toSchedule.append(
+            to_schedule.append(
                 scheduling.Item(
-                    item["id"],
+                    GoalItem.objects.get(id=item["id"]),
                     int(item["hours"]),
-                    set(item["groups"]).intersection(request.user.owned_lines),
+                    set(item["groups"]).intersection(owned_lines),
                 )
             )
+        for group, items in existing.items():
+            if not group in owned_lines:
+                continue
+            existing_items[group] = [
+                scheduling.ExistingItem(
+                    GoalItem.objects.get(id=item["id"]),
+                    datetime.fromtimestamp(
+                        int(item["start"]), tz=current_timezone
+                    ),
+                    datetime.fromtimestamp(
+                        int(item["end"]), tz=current_timezone
+                    ),
+                )
+                for item in items
+            ]
     except Exception:
         logger.exception("Invalid auto-schedule request")
         raise UserFacingException("Unable to schedule: invalid request.")
     try:
-        result = scheduling.schedule(toSchedule, start, end)
+        result = scheduling.schedule(to_schedule, existing_items, start, end)
     except scheduling.ScheduleException as e:
         raise UserFacingException(str(e))
     return json.dumps(result)

@@ -78,6 +78,7 @@ $(function() {
 
     /**************** Timeline event listeners ***************/
     items.on("update", function(event, properties, senderId) {
+        generateWarnings();
         if (senderId === SENDER_ID_IGNORE) return;
         let item = properties.data[0];
         let oldItem = properties.oldData[0];
@@ -116,7 +117,6 @@ $(function() {
                 items.update(item, SENDER_ID_IGNORE);
             }
         });
-        generateWarnings();
     });
     items.on("add", function(event, properties, senderId) {
         let item = items.get(properties.items[0]);
@@ -159,6 +159,7 @@ $(function() {
         itemInfo.start = null;
         itemInfo.overrideHours = null;
         toggleGoalItem(itemId, itemInfo.isOrphaned);
+        generateWarnings([itemId]);
         if (senderId === SENDER_ID_IGNORE) {
             return;
         }
@@ -170,7 +171,6 @@ $(function() {
                     items.remove({id: itemId}, SENDER_ID_IGNORE)
                 }
             });
-        // generateWarnings();
     });
 
     function validGroup(itemId, group) {
@@ -344,11 +344,9 @@ $(function() {
             returnType: "Array",
         });
         if (itemsInGroup.length === 1) return false;
-        itemsInGroup.sort(function(a, b) {
-            return moment(a.start) - moment(b.start);
-        });
+        itemsInGroup.sort(sortItemByStartTime);
         for (let i = 0; i < itemsInGroup.length - 1; i++) {
-            if (moment(itemsInGroup[i + 1].start) <= moment(itemsInGroup[i].end)) {
+            if (moment(itemsInGroup[i + 1].start) < moment(itemsInGroup[i].end)) {
                 throw Error("overlap");
             }
         }
@@ -394,8 +392,11 @@ $(function() {
         checkOverlap(item);
     }
 
-    function generateWarnings() {
+    function generateWarnings(exclude) {
         if (timeline === null) return;  // Timeline is not initialized yet.
+        if (!exclude || !Array.isArray(exclude)) {
+            exclude = [];
+        }
         let visibleItems = timeline.getVisibleItems();
         let suppressWarning = $("#suppressWarningCheckbox").prop("checked");
         if (suppressWarning) {
@@ -404,6 +405,9 @@ $(function() {
         }
         let warnings = [];
         for (let itemId of visibleItems) {
+            if (exclude.includes(itemId)) {
+                continue;
+            }
             let item = items.get(itemId);
             let itemInfo = goalItemsMap.get(itemId);
             if (itemInfo.isOrphaned) {
@@ -558,6 +562,10 @@ function toggleGoalItem(goalItemId, scheduled) {
         .prop("disabled", scheduled);
 }
 
+function sortItemByStartTime(a, b) {
+    return moment(a.start) - moment(b.start);
+}
+
 /**
  * Bind shortcut keys
  */
@@ -614,6 +622,20 @@ $(function() {
                 "You must select at least one item from the palette below.");
             return;
         }
+        let existing = Object();
+        for (let group of groups.getIds()) {
+            existing[group] = items.get({
+                filter: item => item.group === group,
+                order: sortItemByStartTime
+            }).map(function(item) {
+                return {
+                    id: item.id,
+                    start: moment(item.start).unix(),
+                    end: moment(item.end).unix(),
+                }
+            });
+        }
+
         let toSchedule = [];
         for (let itemInfo of selected.map(e => goalItemsMap.get(e))) {
             toSchedule.push({
@@ -637,6 +659,7 @@ $(function() {
                 .prop("disabled", true);
             postJson(button.attr("data-href"), {
                 items: JSON.stringify(Array.from(toSchedule)),
+                existing: JSON.stringify(existing),
                 start: start.unix(),
                 end: end.unix(),
                 csrfmiddlewaretoken: $("input[name='csrfmiddlewaretoken']").val()
@@ -645,7 +668,7 @@ $(function() {
                 addItems(data);
                 undoMgr.add({
                     undo: function() {
-                        items.remove(data.map(i => i.id));
+                        data.forEach(i => items.remove(i.id, SENDER_ID_IGNORE));
                     },
                     redo: function() {
                         addItems(data);
