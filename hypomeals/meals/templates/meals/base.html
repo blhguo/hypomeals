@@ -72,8 +72,8 @@
                 </a>
                 <div class="dropdown-menu">
                     <a class="dropdown-item" href="{% url 'lines' %}">Lines</a>
-                    <a class="dropdown-item" href="{% url 'goals' %}">Goals</a>
                     {% if perms.meals.view_goal %}
+                    <a class="dropdown-item" href="{% url 'goals' %}">Goals</a>
                     {% if request.user.is_plant_manager %}
                     <a class="dropdown-item" href="{% url 'schedule' %}">Schedule</a>
                     {% else %}
@@ -82,12 +82,16 @@
                     {% endif %}
                 </div>
             </li>
+            {% if perms.meals.add_sku %}
             <li class="nav-item {% block import_active %}{% endblock %}">
                 <a class="nav-link" href="{% url 'import' %}">Import</a>
             </li>
+            {% endif %}
+            {% if perms.meals.view_user %}
             <li class="nav-item {% block users_active %}{% endblock %}">
                 <a class="nav-link" href="{% url 'users' %}">Users</a>
             </li>
+            {% endif %}
         </ul>
 
         <ul class="navbar-nav mr-2">

@@ -84,7 +84,9 @@ ul.ui-autocomplete {
     <th>Name</th>
     <th>Shortname</th>
     <th>Comment</th>
+    {% if perms.meals.view_goal %}
     <th>Action</th>
+    {% endif %}
 </tr>
 </thead>
 
@@ -109,13 +111,16 @@ ul.ui-autocomplete {
     </td>
     <td>{{ line.shortname }}</td>
     <td>{{ line.comment }}</td>
+    {% if perms.meals.view_goal %}
     <td><a href="{% url 'schedule_report' %}"
            data-toggle="tooltip"
            data-placement="left"
            title="View a formatted manufacturing schedule report for this
                 manufacturing line suitable for display in the factory."
            class="scheduleReportButtons"
-           data-line-shortname="{{ line.shortname }}">Report</a></td>
+           data-line-shortname="{{ line.shortname }}">Report</a>
+    </td>
+    {% endif %}
 </tr>
 {% empty %}
     <div class="alert alert-danger">

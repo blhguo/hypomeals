@@ -170,6 +170,7 @@ def edit_user(request, pk):
         "password": instance.password,
         "is_analyst": instance.is_analyst,
         "is_business_manager": instance.is_business_manager,
+        "is_product_manager": instance.is_product_manager,
         "is_plant_manager": instance.is_plant_manager,
         "lines": ", ".join(instance.owned_lines)
     }

@@ -1463,7 +1463,7 @@ class EditUserForm(forms.ModelForm, utils.BootstrapFormControlMixin):
 
         if self.cleaned_data.get("is_plant_manager", False):
             lines = self.cleaned_data.get("lines", [])
-            logger.info("Assigning PlM for %s for lines: ", instance.username, lines)
+            logger.info("Assigning PlM for %s for lines: %s", instance.username, lines)
             for line in lines:
                 group = Group.objects.get(name=f"Plant Manager ({line.shortname})")
                 group.user_set.add(instance)

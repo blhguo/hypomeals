@@ -39,16 +39,9 @@
             </button>
         {% endif %}
         {% if perms.meals.view_sale %}
-        <button class="btn btn-danger dropdown-toggle dropdown-toggle-split"
-                data-toggle="dropdown"></button>
-        <div class="dropdown-menu">
-        <a data-href="{% url 'generate_sales_report' %}"
-            disabled
-            id="generateButton"
-            class="dropdown-item">
-            <span class="fas fa-align-justify"></span> Generate Sales Report
-        </a>
-        </div>
+        <button class="btn btn-info" id="generateButton">
+            <span class="fas fa-align-justify"></span> Sales Report
+        </button>
         {% endif %}
     </div>
 </div>
