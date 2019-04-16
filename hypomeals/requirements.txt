@@ -1,6 +1,5 @@
 pytz
 django
-psycopg2
 psycopg2-binary
 six
 requests
