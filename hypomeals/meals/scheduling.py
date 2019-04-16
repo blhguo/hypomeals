@@ -5,7 +5,7 @@ import functools
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Mapping, Set
+from typing import List, Mapping, Set, Tuple, Dict
 
 from meals.models import GoalItem
 from meals.utils import compute_end_time
@@ -33,14 +33,14 @@ class ExistingItem:
 
 @dataclass
 class Schedule:
-    id: int
+    item_id: int
     start: datetime
     end: datetime
     group: str
 
     def to_dict(self) -> Mapping[str, str]:
         return {
-            "id": str(self.id),
+            "id": str(self.item_id),
             "start": int(self.start.timestamp()),
             "end": int(self.end.timestamp()),
             "group": self.group,
@@ -53,36 +53,22 @@ class ScheduleException(Exception):
     pass
 
 
-def schedule(
-    items: List[Item],
-    existing_items: Mapping[str, List[ExistingItem]],
-    start: datetime,
-    end: datetime,
-) -> List[Mapping[str, str]]:
+def _get_available_blocks(
+    existing_items: Mapping[str, List[ExistingItem]], start: datetime, end: datetime
+) -> Dict[str, List[Tuple[datetime, datetime]]]:
     """
-    Schedules the items according the following algorithm:
-    :param items: a list of Item objects to be scheduled
-    :param existing_items: a list of ExistingItem objects that are already on the
-        timeline and therefore cannot be changed.
-    :param start: the earliest time when the items can be scheduled to start
-    :param end: the latest time when the items can be scheduled to finish
-    :return: a list of schedules
+    Finds available time blocks in each group. A time block is a chunk of time in
+    which an item can be scheduled.
+    :param existing_items: mapping of existing items
+    :param start: start time
+    :param end: end time
+    :return: a dict mapping group to available time blocks
     """
-    schedules: List[Schedule] = []
-    logger.info(
-        "Scheduling %d items from %s to %s",
-        len(items),
-        start.isoformat(),
-        end.isoformat(),
-    )
-    # Prioritize item with earliest deadline, with a tiebreaker of shortest
-    # time first
-    items.sort(key=lambda item: (item.item.completion_time, item.hours))
-    ml_schedules = dict()
+    schedules: Dict[str, List[Tuple[datetime, datetime]]] = {}
     for ml_sn, goals in existing_items.items():
         relevant_goals = []
         for item in goals:
-            if item.start <= end and item.end >=start:
+            if item.start <= end and item.end >= start:
                 relevant_goals.append(item)
         time_block = []
         cur_start = start
@@ -96,7 +82,36 @@ def schedule(
             cur_start = schedule.end
         if cur_start < end:
             time_block.append((cur_start, end))
-        ml_schedules[ml_sn] = time_block
+        schedules[ml_sn] = time_block
+    return schedules
+
+
+def schedule(
+    items: List[Item],
+    existing_items: Mapping[str, List[ExistingItem]],
+    start: datetime,
+    end: datetime,
+) -> List[Mapping[str, str]]:
+    """
+    Schedules the items according the following algorithm:
+    :param items: a list of Item objects to be scheduled
+    :param existing_items: a mapping from group to ExistingItem objects that are
+        already on the timeline and therefore cannot be changed.
+    :param start: the earliest time when the items can be scheduled to start
+    :param end: the latest time when the items can be scheduled to finish
+    :return: a list of schedules
+    """
+    schedules: List[Schedule] = []
+    logger.info(
+        "Scheduling %d items from %s to %s",
+        len(items),
+        start.isoformat(),
+        end.isoformat(),
+    )
+    # Prioritize item with earliest deadline, with a tiebreaker of shortest
+    # time first
+    items.sort(key=lambda item: (item.item.goal.deadline, item.hours))
+    ml_schedules = _get_available_blocks(existing_items, start, end)
 
     for item in items:
         min_earliest_time = end
@@ -105,10 +120,10 @@ def schedule(
         for ml in item.groups:
             earliest_time = end
             earliest_block_id = None
-            for id, (st, et) in enumerate(ml_schedules[ml]):
+            for i, (st, et) in enumerate(ml_schedules[ml]):
                 if compute_end_time(st, item.hours) <= et:
                     earliest_time = st
-                    earliest_block_id = id
+                    earliest_block_id = i
             if earliest_time <= min_earliest_time:
                 min_earliest_time = earliest_time
                 min_ml = ml
@@ -118,12 +133,7 @@ def schedule(
         else:
             item_end_time = compute_end_time(min_earliest_time, item.hours)
             schedules.append(
-                Schedule(
-                    item.item.id,
-                    min_earliest_time,
-                    item_end_time,
-                    min_ml,
-                )
+                Schedule(item.item.id, min_earliest_time, item_end_time, min_ml)
             )
             st, et = ml_schedules[min_ml][min_block_id]
             if et == item_end_time:

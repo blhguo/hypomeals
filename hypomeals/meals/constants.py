@@ -2,7 +2,7 @@
 This file defines some constants (e.g., units) used throughout the project
 """
 import re
-from datetime import time, datetime
+from datetime import datetime
 
 from django.utils import timezone
 
