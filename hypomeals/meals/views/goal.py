@@ -345,7 +345,9 @@ def schedule(request):
     )
     if request.method == "POST":
         logger.info("raw POST=%s", request.POST)
-        formset = GoalScheduleFormset(request.POST, goal_items=goal_items)
+        formset = GoalScheduleFormset(
+            request.POST, goal_items=goal_items, user=request.user
+        )
         if formset.is_valid():
             with transaction.atomic():
                 instances = []
@@ -368,7 +370,7 @@ def schedule(request):
             logger.info(msg)
             return redirect("schedule")
     else:
-        formset = GoalScheduleFormset(goal_items=goal_items)
+        formset = GoalScheduleFormset(goal_items=goal_items, user=request.user)
 
     return render(
         request,
@@ -378,7 +380,7 @@ def schedule(request):
             "goals": goal_objs,
             "goal_items": goal_items,
             "lines": request.user.owned_lines,
-            "schedulers": scheduling.schedulers.keys()
+            "schedulers": scheduling.get_scheduler_choices(),
         },
     )
 
@@ -446,7 +448,7 @@ def schedule_report(request):
 @auth.permission_required_ajax(
     perm=("meals.view_goal",),
     msg="You do not have permission to view the manufacturing schedule",
-    reason="Only analysts may view the manufacturing schedule."
+    reason="Only analysts may view the manufacturing schedule.",
 )
 def all_schedules(request):
     activities = GoalSchedule.objects.all()
@@ -461,7 +463,7 @@ def all_schedules(request):
             "activities": activities,
             "show_formulas": False,
             "show_ingredients": False,
-        }
+        },
     )
 
 
@@ -482,6 +484,10 @@ def auto_schedule(request):
         end = datetime.fromtimestamp(int(end), tz=current_timezone)
     except ValueError:
         raise UserFacingException("Unable to schedule: invalid start/end time")
+    if start >= end:
+        raise UserFacingException(
+            "Unable to schedule: end time is less than start time"
+        )
     if not items:
         # Return empty schedule
         return "[]"

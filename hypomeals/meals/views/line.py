@@ -24,7 +24,10 @@ def lines(request):
 
 
 @login_required
-@auth.user_is_admin_ajax(msg="Only administrators may edit a manufacturing line.")
+@auth.permission_required_ajax(
+    perm=("meals.change_manufacturingline",),
+    msg="You do not have permission to edit manufacturing lines",
+    reason="Only Product Managers may edit manufacturing lines.")
 @utils.ajax_view
 def edit_line(request, pk):
     line = get_object_or_404(ManufacturingLine, pk=pk)
@@ -51,7 +54,10 @@ def edit_line(request, pk):
 
 
 @login_required
-@auth.user_is_admin_ajax(msg="Only administrators may create new manufacturing lines.")
+@auth.permission_required_ajax(
+    perm=("meals.add_manufacturingline",),
+    msg="You do not have permission to add manufacturing lines",
+    reason="Only Product Managers may add manufacturing lines.")
 @utils.ajax_view
 def add_line(request):
     if request.method == "POST":
@@ -77,7 +83,10 @@ def add_line(request):
 
 
 @login_required
-@auth.user_is_admin_ajax(msg="Only administrators may remove manufacturing lines.")
+@auth.permission_required_ajax(
+    perm=("meals.delete_manufacturingline",),
+    msg="You do not have permission to remove manufacturing lines",
+    reason="Only Product Managers may remove manufacturing lines.")
 @utils.ajax_view
 def remove_lines(request):
     try:

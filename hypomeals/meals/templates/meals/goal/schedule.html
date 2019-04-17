@@ -114,15 +114,25 @@ ul.errorlist {
         </div>
         <input type="date" class="form-control" id="dateInput">
     </div>
-<div class="btn-group">
+<div class="btn-group mr-2">
     <button class="btn btn-success" id="showHelpButton">
         <span class="fas fa-question-circle"></span> Help
     </button>
-    <button class="btn btn-info"
+    <button class="btn btn-info dropdown-toggle"
+            data-toggle="dropdown"
             id="autoScheduleButton"
             data-href="{% url 'auto_schedule' %}">
         <span class="fas fa-robot"></span> Auto-schedule (Beta)
     </button>
+    <div class="dropdown-menu" id="schedulerDropdown">
+        {% for value, scheduler in schedulers %}
+        <a class="dropdown-item"
+           data-href="{% url 'auto_schedule' %}"
+           data-value="{{ value }}">{{ scheduler }}</a>
+        {% endfor %}
+    </div>
+</div>
+<div class="btn-group">
     <button class="btn btn-primary dropdown-toggle"
             data-toggle="dropdown">
         <span class="fas fa-search-plus"></span> Fit...
@@ -318,8 +328,8 @@ ul.errorlist {
     {% endfor %}
 </ul>
 <ul id="availableSchedulers">
-    {% for scheduler in schedulers %}
-    <li>{{ scheduler }}</li>
+    {% for value, scheduler in schedulers %}
+    <li data-value="{{ value }}">{{ scheduler }}</li>
     {% endfor %}
 </ul>
 </div>

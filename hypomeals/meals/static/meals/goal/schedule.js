@@ -1,5 +1,5 @@
 const SENDER_ID_IGNORE = 1;  // Sender should be ignored
-const SENDER_ID_INIT = 2;
+const SENDER_ID_AUTO_SCHEDULE = 2;
 const WORK_HOURS_PER_DAY = 10;  // TODO: Get this from HTML
 const WORK_HOURS_START = 8;
 const WORK_HOURS_END = 18;
@@ -13,13 +13,15 @@ let goalItemsMap = new Map();
 let warnings = new vis.DataSet([]);
 let ownedLines = new Set();
 let undoMgr = new UndoManager();
-let availableSchedulers = [];
+let suppressWarningCheckbox = null;
+let warningUl = null;
+let warningDiv = null;
 
 $(function() {
     $("[data-toggle='tooltip']").tooltip();
-    let warningUl = $("#warningUl");
-    let warningDiv = $("#warningDiv");
-    let suppressWarningCheckbox = $("#suppressWarningCheckbox")
+    warningUl = $("#warningUl");
+    warningDiv = $("#warningDiv");
+    suppressWarningCheckbox = $("#suppressWarningCheckbox")
         .change(generateWarnings);
     $("#showHelpButton").click(function() {
         $("#helpDiv").toggle("fast");
@@ -27,9 +29,6 @@ $(function() {
 
     $("#ownedLines li").each(function (_, e) {
         ownedLines.add($(e).text());
-    });
-    $("#availableSchedulers li").each(function(_, e) {
-        availableSchedulers.push($(e).text());
     });
 
     $(".selectAllButtons").click(function() {
@@ -59,7 +58,6 @@ $(function() {
     $("#undoButton").click(undoMgr.undo);
     $("#redoButton").click(undoMgr.redo);
 
-    let mfgLines = new Set();  // Set of MLs to display groups
     $("span.goalItems[data-schedulable=true]")
         .on("dragstart", function(event) {
         let src = $(this);
@@ -124,13 +122,17 @@ $(function() {
         });
     });
     items.on("add", function(event, properties, senderId) {
+        generateWarnings();
         let item = items.get(properties.items[0]);
         let itemInfo = goalItemsMap.get(item.id);
+        toggleGoalItem(item.id, true);
+        if (senderId === SENDER_ID_IGNORE) {
+            return;
+        }
         if (!validGroup(item.id, item.group)) {
             items.remove({id: item.id}, SENDER_ID_IGNORE);
             return;
         }
-        toggleGoalItem(item.id, true);
         if ("start" in item) {
             itemInfo.start = item.start;
             try {
@@ -144,8 +146,7 @@ $(function() {
                 items.remove({id: item.id}, SENDER_ID_IGNORE);
             }
         }
-        generateWarnings();
-        if (senderId === SENDER_ID_IGNORE) {
+        if (senderId == SENDER_ID_AUTO_SCHEDULE) {
             return;
         }
         undoMgr.add({
@@ -199,6 +200,7 @@ $(function() {
 
     /****************** Sync with Form **********************/
     let form = $("form");
+    let allLines = new Set();  // Set of MLs to display groups
     form.find("div.goalItems").each(function(i, div) {
         div = $(div);
         let id = Number(div.attr("data-goal-item-id"));
@@ -237,7 +239,10 @@ $(function() {
         if (lines.includes(line)) {
             itemInfo.group = line;
         }
-        lines.forEach((l) => mfgLines.add(l));
+        if (!ownedLines.has(line)) {
+            itemInfo.editable = false;
+        }
+        lines.forEach((l) => allLines.add(l));
 
         let endTime = moment(div.find("input[name*=end_time]").val(),
             "YYYY-MM-DD HH:mm:ss");
@@ -319,7 +324,7 @@ Do you want to save this schedule?</p>`));
 
     /***************** Timeline *******************/
     groups = new vis.DataSet([]);
-    mfgLines.forEach((l) => {
+    allLines.forEach((l) => {
         let group = {
             id: l,
             content: l,
@@ -330,113 +335,6 @@ Do you want to save this schedule?</p>`));
         }
         groups.add(group);
     });
-
-    function highlightGroups(groupIds, highlighted) {
-        if (groupIds === "*") {
-            groupIds = groups.distinct("id");
-        }
-        let updates = [];
-        let className = highlighted ? "bg-success text-white opacity-7" : "1";
-        for (let group of groupIds) {
-            if (!ownedLines.has(group)) continue;
-            updates.push({id: group, className: className});
-        }
-        groups.update(updates);
-    }
-
-    function checkOverlap(item) {
-        let itemsInGroup = items.get({
-            filter: (i) => i.group === item.group,
-            returnType: "Array",
-        });
-        if (itemsInGroup.length === 1) return false;
-        itemsInGroup.sort(sortItemByStartTime);
-        for (let i = 0; i < itemsInGroup.length - 1; i++) {
-            if (moment(itemsInGroup[i + 1].start) < moment(itemsInGroup[i].end)) {
-                throw Error("overlap");
-            }
-        }
-        return false;
-    }
-
-    function adjustEnd(item, start, overrideHours, showWarning) {
-        let itemId = item.id;
-        let globalSuppress = suppressWarningCheckbox.prop("checked");
-        start = moment(start);
-        let itemInfo = goalItemsMap.get(itemId);
-        let updates = {id: itemId};
-        itemInfo.overrideHours = overrideHours;
-        if (overrideHours) {
-            updates["end"] = moment(start).add(overrideHours, "hours");
-        } else {
-            updates["end"] = getCompletionTime(start, itemInfo.hours);
-        }
-        updates["type"] = "range";
-        if (updates.end > itemInfo.deadline) {
-            updates["className"] = "bg-danger text-white";
-            updates["title"] = `${start.format("lll")} - ${updates.end.format("lll")}.
-        Warning: item exceeds deadline ${itemInfo.deadline.format("lll")}`;
-            if (showWarning && !globalSuppress) {
-                makeModalAlert("Warning",
-                    `Scheduling this item to start at \
-            ${start.format("lll")} will exceed predetermined \
-            deadline of ${itemInfo.deadline.format("lll")} in the goal.
-            Consider moving this item earlier.`);
-            }
-        } else if (itemInfo.isOrphaned) {
-            updates["className"] = "bg-warning text-dark";
-            updates["title"] = `${start.format("lll")} - ${updates.end.format("lll")}`;
-        } else if (itemInfo.overrideHours) {
-            updates["className"] = "bg-warning text-dark";
-            updates["title"] = `${start.format("lll")} - ${updates.end.format("lll")} \
-            Warning: item duration is overridden to ${overrideHours} hours`;
-        } else {
-            updates["className"] = "";
-            updates["title"] = `${start.format("lll")} - ${updates.end.format("lll")}`
-        }
-        items.update(updates, SENDER_ID_IGNORE);
-        checkOverlap(item);
-        return updates["end"];
-    }
-
-    function generateWarnings(exclude) {
-        if (timeline === null) return;  // Timeline is not initialized yet.
-        if (!exclude || !Array.isArray(exclude)) {
-            exclude = [];
-        }
-        let visibleItems = timeline.getVisibleItems();
-        let suppressWarning = $("#suppressWarningCheckbox").prop("checked");
-        if (suppressWarning) {
-            warningDiv.toggle(false);
-            return;
-        }
-        let warnings = [];
-        for (let itemId of visibleItems) {
-            if (exclude.includes(itemId)) {
-                continue;
-            }
-            let item = items.get(itemId);
-            let itemInfo = goalItemsMap.get(itemId);
-            if (itemInfo.isOrphaned) {
-                warnings.push(`'${itemInfo.content}': item is orphaned. \
-                    consider removing the item.`);
-                continue;  // other warnings are suppressed for orphaned items.
-            }
-            if (moment(item.end) > itemInfo.deadline) {
-                warnings.push(`'${itemInfo.content}': item exceeds \
-                    deadline of ${itemInfo.deadline.format("lll")}`);
-            }
-            if (itemInfo.overrideHours) {
-                warnings.push(`'${itemInfo.content}': manufacturing duration \
-                    has been overridden to ${itemInfo.overrideHours} hours.`);
-            }
-        }
-        warningDiv.toggle(warnings.length > 0 && !suppressWarning);
-        warningUl.find("li").remove();
-        warnings.forEach(function(warning) {
-            $("<li>", {text: warning}).appendTo(warningUl);
-        });
-    }
 
     timeline = new vis.Timeline($("#timelineDiv")[0], items, groups, {
         editable: true,
@@ -492,6 +390,113 @@ Do you want to save this schedule?</p>`));
             center.clone().endOf("week"));
     });
 });
+
+function highlightGroups(groupIds, highlighted) {
+    if (groupIds === "*") {
+        groupIds = groups.distinct("id");
+    }
+    let updates = [];
+    let className = highlighted ? "bg-success text-white opacity-7" : "1";
+    for (let group of groupIds) {
+        if (!ownedLines.has(group)) continue;
+        updates.push({id: group, className: className});
+    }
+    groups.update(updates);
+}
+
+function checkOverlap(item) {
+    let itemsInGroup = items.get({
+        filter: (i) => i.group === item.group,
+        returnType: "Array",
+    });
+    if (itemsInGroup.length === 1) return false;
+    itemsInGroup.sort(sortItemByStartTime);
+    for (let i = 0; i < itemsInGroup.length - 1; i++) {
+        if (moment(itemsInGroup[i + 1].start) < moment(itemsInGroup[i].end)) {
+            throw Error("overlap");
+        }
+    }
+    return false;
+}
+
+function adjustEnd(item, start, overrideHours, showWarning) {
+    let itemId = item.id;
+    let globalSuppress = suppressWarningCheckbox.prop("checked");
+    start = moment(start);
+    let itemInfo = goalItemsMap.get(itemId);
+    let updates = {id: itemId};
+    itemInfo.overrideHours = overrideHours;
+    if (overrideHours) {
+        updates["end"] = moment(start).add(overrideHours, "hours");
+    } else {
+        updates["end"] = getCompletionTime(start, itemInfo.hours);
+    }
+    updates["type"] = "range";
+    if (updates.end > itemInfo.deadline) {
+        updates["className"] = "bg-danger text-white";
+        updates["title"] = `${start.format("lll")} - ${updates.end.format("lll")}.
+    Warning: item exceeds deadline ${itemInfo.deadline.format("lll")}`;
+        if (showWarning && !globalSuppress) {
+            makeModalAlert("Warning",
+                `Scheduling this item to start at \
+        ${start.format("lll")} will exceed predetermined \
+        deadline of ${itemInfo.deadline.format("lll")} in the goal.
+        Consider moving this item earlier.`);
+        }
+    } else if (itemInfo.isOrphaned) {
+        updates["className"] = "bg-warning text-dark";
+        updates["title"] = `${start.format("lll")} - ${updates.end.format("lll")}`;
+    } else if (itemInfo.overrideHours) {
+        updates["className"] = "bg-warning text-dark";
+        updates["title"] = `${start.format("lll")} - ${updates.end.format("lll")} \
+        Warning: item duration is overridden to ${overrideHours} hours`;
+    } else {
+        updates["className"] = "";
+        updates["title"] = `${start.format("lll")} - ${updates.end.format("lll")}`
+    }
+    items.update(updates, SENDER_ID_IGNORE);
+    checkOverlap(item);
+    return updates["end"];
+}
+
+function generateWarnings(exclude) {
+    if (timeline === null) return;  // Timeline is not initialized yet.
+    if (!exclude || !Array.isArray(exclude)) {
+        exclude = [];
+    }
+    let visibleItems = timeline.getVisibleItems();
+    let suppressWarning = $("#suppressWarningCheckbox").prop("checked");
+    if (suppressWarning) {
+        warningDiv.toggle(false);
+        return;
+    }
+    let warnings = [];
+    for (let itemId of visibleItems) {
+        if (exclude.includes(itemId)) {
+            continue;
+        }
+        let item = items.get(itemId);
+        let itemInfo = goalItemsMap.get(itemId);
+        if (itemInfo.isOrphaned) {
+            warnings.push(`'${itemInfo.content}': item is orphaned. \
+                consider removing the item.`);
+            continue;  // other warnings are suppressed for orphaned items.
+        }
+        if (moment(item.end) > itemInfo.deadline) {
+            warnings.push(`'${itemInfo.content}': item exceeds \
+                deadline of ${itemInfo.deadline.format("lll")}`);
+        }
+        if (itemInfo.overrideHours) {
+            warnings.push(`'${itemInfo.content}': manufacturing duration \
+                has been overridden to ${itemInfo.overrideHours} hours.`);
+        }
+    }
+    warningDiv.toggle(warnings.length > 0 && !suppressWarning);
+    warningUl.find("li").remove();
+    warnings.forEach(function(warning) {
+        $("<li>", {text: warning}).appendTo(warningUl);
+    });
+}
 
 /**
  * Computes the difference of two sets. Taken from:
@@ -618,9 +623,10 @@ $(function() {
  */
 $(function() {
     let checkboxes = $("#goalItemList input[type='checkbox']:enabled");
-    $("#autoScheduleButton").click(function(ev) {
+    $("#schedulerDropdown a.dropdown-item").click(function(ev) {
         ev.preventDefault();
-        let button = $(this);
+        let scheduler = $(this).attr("data-value");
+        let button = $("#autoScheduleButton");
         let selected = checkboxes.filter(":checked")
             .toArray()
             .map(e => Number($(e).attr("data-goal-item-id")));
@@ -669,6 +675,7 @@ $(function() {
                 existing: JSON.stringify(existing),
                 start: start.unix(),
                 end: end.unix(),
+                scheduler: scheduler,
                 csrfmiddlewaretoken: $("input[name='csrfmiddlewaretoken']").val()
             }, true).done(function(data) {
                 data = JSON.parse(data);
@@ -705,7 +712,7 @@ $(function() {
                 item.start = moment.unix(scheduled.start);
                 item.end = moment.unix(scheduled.end);
 
-                items.add(item, SENDER_ID_IGNORE);
+                items.add(item, SENDER_ID_AUTO_SCHEDULE);
             }
         }
         modal.find("input[type='date']").change(function() {

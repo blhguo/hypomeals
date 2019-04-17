@@ -42,16 +42,18 @@ ul.ui-autocomplete {
 </div>
 {% endif %}
 
-{% if request.user.is_admin %}
 <div class="row mt-3">
 <div class="col-sm d-flex justify-content-end">
     <div class="btn-group">
+    {% if perms.meals.add_manufacturingline %}
     <button type="button"
             data-href="{% url 'add_line' %}"
             id="addButton"
             class="btn btn-primary">
         <span class="fas fa-plus"></span> Add Manufacturing Line
     </button>
+    {% endif %}
+    {% if perms.meals.delete_manufacturingline %}
     <button type="button"
             data-href="{% url 'remove_lines' %}"
             id="removeButton"
@@ -59,10 +61,10 @@ ul.ui-autocomplete {
             disabled>
         <span class="fas fa-minus"></span> Remove selected
     </button>
+    {% endif %}
     </div>
 </div>
 </div>
-{% endif %}
 
 <!-- Table -->
 <div class="row mt-3">
@@ -70,7 +72,7 @@ ul.ui-autocomplete {
 <table class="table">
 <thead class="thead-light">
 <tr>
-    {% if request.user.is_admin %}
+    {% if perms.meals.add_manufacturingline or perms.meals.delete_manufacturingline %}
     <th>
         <div class="custom-control custom-checkbox">
         <input type="checkbox"
@@ -93,7 +95,7 @@ ul.ui-autocomplete {
 <tbody>
 {% for line in lines %}
 <tr>
-    {% if request.user.is_admin %}
+    {% if perms.meals.add_manufacturingline or perms.meals.delete_manufacturingline %}
     <td>
         <div class="custom-control custom-checkbox">
         <input type="checkbox" data-line-id="{{ line.pk }}"

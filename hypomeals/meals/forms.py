@@ -9,7 +9,7 @@ from pathlib import Path
 
 from django import forms
 from django.contrib.auth.models import Group
-from django.core.exceptions import FieldDoesNotExist
+from django.core.exceptions import FieldDoesNotExist, PermissionDenied
 from django.core.exceptions import ValidationError
 from django.core.files import File
 from django.core.paginator import Paginator
@@ -966,7 +966,7 @@ class ManufacturingLineForm(forms.ModelForm, utils.BootstrapFormControlMixin):
         initial = kwargs.pop("initial", {})
         if instance:
             initial["skus"] = ", ".join(
-                line.sku.verbose_name for line in instance.skus.all()
+                sku.verbose_name for sku in instance.skus.all()
             )
         super().__init__(*args, instance=instance, initial=initial, **kwargs)
 
@@ -1225,11 +1225,12 @@ class GoalScheduleForm(forms.ModelForm):
     def clean_line(self):
         if not self.cleaned_data["line"]:
             return None
-        qs = ManufacturingLine.objects.filter(shortname=self.cleaned_data["line"])
+        line = self.cleaned_data["line"]
+        qs = ManufacturingLine.objects.filter(shortname=line)
         if not qs.exists():
             raise ValidationError(
                 "Manufacturing Line '%(line)s' does not exist.",
-                params={"line": self.cleaned_data["line"]},
+                params={"line": line},
             )
         if not SkuManufacturingLine.objects.filter(
             sku=self.item.sku, line=qs[0]
@@ -1238,9 +1239,14 @@ class GoalScheduleForm(forms.ModelForm):
                 "Manufacturing Line '%(line)s' cannot produce SKU #%(sku_number)d",
                 code="invalid",
                 params={
-                    "line": self.cleaned_data["line"],
+                    "line": line,
                     "sku_number": self.item.sku.number,
                 },
+            )
+        if line not in self.user.owned_lines:
+            raise PermissionDenied(
+                "You are not authorized to manage "
+                f"manufacturing activities on line '{line}'"
             )
         logger.info("Found line %s for goal item %d", qs[0].pk, self.item.pk)
         return qs[0]
@@ -1271,9 +1277,10 @@ class GoalScheduleForm(forms.ModelForm):
                 )
         return super().clean()
 
-    def __init__(self, *args, item, **kwargs):
+    def __init__(self, *args, item, user, **kwargs):
         super().__init__(*args, **kwargs)
         self.item = item
+        self.user = user
         self.fields["goal_item"].widget.attrs["data-goal-item-id"] = item.pk
         lines = item.sku.line_choices
         self.fields["line"] = forms.ChoiceField(choices=lines, required=False)
@@ -1288,8 +1295,9 @@ class GoalScheduleForm(forms.ModelForm):
 
 
 class GoalScheduleFormsetBase(forms.BaseFormSet):
-    def __init__(self, *args, goal_items, **kwargs):
+    def __init__(self, *args, goal_items, user, **kwargs):
         self.goal_items = goal_items
+        self.user = user
         initial = kwargs.pop("initial", [])
         for item in goal_items:
             data = {"goal_item": item.pk}
@@ -1305,6 +1313,7 @@ class GoalScheduleFormsetBase(forms.BaseFormSet):
     def get_form_kwargs(self, index):
         kwargs = super().get_form_kwargs(index)
         kwargs["item"] = self.goal_items[index]
+        kwargs["user"] = self.user
         if hasattr(self.goal_items[index], "schedule"):
             kwargs["instance"] = self.goal_items[index].schedule
         return kwargs

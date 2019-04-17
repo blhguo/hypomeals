@@ -150,14 +150,16 @@ def add_user(request):
     if request.method == "POST":
         form = EditUserForm(request.POST)
         if form.is_valid():
-            instance = form.save()
-            message = f"User '{ instance.username }' added successfully"
+            instance = form.save(commit=True)
+            message = f"User '{instance.username}' added successfully"
             messages.info(request, message)
             return redirect("users")
     else:
         form = EditUserForm()
     return render(
-        request, template_name="meals/accounts/edit_user.html", context={"form": form}
+        request,
+        template_name="meals/accounts/edit_user.html",
+        context={"form": form, "edit": False},
     )
 
 
@@ -172,7 +174,7 @@ def edit_user(request, pk):
         "is_business_manager": instance.is_business_manager,
         "is_product_manager": instance.is_product_manager,
         "is_plant_manager": instance.is_plant_manager,
-        "lines": ", ".join(instance.owned_lines)
+        "lines": ", ".join(instance.owned_lines),
     }
     if request.method == "POST":
         form = EditUserForm(request.POST, instance=instance)

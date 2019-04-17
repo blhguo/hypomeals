@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Mapping, Set, Tuple, Dict, Callable
 
+from django.db.models import Sum, F
+from django.utils import timezone
+
 from meals.constants import WORK_HOURS_END
 from meals.models import GoalItem
 from meals.utils import compute_end_time, compute_start_time
@@ -134,9 +137,11 @@ def schedule(
         if min_ml is None:
             raise ScheduleException("Unable to schedule: too many items.")
         else:
-            if min_earliest_time > item.item.goal.completion_time:
-                raise ScheduleException("Unable to schedule: too many items.")
             item_end_time = compute_end_time(min_earliest_time, item.hours)
+            if timezone.make_naive(item_end_time) > datetime.combine(
+                item.item.goal.deadline, WORK_HOURS_END
+            ):
+                raise ScheduleException("Unable to schedule: would exceed deadline.")
             schedules.append(
                 Schedule(item.item.id, min_earliest_time, item_end_time, min_ml)
             )
@@ -173,14 +178,23 @@ def schedule_max_profit(
     )
     # Prioritize item with earliest deadline, with a tiebreaker of shortest
     # time first
-    items.sort(key=lambda item: (item.item.sku.run_cost, item.hours))
+    items.sort(
+        key=lambda item: (
+            item.item.sku.sales.aggregate(revenue=Sum(F("price") * F("sales")))[
+                "revenue"
+            ],
+            item.hours,
+        )
+    )
     ml_schedules = _get_available_blocks(existing_items, start, end)
 
     for item in items:
         max_latest_time = start
         opt_ml = None
         opt_block_id = None
-        item_deadline = datetime.combine(item.item.goal.deadline, WORK_HOURS_END)
+        item_deadline = start.tzinfo.localize(
+            datetime.combine(item.item.goal.deadline, WORK_HOURS_END)
+        )
         for ml in item.groups:
             latest_time = end
             latest_block_id = None
@@ -210,7 +224,7 @@ def schedule_max_profit(
     return list(map(Schedule.to_dict, schedules))
 
 
-schedulers = {"earliest_deadline": schedule, "max_profit": schedule_max_profit}
+schedulers = {"earliest_deadline": schedule, "max_revenue": schedule_max_profit}
 
 
 SchedulerType = Callable[
@@ -222,6 +236,12 @@ SchedulerType = Callable[
 def get_scheduler(name) -> SchedulerType:
     if name in schedulers:
         return schedulers[name]
-    else:
-        logger.warning("Unknown scheduler %s, returning earliest_deadline")
-        return schedulers["earliest_deadline"]
+    logger.warning("Unknown scheduler %s, returning earliest_deadline")
+    return schedulers["earliest_deadline"]
+
+
+def get_scheduler_choices() -> List[Tuple[str, str]]:
+    return [
+        ("earliest_deadline", "Earliest deadline first"),
+        ("max_revenue", "Maximum revenue"),
+    ]
