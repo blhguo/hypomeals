@@ -13,6 +13,7 @@ let goalItemsMap = new Map();
 let warnings = new vis.DataSet([]);
 let ownedLines = new Set();
 let undoMgr = new UndoManager();
+let availableSchedulers = [];
 
 $(function() {
     $("[data-toggle='tooltip']").tooltip();
@@ -26,6 +27,9 @@ $(function() {
 
     $("#ownedLines li").each(function (_, e) {
         ownedLines.add($(e).text());
+    });
+    $("#availableSchedulers li").each(function(_, e) {
+        availableSchedulers.push($(e).text());
     });
 
     $(".selectAllButtons").click(function() {
