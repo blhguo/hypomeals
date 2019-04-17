@@ -198,13 +198,15 @@ def schedule_max_profit(
         for ml in item.groups:
             latest_time = end
             latest_block_id = None
-            for i, (st, et) in enumerate(reversed(list(ml_schedules[ml]))):
+            found = False
+            for i, (st, et) in reversed(list(enumerate(ml_schedules[ml]))):
                 deadline = et if et <= item_deadline else item_deadline
                 if compute_start_time(deadline, item.hours) >= st:
                     latest_time = compute_start_time(deadline, item.hours)
                     latest_block_id = i
+                    found = True
                     break
-            if latest_time > max_latest_time:
+            if found:
                 max_latest_time = latest_time
                 opt_ml = ml
                 opt_block_id = latest_block_id
@@ -216,10 +218,10 @@ def schedule_max_profit(
                 Schedule(item.item.id, max_latest_time, item_end_time, opt_ml)
             )
             st, et = ml_schedules[opt_ml][opt_block_id]
-            if et == item_end_time:
+            if st == max_latest_time:
                 del ml_schedules[opt_ml][opt_block_id]
             else:
-                ml_schedules[opt_ml][opt_block_id] = (item_end_time, et)
+                ml_schedules[opt_ml][opt_block_id] = (st, max_latest_time)
     logger.info("Scheduled %d items: %s", len(schedules), schedules)
     return list(map(Schedule.to_dict, schedules))
 

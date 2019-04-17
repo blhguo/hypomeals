@@ -126,13 +126,6 @@ $(function() {
         let item = items.get(properties.items[0]);
         let itemInfo = goalItemsMap.get(item.id);
         toggleGoalItem(item.id, true);
-        if (senderId === SENDER_ID_IGNORE) {
-            return;
-        }
-        if (!validGroup(item.id, item.group)) {
-            items.remove({id: item.id}, SENDER_ID_IGNORE);
-            return;
-        }
         if ("start" in item) {
             itemInfo.start = item.start;
             try {
@@ -146,7 +139,14 @@ $(function() {
                 items.remove({id: item.id}, SENDER_ID_IGNORE);
             }
         }
-        if (senderId == SENDER_ID_AUTO_SCHEDULE) {
+        if (senderId === SENDER_ID_IGNORE) {
+            return;
+        }
+        if (!validGroup(item.id, item.group)) {
+            items.remove({id: item.id}, SENDER_ID_IGNORE);
+            return;
+        }
+        if (senderId === SENDER_ID_AUTO_SCHEDULE) {
             return;
         }
         undoMgr.add({
