@@ -378,6 +378,7 @@ def schedule(request):
             "goals": goal_objs,
             "goal_items": goal_items,
             "lines": request.user.owned_lines,
+            "schedulers": scheduling.schedulers.keys()
         },
     )
 
@@ -474,6 +475,7 @@ def auto_schedule(request):
     existing = json.loads(request.POST.get("existing", "{}"))
     start = request.POST.get("start", "")
     end = request.POST.get("end", "")
+    scheduler_name = request.POST.get("scheduler", "")
     current_timezone = timezone.get_current_timezone()
     try:
         start = datetime.fromtimestamp(int(start), tz=current_timezone)
@@ -510,7 +512,8 @@ def auto_schedule(request):
         logger.exception("Invalid auto-schedule request")
         raise UserFacingException("Unable to schedule: invalid request.")
     try:
-        result = scheduling.schedule(to_schedule, existing_items, start, end)
+        scheduler = scheduling.get_scheduler(scheduler_name)
+        result = scheduler(to_schedule, existing_items, start, end)
     except scheduling.ScheduleException as e:
         raise UserFacingException(str(e))
     return json.dumps(result)

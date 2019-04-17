@@ -115,6 +115,21 @@ class UtilsTest(BaseTestCase):
                 tz.localize(datetime(2019, 2, 21, 12, 0, 0)),
                 "1AM, 4 hours, 12PM same day",
             ),
+            (
+                (tz.localize(datetime(2019, 3, 9, 16, 0, 0)), 4),
+                tz.localize(datetime(2019, 3, 10, 10, 0, 0)),
+                "4PM, 4 hours, 10 AM next day, across DST switch"
+            )
         ]
         for (start_time, hours), expected, msg in test_cases:
-            self.assertEqual(utils.compute_end_time(start_time, hours), expected, msg)
+            print(
+                "start:   ",
+                start_time.strftime("%Y-%m-%d %H:%M:%S %Z%z"),
+                "+",
+                hours,
+                "hours",
+            )
+            end_time = utils.compute_end_time(start_time, hours)
+            print("end:     ", end_time.strftime("%Y-%m-%d %H:%M:%S %Z%z"))
+            print("expected:", expected.strftime("%Y-%m-%d %H:%M:%S %Z%z"))
+            self.assertEqual(end_time, expected, msg)

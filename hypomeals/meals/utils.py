@@ -8,7 +8,7 @@ import random
 import string
 import time
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time as dtime
 from decimal import Decimal
 from functools import wraps
 from typing import Type, Tuple, Callable
@@ -38,6 +38,7 @@ from meals.constants import (
 )
 
 logger = logging.getLogger(__name__)
+
 
 def exception_to_error(func):
     @wraps(func)
@@ -308,8 +309,9 @@ class ModelFieldsCompareMixin:
                         return False
             else:
                 if value1 != value2:
-                    logger.info("%s %s %s %s", type(value1), value1, type(value2),
-                                value2)
+                    logger.info(
+                        "%s %s %s %s", type(value1), value1, type(value2), value2
+                    )
                     return False
         return True
 
@@ -480,6 +482,13 @@ class SortedDefaultDict(defaultdict):
         return sorted(super_keys, key=self.key, reverse=self.reverse)
 
 
+def _get_localized_time_for_date(date: datetime, time: dtime) -> datetime:
+    if timezone.is_naive(date):
+        raise ValueError("date must be localized")
+    tz = date.tzinfo
+    return tz.localize(datetime.combine(date.date(), time))
+
+
 def compute_end_time(start_time: datetime, num_hours: float) -> datetime:
     """
     Computes manufacturing end time, taking into consideration work hours of
@@ -489,31 +498,62 @@ def compute_end_time(start_time: datetime, num_hours: float) -> datetime:
     :return: the datetime at which production is scheduled to complete
     """
     start_time = start_time.astimezone(timezone.get_current_timezone())
+    first_day_start = _get_localized_time_for_date(start_time, WORK_HOURS_START)
+    first_day_end = _get_localized_time_for_date(start_time, WORK_HOURS_END)
     num_days = int(num_hours / WORK_HOURS_PER_DAY)
     remaining_hours = num_hours % WORK_HOURS_PER_DAY
     if remaining_hours == 0:
         num_days -= 1
         remaining_hours = WORK_HOURS_PER_DAY
-    if WORK_HOURS_END >= start_time.timetz() >= WORK_HOURS_START:
-        first_day_end = datetime.combine(start_time.date(), WORK_HOURS_END)
+    if first_day_end >= start_time >= first_day_start:
         remaining_hours -= (
             first_day_end - start_time
         ).total_seconds() / SECONDS_PER_HOUR
     end_time = start_time + timedelta(days=num_days)
     if remaining_hours > 0:
-        if start_time.timetz() < WORK_HOURS_START:
+        if start_time < first_day_start:
             # Can use same day to finish
-            end_time = datetime.combine(end_time, WORK_HOURS_START)
+            end_time = _get_localized_time_for_date(end_time, WORK_HOURS_START)
         else:
-            end_time = datetime.combine(
-                (end_time + timedelta(days=1)).date(), WORK_HOURS_START
+            end_time = _get_localized_time_for_date(
+                end_time + timedelta(days=1), WORK_HOURS_START
             )
         end_time += timedelta(hours=remaining_hours)
     else:
-        end_time = datetime.combine(end_time.date(), WORK_HOURS_END) + timedelta(
+        end_time = _get_localized_time_for_date(end_time, WORK_HOURS_END) + timedelta(
             hours=remaining_hours
         )
     return end_time
+
+
+def compute_start_time(end_time: datetime, num_hours: float) -> datetime:
+    """
+    Computes manufacturing start time, taking into consideration work hours of
+    manufacturing lines (supplied by constants.py).
+    :param end_time: datetime at which production ends
+    :param num_hours: total number of hours to complete production on a MfgLine
+    :return: the datetime at which production is scheduled to complete
+    """
+    end_time = end_time.astimezone(timezone.get_current_timezone())
+    time_for_last_day = end_time - datetime.combine(end_time.date(), WORK_HOURS_START)
+
+    if num_hours > time_for_last_day.seconds / SECONDS_PER_HOUR:
+        num_hours = num_hours - time_for_last_day.seconds / SECONDS_PER_HOUR
+    else:
+        return end_time - timedelta(hours=num_hours)
+
+    num_days = int(num_hours / WORK_HOURS_PER_DAY)
+    remaining_hours = num_hours % WORK_HOURS_PER_DAY
+    if remaining_hours > 0:
+        num_days += 1
+
+    end_day = datetime.combine(end_time.date(), WORK_HOURS_END)
+    start_time = end_day - timedelta(days=num_days)
+    if remaining_hours > 0:
+        start_time -= timedelta(hours=remaining_hours)
+    else:
+        start_time = datetime.combine(start_time.date(), WORK_HOURS_START)
+    return start_time
 
 
 def ajax_view(func):
@@ -529,6 +569,7 @@ def ajax_view(func):
 
     Works especially well with various AJAX-handling functions in `common.js`.
     """
+
     @functools.wraps(func)
     def wrapper(request, *args, **kwargs):
         from meals.exceptions import UserFacingException  # noqa
