@@ -479,7 +479,7 @@ function generateWarnings(exclude) {
         let itemInfo = goalItemsMap.get(itemId);
         if (itemInfo.isOrphaned) {
             warnings.push(`'${itemInfo.content}': item is orphaned. \
-                consider removing the item.`);
+                Consider removing the item.`);
             continue;  // other warnings are suppressed for orphaned items.
         }
         if (moment(item.end) > itemInfo.deadline) {

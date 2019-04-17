@@ -172,7 +172,7 @@ ul.errorlist {
 <div class="card-columns">
 {% for goal in goals %}
 {% with goal.details.all as details %}
-{% if details %}  {# if the goal has any items to schedule #}
+{% if details and goal.is_enabled %}  {# if the goal is enabled and has any items to schedule #}
 <div class="card mb-4">
 <div class="card-body">
 <h5 class="card-title d-flex justify-content-between align-items-center">
