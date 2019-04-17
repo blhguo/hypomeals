@@ -1426,50 +1426,53 @@ class EditUserForm(forms.ModelForm, utils.BootstrapFormControlMixin):
         return new
 
     def save(self, commit=False):
-        instance = super().save(commit=False)
-        if self.cleaned_data.get("set_unusable_password", False):
-            instance.set_unusable_password()
-        else:
-            password = self.cleaned_data.get("password", "")
-            if password:
-                instance.set_password(password)
+        with transaction.atomic():
+            instance = super().save(commit=True)
+            if self.cleaned_data.get("set_unusable_password", False):
+                instance.set_unusable_password()
             else:
-                # Somehow the instance's password would be changed
-                # Restore original password here if the password field is empty.
-                instance.password = self.initial.get("password", "")
+                password = self.cleaned_data.get("password", "")
+                if password:
+                    instance.set_password(password)
+                else:
+                    # Somehow the instance's password would be changed
+                    # Restore original password here if the password field is empty.
+                    instance.password = self.initial.get("password", "")
 
-        # Assign roles
-        users_group = Group.objects.get(name=USERS_GROUP)
-        users_group.user_set.add(instance)
-        for field_name, group_name in [
-            ("is_admin", ADMINS_GROUP),
-            ("is_business_manager", BUSINESS_MANAGER_GROUP),
-            ("is_product_manager", PRODUCT_MANAGER_GROUP),
-            ("is_analyst", ANALYST_GROUP),
-        ]:
-            group = Group.objects.get(name=group_name)
-            if self.cleaned_data.get(field_name, False):
-                logger.info("Assigning %s to %s", field_name, instance.username)
-                group.user_set.add(instance)
-            else:
-                logger.info("Revoking %s for %s", field_name, instance.username)
+            # Assign roles
+            users_group = Group.objects.get(name=USERS_GROUP)
+            users_group.user_set.add(instance)
+            for field_name, group_name in [
+                ("is_admin", ADMINS_GROUP),
+                ("is_business_manager", BUSINESS_MANAGER_GROUP),
+                ("is_product_manager", PRODUCT_MANAGER_GROUP),
+                ("is_analyst", ANALYST_GROUP),
+            ]:
+                group = Group.objects.get(name=group_name)
+                if self.cleaned_data.get(field_name, False):
+                    logger.info("Assigning %s to %s", field_name, instance.username)
+                    group.user_set.add(instance)
+                else:
+                    logger.info("Revoking %s for %s", field_name, instance.username)
+                    group.user_set.remove(instance)
+
+            all_plant_manager_groups = Group.objects.filter(
+                name__startswith="Plant Manager"
+            )
+            for group in all_plant_manager_groups:
                 group.user_set.remove(instance)
 
-        all_plant_manager_groups = Group.objects.filter(
-            name__startswith="Plant Manager"
-        )
-        for group in all_plant_manager_groups:
-            group.user_set.remove(instance)
+            if self.cleaned_data.get("is_plant_manager", False):
+                lines = self.cleaned_data.get("lines", [])
+                logger.info(
+                    "Assigning PlM for %s for lines: %s", instance.username, lines
+                )
+                for line in lines:
+                    group = Group.objects.get(name=f"Plant Manager ({line.shortname})")
+                    group.user_set.add(instance)
 
-        if self.cleaned_data.get("is_plant_manager", False):
-            lines = self.cleaned_data.get("lines", [])
-            logger.info("Assigning PlM for %s for lines: %s", instance.username, lines)
-            for line in lines:
-                group = Group.objects.get(name=f"Plant Manager ({line.shortname})")
-                group.user_set.add(instance)
-
-        if commit:
-            instance.save()
+            if commit:
+                instance.save()
         return instance
 
 

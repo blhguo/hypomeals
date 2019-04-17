@@ -5,7 +5,7 @@ import functools
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Mapping, Set, Tuple, Dict
+from typing import List, Mapping, Set, Tuple, Dict, Callable
 
 from meals.constants import WORK_HOURS_END
 from meals.models import GoalItem
@@ -184,7 +184,7 @@ def schedule_max_profit(
         for ml in item.groups:
             latest_time = end
             latest_block_id = None
-            for i, (st, et) in reversed(list(enumerate(ml_schedules[ml]))):
+            for i, (st, et) in enumerate(reversed(list(ml_schedules[ml]))):
                 deadline = et if et <= item_deadline else item_deadline
                 if compute_start_time(deadline, item.hours) >= st:
                     latest_time = compute_start_time(deadline, item.hours)
@@ -208,3 +208,20 @@ def schedule_max_profit(
                 ml_schedules[opt_ml][opt_block_id] = (item_end_time, et)
     logger.info("Scheduled %d items: %s", len(schedules), schedules)
     return list(map(Schedule.to_dict, schedules))
+
+
+schedulers = {"earliest_deadline": schedule, "max_profit": schedule_max_profit}
+
+
+SchedulerType = Callable[
+    [List[Item], Mapping[str, List[ExistingItem]], datetime, datetime],
+    List[Mapping[str, str]],
+]
+
+
+def get_scheduler(name) -> SchedulerType:
+    if name in schedulers:
+        return schedulers[name]
+    else:
+        logger.warning("Unknown scheduler %s, returning earliest_deadline")
+        return schedulers["earliest_deadline"]
