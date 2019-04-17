@@ -510,7 +510,7 @@ def auto_schedule(request):
         logger.exception("Invalid auto-schedule request")
         raise UserFacingException("Unable to schedule: invalid request.")
     try:
-        result = scheduling.schedule(to_schedule, existing_items, start, end)
+        result = scheduling.schedule_max_profit(to_schedule, existing_items, start, end)
     except scheduling.ScheduleException as e:
         raise UserFacingException(str(e))
     return json.dumps(result)

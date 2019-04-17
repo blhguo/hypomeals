@@ -65,10 +65,10 @@ UNIT_ACCEPTED_FORMS = {
 MIX_UNIT_EXP_REGEX = re.compile(r"^(\d*\.?\d+)\s*(\D.*|)$")
 
 WORK_HOURS_START = (
-    timezone.get_current_timezone().localize(datetime(2000, 1, 1, 8, 0)).timetz()
+    timezone.get_current_timezone().localize(datetime(2000, 5, 1, 8, 0)).timetz()
 )
 WORK_HOURS_END = (
-    timezone.get_current_timezone().localize(datetime(2000, 1, 1, 18, 0)).timetz()
+    timezone.get_current_timezone().localize(datetime(2000, 5, 1, 18, 0)).timetz()
 )
 WORK_HOURS_PER_DAY = 10  # Per req. 4.4.4, factories run 10 hours per day
 HOURS_PER_DAY = 24

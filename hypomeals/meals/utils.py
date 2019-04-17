@@ -516,6 +516,36 @@ def compute_end_time(start_time: datetime, num_hours: float) -> datetime:
     return end_time
 
 
+def compute_start_time(end_time: datetime, num_hours: float) -> datetime:
+    """
+    Computes manufacturing start time, taking into consideration work hours of
+    manufacturing lines (supplied by constants.py).
+    :param end_time: datetime at which production ends
+    :param num_hours: total number of hours to complete production on a MfgLine
+    :return: the datetime at which production is scheduled to complete
+    """
+    end_time = end_time.astimezone(timezone.get_current_timezone())
+    time_for_last_day = end_time - datetime.combine(end_time.date(), WORK_HOURS_START)
+
+    if num_hours > time_for_last_day.seconds / SECONDS_PER_HOUR:
+        num_hours = num_hours - time_for_last_day.seconds / SECONDS_PER_HOUR
+    else:
+        return end_time - timedelta(hours=num_hours)
+
+    num_days = int(num_hours / WORK_HOURS_PER_DAY)
+    remaining_hours = num_hours % WORK_HOURS_PER_DAY
+    if remaining_hours > 0:
+        num_days += 1
+
+    end_day = datetime.combine(end_time.date(), WORK_HOURS_END)
+    start_time = end_day - timedelta(days=num_days)
+    if remaining_hours > 0:
+        start_time -= timedelta(hours=remaining_hours)
+    else:
+        start_time = datetime.combine(start_time.date(), WORK_HOURS_START)
+    return start_time
+
+
 def ajax_view(func):
     """
     A decorator that turns a view into an AJAX-only view. This does the following
