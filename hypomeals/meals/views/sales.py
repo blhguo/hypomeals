@@ -297,11 +297,19 @@ def sales_summary(request):
         end_year = now.year
         begin_year = end_year - 9
         pl_summary_report = []
+        pl_rev = 0
+        pl_rev_yearly = {}
         for sku in skus:
             rev_sum, num_sales, sku_ten_year = _sku_revenue(sku, customers, begin_year)
             sku_summary_report = _sku_summary(sku, rev_sum, num_sales, sku_ten_year)
             pl_summary_report.append(sku_summary_report)
-        sales_summary_result.append((pl.name, pl_summary_report))
+            pl_rev += rev_sum
+            for data in sku_ten_year:
+                if data[0] not in pl_rev_yearly:
+                    pl_rev_yearly[data[0]] = data[3]
+                else:
+                    pl_rev_yearly[data[0]] += data[3]
+        sales_summary_result.append((pl.name, pl_summary_report, pl_rev, pl_rev_yearly))
     if export:
         return export_sales_summary(sales_summary_result)
     drilldown_params = "?customer=" + form.data["customers"]
