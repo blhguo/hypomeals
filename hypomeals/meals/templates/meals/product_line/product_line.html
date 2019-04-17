@@ -39,7 +39,7 @@
             </button>
         {% endif %}
         {% if perms.meals.view_sale %}
-        <button class="btn btn-info" id="generateButton">
+        <button class="btn btn-info" id="generateButton" data-href="{% url 'generate_sales_report' %}">
             <span class="fas fa-align-justify"></span> Sales Report
         </button>
         {% endif %}

@@ -69,18 +69,11 @@ $(function() {
             return;
         }
         let url = $(this).attr("data-href");
-        makeModalAlert("Confirm",
-            `Are you sure you want to generate a report using ${toTarget.length} Product Line(s)?`,
-            function() {
-                $.getJSON(url, {
-                    toTarget: JSON.stringify(toTarget),
-                }).done(function(data, textStatus) {
-                    if (!showNetworkError(data, textStatus)) {
-                        return;
-                    }
-                    redirect(data.resp);
-                })
-            });
+        getJson(url, {
+            toTarget: JSON.stringify(toTarget),
+        }).done(function(data) {
+            redirect(data);
+        });
     });
 
     /***************** View Related SKUs ****************/
