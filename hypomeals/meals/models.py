@@ -599,7 +599,7 @@ class ManufacturingLine(
     comment = models.CharField(max_length=4000, verbose_name="Comment")
 
     @cached_property
-    def get_content_type(self):
+    def content_type(self):
         return ContentType.objects.get_for_model(ManufacturingLine)
 
     def __repr__(self):
@@ -613,7 +613,7 @@ class ManufacturingLine(
         Create the permission for this manufacturing line, and the corresponding group
         a user must be in to be considered Plant Manager.
         """
-        content_type = self.get_content_type
+        content_type = self.content_type
         perm = Permission.objects.get_or_create(
             codename=f"owns_ml_{self.shortname}",
             defaults={
@@ -623,6 +623,8 @@ class ManufacturingLine(
         )[0]
         group, _ = Group.objects.get_or_create(name=f"Plant Manager ({self.shortname})")
         group.permissions.add(perm)
+        analyst_perms = Group.objects.get(name=ANALYST_GROUP).permissions.all()
+        group.permissions.add(*analyst_perms)
 
         # Admins also own all manufacturing lines
         admin_group = Group.objects.get(name="Admins")
