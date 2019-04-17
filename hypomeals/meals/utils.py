@@ -535,7 +535,9 @@ def compute_start_time(end_time: datetime, num_hours: float) -> datetime:
     :return: the datetime at which production is scheduled to complete
     """
     end_time = end_time.astimezone(timezone.get_current_timezone())
-    time_for_last_day = end_time - _get_localized_time_for_date(end_time, WORK_HOURS_START)
+    time_for_last_day = end_time - _get_localized_time_for_date(
+        end_time, WORK_HOURS_START
+    )
 
     if num_hours > time_for_last_day.seconds / SECONDS_PER_HOUR:
         num_hours = num_hours - time_for_last_day.seconds / SECONDS_PER_HOUR

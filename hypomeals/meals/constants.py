@@ -2,9 +2,7 @@
 This file defines some constants (e.g., units) used throughout the project
 """
 import re
-from datetime import datetime, time
-
-from django.utils import timezone
+from datetime import time
 
 MASS_BASED_UNITS = {
     "kg": {"verbose_name": "Kilogram", "is_base": True, "scale_factor": 1.0},

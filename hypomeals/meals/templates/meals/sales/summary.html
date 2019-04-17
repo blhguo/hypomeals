@@ -77,44 +77,33 @@
         {% ifchanged %}
             <div>
                 <nav class="navbar navbar-light bg-light">
-                    <span class="navbar-brand mb-0 h1">{{ pl_name }}</span>
+                    <span class="navbar-brand mb-0 h1">
+                        {{ pl_name }}
+                    </span>
+                    <small>
+                        Total revenue: $ {{ pl_rev|quantize|intcomma }}
+                        <a href="#" data-toggle="modal" data-target="#modal{{ pl_name }}">
+                            (details)
+                        </a>
+                    </small>
                 </nav>
             </div>
-            <table class="table text-center">
-                <thead class="thead-light">
-                <tr>
-                    <th>Product Line Name</th>
-                    <th>Total Revenue</th>
-                    <th>Yearly Revenue Detail</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                    <td>{{ pl_name }}</td>
-                    <td>{{ pl_rev }}</td>
-                    <td>
-                        <button class="btn btn-link" type="button" data-toggle="modal" data-target="#modal{{ pl_name }}">
-                            Show
-                        </button>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-            <div class="modal fade"  id="modal{{ pl_name }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-              <div class="modal-dialog modal-lg" role="document">
+            <div class="modal fade"  id="modal{{ pl_name }}" tabindex="-1" role="dialog">
+              <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                   <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Most Recent 10 Years</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <h5 class="modal-title">Most Recent 10 Years</h5>
+                    <button type="button" class="close" data-dismiss="modal">
                       <span aria-hidden="true">&times;</span>
                     </button>
                   </div>
                   <div class="modal-body">
+                    <h3>{{ pl_name }}</h3>
                     <table class="table text-center">
                         <thead class="thead-light">
                         <tr>
                             <th>Year</th>
-                            <th>Yearly Revenue</th>
+                            <th>Revenue</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -124,7 +113,7 @@
                                 {{ key }}
                             </td>
                             <td class="align-middle">
-                                {{ value }}
+                                $ {{ value|quantize|intcomma }}
                             </td>
                         </tr>
                         {% endfor %}

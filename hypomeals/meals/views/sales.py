@@ -1,3 +1,4 @@
+#pylint: disable-msg=too-many-branches
 import json
 import logging
 import operator
